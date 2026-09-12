@@ -13,16 +13,9 @@ jobs:
     name: Test before release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout core
+      - name: Checkout code
         uses: actions/checkout@v7
         with:
-          repository: yi-nology/git-sync-core
-          path: git-sync-core
-
-      - name: Checkout service
-        uses: actions/checkout@v7
-        with:
-          path: git-sync-service
           fetch-depth: 0
 
       - name: Set up Go
@@ -31,7 +24,6 @@ jobs:
           go-version: '1.26'
 
       - name: Run tests
-        working-directory: git-sync-service
         run: go test -v ./...
 
   release:
@@ -44,16 +36,9 @@ jobs:
         goarch: [amd64, arm64]
 
     steps:
-      - name: Checkout core
+      - name: Checkout code
         uses: actions/checkout@v7
         with:
-          repository: yi-nology/git-sync-core
-          path: git-sync-core
-
-      - name: Checkout service
-        uses: actions/checkout@v7
-        with:
-          path: git-sync-service
           fetch-depth: 0
 
       - name: Set up Go
@@ -62,7 +47,6 @@ jobs:
           go-version: '1.26'
 
       - name: Build
-        working-directory: git-sync-service
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -82,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: git-sync-service-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: git-sync-service/dist/*
+          path: ./dist/*
 
   publish:
     name: Publish Release

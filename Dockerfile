@@ -1,24 +1,16 @@
-# 公网壳镜像。构建上下文为父目录（需含同级 git-sync-core）：
-#   my_project/
-#     git-sync-core/
-#     git-sync-service/
-#   docker build -f git-sync-service/Dockerfile -t git-sync-service:latest .
+# 公网壳镜像。git-sync-core 以 Go module 版本依赖（go.mod），无需同级源码目录。
+#   docker build -t git-sync-service:latest .
 
 FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
-RUN apk add --no-cache git gcc musl-dev
+RUN apk add --no-cache git
 
-COPY git-sync-core/go.mod git-sync-core/go.sum ./git-sync-core/
-COPY git-sync-service/go.mod git-sync-service/go.sum ./git-sync-service/
-
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY git-sync-core ./git-sync-core
-COPY git-sync-service ./git-sync-service
-
-WORKDIR /src/git-sync-service
+COPY . .
 
 ARG VERSION=docker-dev
 RUN CGO_ENABLED=0 GOOS=linux go build \
@@ -34,7 +26,7 @@ RUN apk --no-cache add ca-certificates wget \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /out/git-sync-service .
-COPY --from=builder /src/git-sync-service/conf ./conf
+COPY --from=builder /src/conf ./conf
 
 RUN mkdir -p /app/data && chown appuser:appgroup /app/data
 

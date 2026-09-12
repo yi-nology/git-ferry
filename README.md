@@ -19,21 +19,21 @@ A service for synchronizing Git repositories across different platforms.
 
 ## Related repositories
 
-本服务是三仓架构中的**公网壳**：
+本服务是三仓架构中的**公网壳**，以 Go module 版本依赖引擎库：
 
 | Repository | Import path | Role |
 |------------|-------------|------|
-| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP) |
+| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP)，当前 `v0.1.0` |
 | **git-sync-service**（本仓） | `github.com/yi-nology/git-sync-service` | Public shell: hz API + Vue UI |
 | [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | Intranet shell (gateway/SSO auth) |
 
-本地开发请将三仓放在同一父目录；`go.mod` 中 `replace github.com/yi-nology/git-sync-core => ../git-sync-core`。core 发布正式 tag 后可改为版本依赖。
+单仓即可构建（`git clone` 后 `go build`），无需同级 checkout。
 
-```text
-my_project/
-  git-sync-core/
-  git-sync-service/    # this repo
-  git-sync-intranet/
+本地联调未发布的 core 时，可临时：
+
+```bash
+# 可选：本地 workspace，不提交 go.work
+go work init . ../git-sync-core
 ```
 
 ### Intranet auth env
@@ -43,8 +43,7 @@ my_project/
 ### Build image
 
 ```bash
-# 父目录（含 git-sync-core）下
-make -C git-sync-service docker-build
+make docker-build
 ```
 
 ## Installation

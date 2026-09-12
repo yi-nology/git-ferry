@@ -11,11 +11,9 @@ require (
 	github.com/oklog/run v1.2.0
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-platform-sdk v0.49.0
-	github.com/yi-nology/git-sync-core v0.0.0
+	github.com/yi-nology/git-sync-core v0.1.0
 	golang.org/x/time v0.15.0
 )
-
-replace github.com/yi-nology/git-sync-core => ../git-sync-core
 
 require (
 	code.gitea.io/sdk/gitea v0.25.1 // indirect

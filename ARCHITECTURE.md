@@ -13,7 +13,7 @@
 | `git-sync-service`（本仓） | `github.com/yi-nology/git-sync-service` | 公网壳：hz API + Vue | 公网开源 |
 | `git-sync-intranet` | `github.com/yi-nology/git-sync-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
 
-本地开发将三仓放在同一父目录，用 `go.mod` 的 `replace` 指向同级路径（core 发布 tag 后可改版本依赖）。
+本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-sync-core v0.1.0`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
 
 ```
 模式 A: 公网独立服务                 模式 B: 作为库              模式 C: 内网壳
@@ -60,7 +60,7 @@ my_project/
 │   ├── model/  service/  executor/  dao/  lock/
 │
 ├── git-sync-service/                # 本仓：公网壳
-│   ├── go.mod                       # replace core => ../git-sync-core
+│   ├── go.mod                       # require git-sync-core v0.1.0（无 replace）
 │   ├── main.go
 │   ├── router.go / router_gen.go
 │   ├── biz/
@@ -74,7 +74,7 @@ my_project/
 │   └── conf/config.yaml
 │
 └── git-sync-intranet/               # 内网壳（独立仓）
-    ├── go.mod                       # replace core + service => 同级路径
+    ├── go.mod                       # require core + service；本地联调可用 replace
     ├── main.go
     ├── auth/                        # proxy 头 / API Key / SSO 钩子
     └── conf/config.yaml

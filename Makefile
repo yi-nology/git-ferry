@@ -28,7 +28,8 @@ restart:
 	fi
 	@$(MAKE) run
 
-# 本地依赖同级仓 ../git-sync-core（go.mod replace）。core 已发布 tag 后可去掉 replace。
+# 依赖 github.com/yi-nology/git-sync-core v0.1.0（go.mod，可从模块代理拉取）。
+# 本地改 core 时可用 go.work 或临时 replace，勿提交 replace。
 tidy:
 	@go mod tidy
 
@@ -42,6 +43,5 @@ generate:
 	@echo "Generating code from IDL..."
 	@cd idl && thriftgo --out ../biz --go --go-recurse 10 git_sync.thrift
 
-# 在父目录（含 git-sync-core）执行：make -C git-sync-service docker-build
 docker-build:
-	@cd .. && docker build -f git-sync-service/Dockerfile -t $(APP_NAME):latest .
+	@docker build -t $(APP_NAME):latest .

@@ -280,6 +280,8 @@ github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/yi-nology/git-platform-sdk v0.49.0 h1:2s3DOrJaZmX1tNjKdwHoZO2sblYBGcT69djV0bWUE2E=
 github.com/yi-nology/git-platform-sdk v0.49.0/go.mod h1:jNrlwaPuIRssoPxJuFyjelDj+RamEr5LGzZ9UP7DabQ=
+github.com/yi-nology/git-sync-core v0.1.0 h1:LHgeaE30GvO5xZy5LpOsM5aA4S3945NUGmqo2rlRBmY=
+github.com/yi-nology/git-sync-core v0.1.0/go.mod h1:8XgSYWJBeS83sECRsxKtLX1i+u00o+5feq8f/WUii0g=
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
 github.com/yi-nology/go-gitcode v0.7.2/go.mod h1:YE9snaa9ChVY7FoPj/4huVDkVNJaI/gpxHcWgNNGYls=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
