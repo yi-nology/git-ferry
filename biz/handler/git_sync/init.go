@@ -3,20 +3,20 @@ package git_sync
 import (
 	"sync"
 
-	synccore "github.com/yi-nology/git-sync-core"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 )
 
 var (
 	once     sync.Once
-	syncSvc  *synccore.Service
-	initFunc func() *synccore.Service
+	syncSvc  *corebridge.Service
+	initFunc func() *corebridge.Service
 )
 
-func SetSyncServiceGetter(fn func() *synccore.Service) {
+func SetSyncServiceGetter(fn func() *corebridge.Service) {
 	initFunc = fn
 }
 
-func GetSyncService() *synccore.Service {
+func GetSyncService() *corebridge.Service {
 	once.Do(func() {
 		if initFunc != nil {
 			syncSvc = initFunc()

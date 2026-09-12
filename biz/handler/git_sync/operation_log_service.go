@@ -9,7 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	operation_log "github.com/yi-nology/git-sync-service/biz/model/operation_log"
 	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-core/dao"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
 )
 
@@ -44,7 +44,7 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	filter := dao.OperationLogFilter{
+	filter := corebridge.OperationLogFilter{
 		Search:    req.Search,
 		Action:    req.Action,
 		Actor:     req.User,

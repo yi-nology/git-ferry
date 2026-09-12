@@ -9,10 +9,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-sync-service/biz/model/webhook"
 	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-core/dao"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-core/service"
-	syncmodel "github.com/yi-nology/git-sync-core/model"
 )
 
 func RuleList(ctx context.Context, c *app.RequestContext) {
@@ -83,7 +81,7 @@ func RuleCreate(ctx context.Context, c *app.RequestContext) {
 
 	taskKeys := parseTaskKeys(req.SyncTaskKeys)
 
-	r, err := GetSyncService().CreateRule(ctx, &syncmodel.CreateRuleRequest{
+	r, err := GetSyncService().CreateRule(ctx, &corebridge.CreateRuleRequest{
 		Name: req.Name, RepoKey: req.RepoKey, EventType: req.EventType,
 		BranchPattern: req.BranchPattern, Action: req.Action,
 		TaskKeys: taskKeys, MinInterval: int(req.MinInterval),
@@ -110,14 +108,14 @@ func RuleUpdate(ctx context.Context, c *app.RequestContext) {
 
 	taskKeys := parseTaskKeys(req.SyncTaskKeys)
 
-	r, err := GetSyncService().UpdateRule(ctx, &syncmodel.UpdateRuleRequest{
+	r, err := GetSyncService().UpdateRule(ctx, &corebridge.UpdateRuleRequest{
 		ID: uint(req.ID), Name: req.Name, EventType: req.EventType,
 		BranchPattern: req.BranchPattern, Action: req.Action,
 		TaskKeys: taskKeys, MinInterval: int(req.MinInterval),
 		Enabled: req.Enabled, Description: req.Description,
 	})
 	if err != nil {
-		if errors.Is(err, service.ErrRuleNotFound) {
+		if errors.Is(err, corebridge.ErrRuleNotFound) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -158,7 +156,7 @@ func ListEvents(ctx context.Context, c *app.RequestContext) {
 	}
 
 	offset, _ := strconv.Atoi(c.Query("offset"))
-	page := dao.DefaultPagination(offset, int(req.Limit))
+	page := corebridge.DefaultPagination(offset, int(req.Limit))
 	events, total, err := GetSyncService().ListEvents(ctx, req.RepoKey, page.Offset, page.Limit)
 	if err != nil {
 		response.InternalError(c, err.Error())
@@ -201,7 +199,7 @@ func RegisterPlatformWebhook(ctx context.Context, c *app.RequestContext) {
 
 	wh, err := GetSyncService().RegisterPlatformWebhook(ctx, req.RepoKey, req.CallbackUrl, req.Secret, req.Events)
 	if err != nil {
-		if errors.Is(err, service.ErrRepoNotFound) {
+		if errors.Is(err, corebridge.ErrRepoNotFound) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -230,7 +228,7 @@ func ListPlatformWebhooks(ctx context.Context, c *app.RequestContext) {
 
 	webhooks, err := GetSyncService().ListPlatformWebhooks(ctx, req.RepoKey)
 	if err != nil {
-		if errors.Is(err, service.ErrRepoNotFound) {
+		if errors.Is(err, corebridge.ErrRepoNotFound) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -259,7 +257,7 @@ func DeletePlatformWebhook(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if err := GetSyncService().DeletePlatformWebhook(ctx, req.RepoKey, req.WebhookId); err != nil {
-		if errors.Is(err, service.ErrRepoNotFound) {
+		if errors.Is(err, corebridge.ErrRepoNotFound) {
 			response.NotFound(c, err.Error())
 			return
 		}

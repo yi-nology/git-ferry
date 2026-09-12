@@ -1,27 +1,23 @@
 package main
 
 import (
-	"log/slog"
-	"os"
-
-	"github.com/yi-nology/git-sync-core"
 	"github.com/yi-nology/git-sync-service/biz/handler/git_sync"
 	"github.com/yi-nology/git-sync-service/biz/serve"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
 	_ "github.com/yi-nology/git-platform-sdk/backends/all"
 )
 
 func main() {
-	cfg, err := sync.LoadConfig("conf/config.yaml")
+	shellCfg, err := corebridge.LoadShellConfig("conf/config.yaml")
 	if err != nil {
-		slog.Error("load config failed", "error", err)
-		os.Exit(1)
+		serve.ExitOnFail("load config failed", err)
 	}
 
-	serve.SetupLogger(cfg.Log.Level, cfg.Log.Format)
+	serve.SetupLogger(shellCfg.Log.Level, shellCfg.Log.Format)
 
-	syncSvc, err := sync.NewService(cfg)
+	syncSvc, err := corebridge.NewService(shellCfg.Config)
 	if err != nil {
 		serve.ExitOnFail("init sync service failed", err)
 	}
@@ -30,14 +26,15 @@ func main() {
 		serve.ExitOnFail("start sync service failed", err)
 	}
 
-	git_sync.SetSyncServiceGetter(func() *sync.Service {
+	git_sync.SetSyncServiceGetter(func() *corebridge.Service {
 		return syncSvc
 	})
+	git_sync.SetAPIKey(shellCfg.APIKey)
 
 	h := serve.New(serve.Config{
-		Host:        cfg.Server.Host,
-		Port:        cfg.Server.Port,
-		MaxBodySize: cfg.Webhook.MaxBodySize,
+		Host:        shellCfg.Server.Host,
+		Port:        shellCfg.Server.Port,
+		MaxBodySize: shellCfg.Webhook.MaxBodySize,
 	})
 
 	if err := serve.Run(h, syncSvc.Stop); err != nil {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	handler "github.com/yi-nology/git-sync-service/biz/handler/git_sync"
-	"github.com/yi-nology/git-sync-core"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 )
 
 const testAPIKey = "test-secret-api-key-12345"
@@ -19,25 +19,20 @@ func TestMain(m *testing.M) {
 		panic("failed to set ENCRYPTION_KEY: " + err.Error())
 	}
 
-	// Create a test service with a known API key using SQLite in-memory database
-	cfg := &sync.Config{
-		Server:   sync.Config{}.Server,
-		Database: sync.Config{}.Database,
-		Git:      sync.Config{}.Git,
-	}
-	cfg.Server.APIKey = testAPIKey
+	cfg := &corebridge.Config{}
 	cfg.Database.Driver = "sqlite"
 	cfg.Database.DSN = ":memory:"
 	cfg.Git.TempDir = "/tmp/git-sync-test"
 
-	svc, err := sync.NewService(cfg)
+	svc, err := corebridge.NewService(cfg)
 	if err != nil {
 		panic("failed to create test service: " + err.Error())
 	}
 
-	handler.SetSyncServiceGetter(func() *sync.Service {
+	handler.SetSyncServiceGetter(func() *corebridge.Service {
 		return svc
 	})
+	handler.SetAPIKey(testAPIKey)
 
 	os.Exit(m.Run())
 }

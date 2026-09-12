@@ -10,10 +10,8 @@ import (
 	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 	"github.com/yi-nology/git-sync-service/biz/model/repo"
 	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-core/dao"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-core/service"
-	syncmodel "github.com/yi-nology/git-sync-core/model"
 )
 
 func RepoList(ctx context.Context, c *app.RequestContext) {
@@ -39,7 +37,7 @@ func RepoList(ctx context.Context, c *app.RequestContext) {
 
 	offset, limit := converter.PageToOffset(req.Page, req.PageSize)
 
-	filter := dao.RepoFilter{
+	filter := corebridge.RepoFilter{
 		Search:   req.Search,
 		Platform: req.Platform,
 		Status:   req.Status,
@@ -102,7 +100,7 @@ func RepoCreate(ctx context.Context, c *app.RequestContext) {
 		platformID = uint(pid)
 	}
 
-	r, err := GetSyncService().CreateRepo(ctx, &syncmodel.CreateRepoRequest{
+	r, err := GetSyncService().CreateRepo(ctx, &corebridge.CreateRepoRequest{
 		Name: req.Name, RemoteURL: req.RemoteUrl, AccessToken: req.AccessToken, PlatformID: platformID,
 	})
 	if err != nil {
@@ -128,11 +126,11 @@ func RepoUpdate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	r, err := GetSyncService().UpdateRepo(ctx, &syncmodel.UpdateRepoRequest{
+	r, err := GetSyncService().UpdateRepo(ctx, &corebridge.UpdateRepoRequest{
 		Key: req.Key, Name: req.Name, AccessToken: req.AccessToken,
 	})
 	if err != nil {
-		if errors.Is(err, service.ErrRepoNotFound) {
+		if errors.Is(err, corebridge.ErrRepoNotFound) {
 			response.NotFound(c, err.Error())
 			return
 		}

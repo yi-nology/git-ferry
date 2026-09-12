@@ -31,10 +31,11 @@ func ResolveAuthMiddleware() app.HandlerFunc {
 }
 
 // DefaultAPIKeyAuthMiddleware 校验 X-API-Key（常量时间比较）。
+// API Key 由壳层注入（handler.SetAPIKey），不经过 git-sync-core。
 // 服务端 API Key 为空时拒绝全部请求。
 func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		serverKey := handler.GetSyncService().GetAPIKey()
+		serverKey := handler.GetAPIKey()
 		if serverKey == "" {
 			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: API key not configured"})
 			c.Abort()

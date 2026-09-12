@@ -16,8 +16,8 @@ func HealthCheck(ctx context.Context, c *app.RequestContext) {
 
 	httpStatus := http.StatusOK
 	for _, v := range status {
-	// Accept "ok" and "not configured" as healthy states
-	if v != "ok" && v != "not configured" {
+		// Accept "ok" and "not configured" as healthy states
+		if v != "ok" && v != "not configured" {
 			httpStatus = http.StatusServiceUnavailable
 			break
 		}

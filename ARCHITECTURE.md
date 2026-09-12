@@ -13,7 +13,7 @@
 | `git-sync-service`（本仓） | `github.com/yi-nology/git-sync-service` | 公网壳：hz API + Vue | 公网开源 |
 | `git-sync-intranet` | `github.com/yi-nology/git-sync-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
 
-本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-sync-core v0.1.0`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
+本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-sync-core v0.2.0`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
 
 ```
 模式 A: 公网独立服务                 模式 B: 作为库              模式 C: 内网壳
@@ -68,7 +68,7 @@ my_project/
 │   │   ├── model/                   # thrift 生成请求/响应
 │   │   ├── router/                  # 路由 + 可替换鉴权 Provider
 │   │   └── serve/                   # HTTP 启动（内网壳亦复用）
-│   ├── internal/                    # converter / response / version
+│   ├── internal/                    # corebridge(引擎桥梁) / converter / response / version
 │   ├── frontend/
 │   ├── idl/
 │   └── conf/config.yaml

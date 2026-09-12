@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	syncmodel "github.com/yi-nology/git-sync-core/model"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 )
 
 // recordAudit 记录一条审计日志（best-effort：写入失败仅告警，不影响主流程）。
@@ -24,14 +24,14 @@ func recordAudit(ctx context.Context, c *app.RequestContext, action, resourceTyp
 	if actor == "" {
 		actor = "admin"
 	}
-	entry := &syncmodel.OperationLog{
+	entry := &corebridge.OperationLog{
 		Action:       action,
 		ResourceType: resourceType,
 		ResourceKey:  resourceKey,
 		Resource:     resource,
 		Actor:        actor,
 		IP:           c.ClientIP(),
-		Status:       syncmodel.StatusSuccess,
+		Status:       corebridge.StatusSuccess,
 	}
 	if err := GetSyncService().RecordOperation(ctx, entry); err != nil {
 		slog.Warn("record audit log failed", "error", err, "action", action, "resource", resource)

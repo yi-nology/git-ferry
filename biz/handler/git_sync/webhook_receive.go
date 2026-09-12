@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	synccore "github.com/yi-nology/git-sync-core"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
 	"golang.org/x/time/rate"
 )
@@ -102,7 +102,7 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 		header[string(k)] = append(header[string(k)], string(v))
 	})
 
-	err := GetSyncService().ReceiveWebhook(ctx, repoKey, &synccore.WebhookPayload{
+	err := GetSyncService().ReceiveWebhook(ctx, repoKey, &corebridge.WebhookPayload{
 		Method:     string(c.Method()),
 		Path:       string(c.Path()),
 		Header:     header,

@@ -9,10 +9,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-sync-service/biz/model/sync_task"
 	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-core/dao"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-core/service"
-	syncmodel "github.com/yi-nology/git-sync-core/model"
 )
 
 func TaskList(ctx context.Context, c *app.RequestContext) {
@@ -69,7 +67,7 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	t, err := GetSyncService().CreateTask(ctx, &syncmodel.CreateTaskRequest{
+	t, err := GetSyncService().CreateTask(ctx, &corebridge.CreateTaskRequest{
 		Name: req.Name, SourceRepoKey: req.SourceRepoKey, SourceBranch: req.SourceBranch,
 		TargetRepoKey: req.TargetRepoKey, TargetBranch: req.TargetBranch,
 		SyncMode: req.SyncMode, Cron: req.Cron, GitTags: req.GitTags,
@@ -94,14 +92,14 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	t, err := GetSyncService().UpdateTask(ctx, &syncmodel.UpdateTaskRequest{
+	t, err := GetSyncService().UpdateTask(ctx, &corebridge.UpdateTaskRequest{
 		Key: req.Key, Name: req.Name, SourceBranch: req.SourceBranch,
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
 		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
 		GitPrune: req.GitPrune,
 	})
 	if err != nil {
-		if errors.Is(err, service.ErrTaskNotFound) {
+		if errors.Is(err, corebridge.ErrTaskNotFound) {
 			response.NotFound(c, err.Error())
 			return
 		}
@@ -159,7 +157,7 @@ func TaskPreview(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	result, err := GetSyncService().PreviewSync(ctx, &syncmodel.PreviewSyncRequest{
+	result, err := GetSyncService().PreviewSync(ctx, &corebridge.PreviewSyncRequest{
 		SourceRepoKey: req.SourceRepoKey, SourceBranch: req.SourceBranch,
 		TargetRepoKey: req.TargetRepoKey, TargetBranch: req.TargetBranch,
 	})
@@ -185,7 +183,7 @@ func TaskHistory(ctx context.Context, c *app.RequestContext) {
 	}
 
 	offset, _ := strconv.Atoi(c.Query("offset"))
-	page := dao.DefaultPagination(offset, int(req.Limit))
+	page := corebridge.DefaultPagination(offset, int(req.Limit))
 	runs, _, err := GetSyncService().ListHistory(ctx, req.TaskKey, page.Offset, page.Limit)
 	if err != nil {
 		response.InternalError(c, err.Error())

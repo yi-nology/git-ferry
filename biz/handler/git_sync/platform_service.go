@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	platform "github.com/yi-nology/git-sync-service/biz/model/platform"
 	"github.com/yi-nology/git-sync-service/internal/converter"
+	"github.com/yi-nology/git-sync-service/internal/corebridge"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-core/model"
 )
 
 // CreatePlatform 创建平台
@@ -25,18 +25,18 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "name, type, access_token are required")
 		return
 	}
-	if !model.ValidPlatformTypes[req.Type] {
+	if !corebridge.ValidPlatformTypes[req.Type] {
 		response.BadRequest(c, fmt.Sprintf("unsupported platform type: %s (valid: github, gitlab, gitea, gitee, gitcode, atomgit, tencent_code, custom)", req.Type))
 		return
 	}
 
 	// 生成 API URL（如果未提供）
 	apiURL := req.ApiUrl
-	if apiURL == "" && req.Type != model.PlatformTypeCustom {
-		apiURL = model.GetAPIURL(req.Type, req.InstanceUrl)
+	if apiURL == "" && req.Type != corebridge.PlatformTypeCustom {
+		apiURL = corebridge.GetAPIURL(req.Type, req.InstanceUrl)
 	}
 
-	p := &model.Platform{
+	p := &corebridge.Platform{
 		Key:           uuid.New().String(),
 		Name:          req.Name,
 		Type:          req.Type,
@@ -47,7 +47,7 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		CACertPath:    req.CaCertPath,
 		ProxyURL:      req.ProxyUrl,
 		IsDefault:     req.IsDefault,
-		Status:        model.PlatformStatusActive,
+		Status:        corebridge.PlatformStatusActive,
 	}
 
 	if err := GetSyncService().CreatePlatform(ctx, p); err != nil {
@@ -208,7 +208,7 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 	result, err := GetSyncService().TestPlatformConnection(ctx, req.Key)
 	if err != nil {
 		// 更新平台状态为错误
-		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusError, err.Error()); statusErr != nil {
+		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, corebridge.PlatformStatusError, err.Error()); statusErr != nil {
 			slog.Warn("failed to update platform status after test error", "key", req.Key, "error", statusErr)
 		}
 		response.InternalError(c, err.Error())
@@ -217,7 +217,7 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 
 	// 按实际连接结果落库:connected=false 时记录失败详情,不能一律写成功
 	if result != nil && result.Connected {
-		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusActive, "connection successful"); statusErr != nil {
+		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, corebridge.PlatformStatusActive, "connection successful"); statusErr != nil {
 			slog.Warn("failed to update platform status to active", "key", req.Key, "error", statusErr)
 		}
 	} else {
@@ -225,7 +225,7 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 		if result != nil && result.Message != "" {
 			failMsg = result.Message
 		}
-		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusError, failMsg); statusErr != nil {
+		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, corebridge.PlatformStatusError, failMsg); statusErr != nil {
 			slog.Warn("failed to update platform status to error", "key", req.Key, "error", statusErr)
 		}
 	}
@@ -266,11 +266,11 @@ func ListPlatformRepos(ctx context.Context, c *app.RequestContext) {
 	// has_more 提示调用方还有下一页(返回条数打满请求页大小)。
 	reqPerPage, _ := strconv.Atoi(perPage)
 	response.Success(c, map[string]interface{}{
-		"repos":     repos,
-		"total":     len(repos),
-		"has_more":  reqPerPage > 0 && len(repos) == reqPerPage,
-		"page":      page,
-		"per_page":  perPage,
+		"repos":    repos,
+		"total":    len(repos),
+		"has_more": reqPerPage > 0 && len(repos) == reqPerPage,
+		"page":     page,
+		"per_page": perPage,
 	})
 }
 
