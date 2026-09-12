@@ -2,13 +2,15 @@ package service
 
 import (
 	"context"
+	"log/slog"
+	"net/url"
 	"strings"
 
 	errors "github.com/cockroachdb/errors"
 	"github.com/google/uuid"
+	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 	"github.com/yi-nology/git-sync-service/internal/dao"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 )
 
 // RepoService handles repository-related operations.
@@ -79,14 +81,20 @@ func (rs *RepoService) CreateRepo(ctx context.Context, req *model.CreateRepoRequ
 
 	// Parse owner/repo from URL if not detected
 	if platformOwner == "" || platformRepo == "" {
-		// Try to parse from URL: https://host/owner/repo.git
-		url := req.RemoteURL
-		url = strings.TrimSuffix(url, ".git")
-		url = strings.TrimSuffix(url, "/")
-		parts := strings.Split(url, "/")
-		if len(parts) >= 2 {
-			platformRepo = parts[len(parts)-1]
-			platformOwner = parts[len(parts)-2]
+		// https://host/group/sub/repo.git → path "group/sub/repo"
+		// 嵌套群组必须整段路径保留,否则 ListBranches/Webhook 拼 pidOf 会 404。
+		raw := strings.TrimSuffix(strings.TrimSuffix(req.RemoteURL, ".git"), "/")
+		if u, uerr := url.Parse(raw); uerr == nil && u.Path != "" {
+			path := strings.Trim(u.Path, "/")
+			if owner, name, ok := strings.Cut(path, "/"); ok && owner != "" && name != "" {
+				platformOwner, platformRepo = owner, name
+			}
+		} else {
+			parts := strings.Split(raw, "/")
+			if len(parts) >= 2 {
+				platformRepo = parts[len(parts)-1]
+				platformOwner = parts[len(parts)-2]
+			}
 		}
 	}
 
@@ -108,7 +116,9 @@ func (rs *RepoService) CreateRepo(ctx context.Context, req *model.CreateRepoRequ
 
 	// Update platform repo count
 	if repo.PlatformID > 0 && rs.platformDAO != nil {
-		_ = rs.platformDAO.UpdateRepoCount(repo.PlatformID)
+		if err := rs.platformDAO.UpdateRepoCount(repo.PlatformID); err != nil {
+			slog.Warn("create repo: failed to update platform repo count", "platform_id", repo.PlatformID, "error", err)
+		}
 	}
 
 	return repo, nil
@@ -157,7 +167,9 @@ func (rs *RepoService) DeleteRepo(ctx context.Context, key string) error {
 
 	// Update platform repo count
 	if platformID > 0 && rs.platformDAO != nil {
-		_ = rs.platformDAO.UpdateRepoCount(platformID)
+		if err := rs.platformDAO.UpdateRepoCount(platformID); err != nil {
+			slog.Warn("delete repo: failed to update platform repo count", "platform_id", platformID, "error", err)
+		}
 	}
 
 	return nil
@@ -186,7 +198,11 @@ func (rs *RepoService) resolveRepoProvider(repo *model.Repo) (sdkprov.Provider, 
 	token := repo.AccessToken
 	var platform *model.Platform
 	if repo.PlatformID > 0 && rs.platformDAO != nil {
-		platform, _ = rs.platformDAO.FindByID(repo.PlatformID)
+		var findErr error
+		platform, findErr = rs.platformDAO.FindByID(repo.PlatformID)
+		if findErr != nil {
+			return nil, errors.Wrapf(findErr, "find platform %d for repo %s", repo.PlatformID, repo.Key)
+		}
 		if platform != nil && token == "" {
 			token = platform.AccessToken
 		}

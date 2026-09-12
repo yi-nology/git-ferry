@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	errors "github.com/cockroachdb/errors"
+	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 	"github.com/yi-nology/git-sync-service/internal/dao"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 )
 
 // PlatformService 平台服务
@@ -139,10 +139,16 @@ func (s *PlatformService) SyncPlatformRepos(ctx context.Context, key string) (in
 	}
 
 	// 一次加载该平台所有已有仓库到内存,避免 N 次 DB 查询。
-	existingRepos, _ := s.repoDAO.FindByPlatformID(platform.ID)
+	existingRepos, existingErr := s.repoDAO.FindByPlatformID(platform.ID)
+	if existingErr != nil {
+		slog.Warn("sync repo: failed to load existing repos, treating all as new", "platform_id", platform.ID, "error", existingErr)
+		existingRepos = nil
+	}
+	// 用 FullName(Key) 查重:展示名(Name)跨群组会撞车,且历史数据里
+	// platform_repo 可能存的是展示名,不能再当业务主键用。
 	existingMap := make(map[string]*model.Repo, len(existingRepos))
 	for _, r := range existingRepos {
-		existingMap[r.PlatformRepo] = r
+		existingMap[r.Key] = r
 	}
 
 	// 同步到本地:收集待创建和待更新的仓库,最后批量写入
@@ -154,24 +160,56 @@ func (s *PlatformService) SyncPlatformRepos(ctx context.Context, key string) (in
 		cloneURL := rewriteCloneHost(repo.CloneURL, platform)
 		sshURL := rewriteCloneHost(repo.SSHURL, platform)
 
+		// Owner/Path 必须从 FullName 拆,不能信 SDK 的 Name/Owner:
+		// - GitLab Name 是展示名(如 "Insights Mcp"),path 是 insights-mcp-gateway
+		// - 嵌套群组 obs/sdk/server 的 Owner 只有首段 obs
+		// - GitCode 组织仓库的 Owner.Login 可能是请求用户而非组织
+		// SplitFullName 语义与 SDK pidOf(owner, repo)=owner+"/"+repo 对齐,
+		// 嵌套群组得到 ("obs", "sdk/server") → pidOf 还原完整路径。
+		owner, pathName := splitRepoPath(repo.FullName, repo.Owner, repo.Name)
+
 		// 内存查重:比逐条 DB 查询快一个数量级。
-		existing := existingMap[repo.Name]
+		existing := existingMap[repo.FullName]
+		if existing == nil && repo.FullName == "" {
+			existing = existingMap[owner+"/"+pathName]
+		}
 		if existing != nil {
-			if existing.CloneURL != cloneURL {
+			if existing.CloneURL != cloneURL ||
+				existing.SSHURL != sshURL ||
+				existing.PlatformOwner != owner ||
+				existing.PlatformRepo != pathName ||
+				(repo.Name != "" && existing.Name != repo.Name) ||
+				(repo.DefaultBranch != "" && existing.DefaultBranch != repo.DefaultBranch) {
 				existing.CloneURL = cloneURL
 				existing.SSHURL = sshURL
+				existing.PlatformOwner = owner
+				existing.PlatformRepo = pathName
+				if repo.Name != "" {
+					existing.Name = repo.Name
+				}
+				if repo.DefaultBranch != "" {
+					existing.DefaultBranch = repo.DefaultBranch
+				}
 				toUpdate = append(toUpdate, existing)
 			}
 			continue
 		}
 
+		key := repo.FullName
+		if key == "" {
+			key = owner + "/" + pathName
+		}
+		name := repo.Name
+		if name == "" {
+			name = pathName
+		}
 		toCreate = append(toCreate, &model.Repo{
-			Key:           repo.FullName,
-			Name:          repo.Name,
+			Key:           key,
+			Name:          name,
 			PlatformID:    platform.ID,
 			Platform:      platform.Type,
-			PlatformOwner: repo.Owner,
-			PlatformRepo:  repo.Name,
+			PlatformOwner: owner,
+			PlatformRepo:  pathName,
 			CloneURL:      cloneURL,
 			SSHURL:        sshURL,
 			DefaultBranch: repo.DefaultBranch,
@@ -181,10 +219,10 @@ func (s *PlatformService) SyncPlatformRepos(ctx context.Context, key string) (in
 
 	count := 0
 
-	// 批量更新已有仓库的 clone URL(事务内)
+	// 批量更新已有仓库的元数据/clone URL(事务内)
 	if len(toUpdate) > 0 {
-		if err := s.repoDAO.BatchUpdateCloneURLs(toUpdate); err != nil {
-			slog.Error("sync repo: batch update clone URLs failed", "error", err, "count", len(toUpdate))
+		if err := s.repoDAO.BatchUpdateRepoMeta(toUpdate); err != nil {
+			slog.Error("sync repo: batch update repo meta failed", "error", err, "count", len(toUpdate))
 		} else {
 			count += len(toUpdate)
 		}
@@ -208,9 +246,23 @@ func (s *PlatformService) SyncPlatformRepos(ctx context.Context, key string) (in
 	}
 
 	// 更新平台仓库数量
-	_ = s.platformDAO.UpdateRepoCount(platform.ID)
+	if err := s.platformDAO.UpdateRepoCount(platform.ID); err != nil {
+		slog.Warn("sync repo: failed to update platform repo count", "platform_id", platform.ID, "error", err)
+	}
 
 	return count, nil
+}
+
+// splitRepoPath 从仓库路径拆出 (owner, pathName),供 ListBranches/Webhook 等
+// SDK 调用拼 pidOf(owner, repo) 使用。
+// 优先用 FullName:嵌套群组 "obs/sdk/server" → ("obs", "sdk/server"),
+// 与 SDK SplitFullName 一致,pidOf 还原后仍是完整路径。
+// FullName 缺失时回退 SDK Owner+Name。
+func splitRepoPath(fullName, sdkOwner, sdkName string) (owner, pathName string) {
+	if fullName != "" {
+		return sdkprov.SplitFullName(fullName)
+	}
+	return sdkOwner, sdkName
 }
 
 // rewriteCloneHost 将仓库 clone/ssh 地址的 scheme+host 替换为平台实例地址。
@@ -242,6 +294,9 @@ func (s *PlatformService) ListReposByPlatform(ctx context.Context, platformKey s
 	platform, err := s.platformDAO.FindByKey(platformKey)
 	if err != nil {
 		return nil, err
+	}
+	if platform == nil {
+		return nil, errors.Newf("platform not found: %s", platformKey)
 	}
 	return s.repoDAO.FindByPlatformID(platform.ID)
 }

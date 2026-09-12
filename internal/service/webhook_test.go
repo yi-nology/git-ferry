@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/yi-nology/git-sync-service/internal/dao"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -342,5 +342,33 @@ func TestRetryEvent_NotFound(t *testing.T) {
 	}
 	if err != ErrEventNotFound {
 		t.Errorf("expected ErrEventNotFound, got %v", err)
+	}
+}
+
+func TestApplyRules_MarksEventProcessed(t *testing.T) {
+	svc, _ := setupWebhookTestService(t)
+	ctx := context.Background()
+
+	event := &model.WebhookEvent{
+		EventID:   "apply-rules-status",
+		RepoKey:   "test-repo",
+		EventType: "push",
+		Status:    model.StatusReceived,
+	}
+	if err := svc.webhooks.CreateWebhookEvent(event); err != nil {
+		t.Fatalf("Create event failed: %v", err)
+	}
+
+	svc.applyRules(ctx, "test-repo", event)
+
+	got, err := svc.webhooks.FindEventByID(event.ID)
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if got.Status != model.StatusProcessed {
+		t.Errorf("expected status %q after applyRules, got %q", model.StatusProcessed, got.Status)
+	}
+	if got.ProcessedAt == nil {
+		t.Error("expected processed_at to be set")
 	}
 }

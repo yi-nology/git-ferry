@@ -162,6 +162,12 @@ func (l *RedisLock) UnlockWithValue(ctx context.Context, key, value string) erro
 	if err != nil {
 		return errors.Wrap(err, "redis unlock failed")
 	}
+	// 清理 lockValues 避免条目累积:TTL 过期或显式释放后不再需要保留
+	l.mu.Lock()
+	if v, ok := l.lockValues[key]; ok && v == value {
+		delete(l.lockValues, key)
+	}
+	l.mu.Unlock()
 	return nil
 }
 

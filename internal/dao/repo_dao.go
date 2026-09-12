@@ -129,13 +129,18 @@ func (d *RepoDAO) BatchCreate(repos []*model.Repo, batchSize int) error {
 	return d.db.CreateInBatches(repos, batchSize).Error
 }
 
-// BatchUpdateCloneURLs 批量更新仓库的 CloneURL/SSHURL(事务内逐条 Save,保证加密字段不被覆盖)。
-func (d *RepoDAO) BatchUpdateCloneURLs(repos []*model.Repo) error {
+// BatchUpdateRepoMeta 批量更新仓库元数据(路径/展示名/默认分支/clone URL)。
+// 事务内用 map Updates,避免全字段回写覆盖加密 token/secret。
+func (d *RepoDAO) BatchUpdateRepoMeta(repos []*model.Repo) error {
 	return d.db.Transaction(func(tx *gorm.DB) error {
 		for _, r := range repos {
-			if err := tx.Model(r).Updates(map[string]interface{}{
-				"clone_url": r.CloneURL,
-				"ssh_url":   r.SSHURL,
+			if err := tx.Model(&model.Repo{}).Where("id = ?", r.ID).Updates(map[string]interface{}{
+				"clone_url":      r.CloneURL,
+				"ssh_url":        r.SSHURL,
+				"platform_owner": r.PlatformOwner,
+				"platform_repo":  r.PlatformRepo,
+				"name":           r.Name,
+				"default_branch": r.DefaultBranch,
 			}).Error; err != nil {
 				return err
 			}
@@ -224,7 +229,7 @@ func (d *RepoDAO) ListWithFilter(page Pagination, filter *RepoFilter) ([]*model.
 
 	// Apply search filter (LIKE on name or clone_url)
 	if filter.Search != "" {
-		like := "%" + filter.Search + "%"
+		like := "%" + EscapeLikePattern(filter.Search) + "%"
 		query = query.Where("(name LIKE ? OR clone_url LIKE ?)", like, like)
 	}
 

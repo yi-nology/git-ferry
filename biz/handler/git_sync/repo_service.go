@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
@@ -93,7 +94,12 @@ func RepoCreate(ctx context.Context, c *app.RequestContext) {
 	platformIDStr := c.Query("platform_id")
 	var platformID uint
 	if platformIDStr != "" {
-		_, _ = fmt.Sscanf(platformIDStr, "%d", &platformID)
+		pid, err := strconv.ParseUint(platformIDStr, 10, 64)
+		if err != nil {
+			response.BadRequest(c, "invalid platform_id: must be a positive integer")
+			return
+		}
+		platformID = uint(pid)
 	}
 
 	r, err := GetSyncService().CreateRepo(ctx, &syncmodel.CreateRepoRequest{
@@ -209,6 +215,10 @@ func BatchRepos(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "keys must not be empty")
 		return
 	}
+	if len(req.Keys) > 200 {
+		response.BadRequest(c, "too many keys: max 200 per batch")
+		return
+	}
 	if req.Action != "delete" {
 		response.BadRequest(c, fmt.Sprintf("unsupported action: %s", req.Action))
 		return
@@ -226,10 +236,18 @@ func BatchRepos(ctx context.Context, c *app.RequestContext) {
 			success++
 		}
 	}
-	response.Success(c, &repo.BatchReposResp{
+	resp := &repo.BatchReposResp{
 		Total:   converter.SafeIntToInt32(total),
 		Success: converter.SafeIntToInt32(success),
 		Failed:  converter.SafeIntToInt32(failed),
 		Errors:  errs,
-	})
+	}
+	// 全部失败返 400,部分失败返 207 Multi-Status,全部成功返 200
+	if failed > 0 && success == 0 {
+		response.Error(c, 400, "all deletions failed")
+	} else if failed > 0 {
+		c.JSON(207, resp)
+	} else {
+		response.Success(c, resp)
+	}
 }

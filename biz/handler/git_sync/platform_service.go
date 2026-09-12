@@ -3,6 +3,7 @@ package git_sync
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -22,6 +23,10 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 	}
 	if req.Name == "" || req.Type == "" || req.AccessToken == "" {
 		response.BadRequest(c, "name, type, access_token are required")
+		return
+	}
+	if !model.ValidPlatformTypes[req.Type] {
+		response.BadRequest(c, fmt.Sprintf("unsupported platform type: %s (valid: github, gitlab, gitea, gitee, gitcode, atomgit, tencent_code, custom)", req.Type))
 		return
 	}
 
@@ -203,20 +208,26 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 	result, err := GetSyncService().TestPlatformConnection(ctx, req.Key)
 	if err != nil {
 		// 更新平台状态为错误
-		_ = GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusError, err.Error())
+		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusError, err.Error()); statusErr != nil {
+			slog.Warn("failed to update platform status after test error", "key", req.Key, "error", statusErr)
+		}
 		response.InternalError(c, err.Error())
 		return
 	}
 
 	// 按实际连接结果落库:connected=false 时记录失败详情,不能一律写成功
 	if result != nil && result.Connected {
-		_ = GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusActive, "connection successful")
+		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusActive, "connection successful"); statusErr != nil {
+			slog.Warn("failed to update platform status to active", "key", req.Key, "error", statusErr)
+		}
 	} else {
 		failMsg := "connection failed"
 		if result != nil && result.Message != "" {
 			failMsg = result.Message
 		}
-		_ = GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusError, failMsg)
+		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, model.PlatformStatusError, failMsg); statusErr != nil {
+			slog.Warn("failed to update platform status to error", "key", req.Key, "error", statusErr)
+		}
 	}
 
 	response.Success(c, map[string]interface{}{

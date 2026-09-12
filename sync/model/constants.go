@@ -47,6 +47,23 @@ const (
 	DefaultTimeout       = 300
 	DefaultRetryCount    = 3
 	DefaultTempDir       = "/tmp/git-sync"
+
+	DefaultConnMaxLifeSec = 300 // 5 分钟
+	DefaultConnMaxIdleSec = 120 // 2 分钟
+	DefaultWebhookRateLimit = 10
+	DefaultMaxBodySize    = 10 << 20 // 10MB
+	DefaultRedisDialTimeout = 5
+	DefaultRedisReadTimeout = 3
+	DefaultRedisWriteTimeout = 3
+
+	// 上限值
+	MaxConcurrent     = 100
+	MaxDBOpenConns    = 200
+	MaxWebhookBodySize = 100 << 20 // 100MB
+	MaxWebhookRateLimit = 10000
+
+	// Push retry 退避因子
+	RetryBackoffMs = 500
 )
 
 // Step name constants

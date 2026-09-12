@@ -31,7 +31,7 @@ type RepoProvider interface {
 
 // PlatformProvider provides platform lookup by ID.
 type PlatformProvider interface {
-	GetPlatformByID(id uint) (*model.Platform, error)
+	GetPlatformByID(ctx context.Context, id uint) (*model.Platform, error)
 }
 
 // Service is the interface the executor depends on.
@@ -110,8 +110,19 @@ func (e *Executor) Execute(ctx context.Context, task *model.SyncTask, trigger st
 		return failRun(run, errors.Newf("target repo not found: %s", task.TargetRepoKey))
 	}
 
+	// 空分支回退到仓库默认分支,再回退 "main":否则 clone/fetch/push 会拼出
+	// "refs/heads/:refs/heads/" 这类坏 refspec,表现为静默零推送或直接失败。
+	// 注意:只用本地副本做 git 操作,不回写原 task(CompleteRun 会 Save 整行)。
+	runTask := *task
+	if runTask.SourceBranch == "" {
+		runTask.SourceBranch = defaultBranchOf(sourceRepo)
+	}
+	if runTask.TargetBranch == "" {
+		runTask.TargetBranch = defaultBranchOf(targetRepo)
+	}
+
 	// 预取 source/target 的 platform 记录,避免后续每次 git 操作都查 DB。
-	platforms := e.prefetchPlatforms(sourceRepo, targetRepo)
+	platforms := e.prefetchPlatforms(ctx, sourceRepo, targetRepo)
 
 	workDir := e.service.GetTempDir(task.Key)
 	if err := os.MkdirAll(workDir, 0o750); err != nil {
@@ -149,14 +160,14 @@ func (e *Executor) Execute(ctx context.Context, task *model.SyncTask, trigger st
 	step1 := e.beginStep(run.ID, step1Name)
 	if step1Name == model.StepClone {
 		details.WriteString("Step 1: Initial clone of source repo...\n")
-		if err := e.cloneRepo(execCtx, repoDir, sourceRepo, task, platforms[sourceRepo.PlatformID]); err != nil {
+		if err := e.cloneRepo(execCtx, repoDir, sourceRepo, &runTask, platforms[sourceRepo.PlatformID]); err != nil {
 			e.failStep(step1, err)
 			fmt.Fprintf(&details, "clone error: %v\n", err)
 			return failRun(run, errors.Wrap(err, "clone failed"))
 		}
 	} else {
 		details.WriteString("Step 1: Fetch updates from source repo...\n")
-		if err := e.fetchRepo(execCtx, repoDir, task, sourceRepo, platforms[sourceRepo.PlatformID]); err != nil {
+		if err := e.fetchRepo(execCtx, repoDir, &runTask, sourceRepo, platforms[sourceRepo.PlatformID]); err != nil {
 			e.failStep(step1, err)
 			fmt.Fprintf(&details, "fetch error: %v\n", err)
 			return failRun(run, errors.Wrap(err, "fetch failed"))
@@ -190,26 +201,28 @@ func (e *Executor) Execute(ctx context.Context, task *model.SyncTask, trigger st
 			step3.RetryCount = attempt - 1
 			fmt.Fprintf(&details, "\nRetry attempt %d/%d...\n", attempt, maxRetries)
 			// 退避期间监听 context,超时/取消时立即中止,不再干等
-			backoff := time.Duration(attempt*500) * time.Millisecond
+			backoff := time.Duration(attempt*model.RetryBackoffMs) * time.Millisecond
+			timer := time.NewTimer(backoff)
 			select {
 			case <-execCtx.Done():
+				timer.Stop()
 				pushErr = execCtx.Err()
 				fmt.Fprintf(&details, "retry aborted (context done): %v\n", pushErr)
-			case <-time.After(backoff):
+			case <-timer.C:
 			}
 			if pushErr != nil {
 				break
 			}
 		}
 
-		pushErr = e.push(execCtx, repoDir, task, targetRepo, platforms[targetRepo.PlatformID])
+		pushErr = e.push(execCtx, repoDir, &runTask, targetRepo, platforms[targetRepo.PlatformID])
 		if pushErr == nil {
 			break
 		}
 
 		if attempt < maxRetries {
 			details.WriteString("Push failed, retrying fetch...\n")
-			if err := e.fetchRepo(execCtx, repoDir, task, sourceRepo, platforms[sourceRepo.PlatformID]); err != nil {
+			if err := e.fetchRepo(execCtx, repoDir, &runTask, sourceRepo, platforms[sourceRepo.PlatformID]); err != nil {
 				fmt.Fprintf(&details, "Retry fetch failed: %v\n", err)
 			}
 		}
@@ -240,7 +253,7 @@ func failRun(run *model.SyncRun, err error) (*model.SyncRun, error) {
 
 // prefetchPlatforms 预取 source/target 的 platform 记录,返回 platformID→Platform 映射。
 // 一次 Execute 内复用,避免后续每次 git 操作都查 DB。
-func (e *Executor) prefetchPlatforms(repos ...*model.Repo) map[uint]*model.Platform {
+func (e *Executor) prefetchPlatforms(ctx context.Context, repos ...*model.Repo) map[uint]*model.Platform {
 	platforms := make(map[uint]*model.Platform, 2)
 	for _, repo := range repos {
 		if repo.PlatformID == 0 {
@@ -249,7 +262,7 @@ func (e *Executor) prefetchPlatforms(repos ...*model.Repo) map[uint]*model.Platf
 		if _, ok := platforms[repo.PlatformID]; ok {
 			continue
 		}
-		p, err := e.service.GetPlatformByID(repo.PlatformID)
+		p, err := e.service.GetPlatformByID(ctx, repo.PlatformID)
 		if err != nil {
 			slog.Warn("prefetch platform failed", "platformID", repo.PlatformID, "error", err)
 			continue
@@ -260,7 +273,7 @@ func (e *Executor) prefetchPlatforms(repos ...*model.Repo) map[uint]*model.Platf
 }
 
 // authConfig 构建 git 认证配置。platform 可选(为 nil 时回退查 DB)。
-func (e *Executor) authConfig(repo *model.Repo, platform *model.Platform) gitbackend.AuthConfig {
+func (e *Executor) authConfig(ctx context.Context, repo *model.Repo, platform *model.Platform) gitbackend.AuthConfig {
 	var skipTLS bool
 	var platformToken string
 	if platform != nil {
@@ -268,7 +281,7 @@ func (e *Executor) authConfig(repo *model.Repo, platform *model.Platform) gitbac
 		platformToken = platform.AccessToken
 	} else if repo.PlatformID > 0 {
 		// 回退:platform 未预取时仍查一次(兼容直接调用)
-		if p, err := e.service.GetPlatformByID(repo.PlatformID); err == nil && p != nil {
+		if p, err := e.service.GetPlatformByID(ctx, repo.PlatformID); err == nil && p != nil {
 			skipTLS = p.SkipTLSVerify
 			platformToken = p.AccessToken
 		}
@@ -340,25 +353,34 @@ func (e *Executor) cloneRepo(ctx context.Context, dir string, repo *model.Repo, 
 		Path:         dir,
 		Branch:       task.SourceBranch,
 		SingleBranch: true,
-		Auth:         e.authConfig(repo, platform),
+		Auth:         e.authConfig(ctx, repo, platform),
 	})
 }
 
 func (e *Executor) fetchRepo(ctx context.Context, dir string, task *model.SyncTask, repo *model.Repo, platform *model.Platform) error {
+	// 克隆地址在 DB 里被修正(私有实例重写/仓库迁移)后,既有 workdir 的
+	// origin 仍指向旧地址;不同步会一直从错误源 fetch。
+	if err := e.syncRemoteURL(ctx, dir, RemoteOrigin, repo.CloneURL); err != nil {
+		slog.Warn("fetchRepo: update origin URL failed", "error", err, "dir", dir)
+	}
+
 	_, err := e.backend.Fetch(ctx, gitbackend.FetchOptions{
 		RepoPath: dir,
 		Remote:   RemoteOrigin,
 		Branches: []string{task.SourceBranch},
 		Tags:     task.GitTags,
 		Prune:    task.GitPrune,
-		Auth:     e.authConfig(repo, platform),
+		Auth:     e.authConfig(ctx, repo, platform),
 	})
 	if err != nil {
 		return err
 	}
 
 	// 增量同步时分支已在正确位置,仅当分支不同时才 checkout
-	cur, _ := e.backend.GetCurrentBranch(ctx, dir)
+	cur, curErr := e.backend.GetCurrentBranch(ctx, dir)
+	if curErr != nil {
+		slog.Warn("fetchRepo: GetCurrentBranch failed, will attempt checkout", "error", curErr, "dir", dir)
+	}
 	if cur != task.SourceBranch {
 		return e.backend.Checkout(ctx, dir, task.SourceBranch)
 	}
@@ -366,19 +388,55 @@ func (e *Executor) fetchRepo(ctx context.Context, dir string, task *model.SyncTa
 }
 
 func (e *Executor) ensureRemote(ctx context.Context, dir string, repo *model.Repo) error {
-	// 按配置的 remote 名称判断存在性(GetRemotes);此前用 ListRemoteBranches
-	// 依赖 remote-tracking refs,从未 fetch 过的既有 remote 会被误判为不存在,
-	// 导致 AddRemote 报 "remote target already exists"。
+	// 先看 remote 是否已配置;存在时再核对 URL(目标 clone_url 被重写后
+	// 只查存在性会继续推旧地址)。native 后端 GetRemoteURL 对缺失 remote
+	// 不返回 ErrRemoteNotFound,所以必须先走 GetRemotes。
 	remotes, err := e.backend.GetRemotes(ctx, dir)
 	if err != nil {
 		return err
 	}
+	exists := false
 	for _, name := range remotes {
 		if name == RemoteTarget {
-			return nil
+			exists = true
+			break
 		}
 	}
-	return e.backend.AddRemote(ctx, dir, RemoteTarget, repo.CloneURL)
+	if !exists {
+		return e.backend.AddRemote(ctx, dir, RemoteTarget, repo.CloneURL)
+	}
+	return e.syncRemoteURL(ctx, dir, RemoteTarget, repo.CloneURL)
+}
+
+// syncRemoteURL 确保 named remote 指向 wantURL(已存在时按需重建)。
+func (e *Executor) syncRemoteURL(ctx context.Context, dir, name, wantURL string) error {
+	if wantURL == "" {
+		return nil
+	}
+	cur, err := e.backend.GetRemoteURL(ctx, dir, name)
+	if err != nil {
+		return err
+	}
+	if remoteURLsEqual(cur, wantURL) {
+		return nil
+	}
+	if err := e.backend.RemoveRemote(ctx, dir, name); err != nil {
+		return err
+	}
+	return e.backend.AddRemote(ctx, dir, name, wantURL)
+}
+
+// remoteURLsEqual 比较 remote URL:忽略末尾斜杠,避免无意义的重建。
+func remoteURLsEqual(a, b string) bool {
+	return strings.TrimRight(a, "/") == strings.TrimRight(b, "/")
+}
+
+// defaultBranchOf 仓库默认分支,空则回退 "main"。
+func defaultBranchOf(repo *model.Repo) string {
+	if repo != nil && repo.DefaultBranch != "" {
+		return repo.DefaultBranch
+	}
+	return model.DefaultBranch
 }
 
 func (e *Executor) push(ctx context.Context, dir string, task *model.SyncTask, repo *model.Repo, platform *model.Platform) error {
@@ -392,7 +450,7 @@ func (e *Executor) push(ctx context.Context, dir string, task *model.SyncTask, r
 		Remote:   RemoteTarget,
 		RefSpecs: []string{refSpec},
 		Force:    task.GitForce,
-		Auth:     e.authConfig(repo, platform),
+		Auth:     e.authConfig(ctx, repo, platform),
 	})
 	return err
 }
@@ -400,4 +458,3 @@ func (e *Executor) push(ctx context.Context, dir string, task *model.SyncTask, r
 func timePtr(t time.Time) *time.Time {
 	return &t
 }
-

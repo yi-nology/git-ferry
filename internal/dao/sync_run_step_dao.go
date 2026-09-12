@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"time"
 
 	"github.com/yi-nology/git-sync-service/sync/model"
@@ -29,11 +30,14 @@ func (d *SyncRunStepDAO) FindByRunID(runID uint) ([]*model.SyncRunStep, error) {
 	return steps, err
 }
 
-func (d *SyncRunStepDAO) CleanupOlderThan(olderThan time.Duration) (int64, error) {
+func (d *SyncRunStepDAO) CleanupOlderThan(ctx context.Context, olderThan time.Duration) (int64, error) {
 	cutoff := time.Now().Add(-olderThan)
 	var total int64
 	for {
-		result := d.db.Where("created_at < ?", cutoff).Limit(1000).Delete(&model.SyncRunStep{})
+		if ctx.Err() != nil {
+			return total, ctx.Err()
+		}
+		result := d.db.WithContext(ctx).Where("created_at < ?", cutoff).Limit(1000).Delete(&model.SyncRunStep{})
 		if result.Error != nil {
 			return total, result.Error
 		}

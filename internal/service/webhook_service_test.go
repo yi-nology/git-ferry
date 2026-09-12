@@ -423,7 +423,7 @@ func TestWebhookService_CleanupOldEvents(t *testing.T) {
 	}
 
 	// Cleanup older than 24 hours
-	count, err := svc.CleanupOldEvents(24 * time.Hour)
+	count, err := svc.CleanupOldEvents(context.Background(), 24 * time.Hour)
 	if err != nil {
 		t.Fatalf("cleanup failed: %v", err)
 	}

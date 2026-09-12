@@ -82,6 +82,12 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 		bodySizeLimit = cfg.Webhook.MaxBodySize
 	}
 
+	// 先检查 Content-Length 头,快速拒绝过大的请求(避免读入内存)
+	if contentLen := c.Request.Header.ContentLength(); contentLen > bodySizeLimit {
+		response.Error(c, consts.StatusRequestEntityTooLarge, "request body too large")
+		return
+	}
+
 	bodyBytes, bodyErr := c.Body()
 	if bodyErr != nil {
 		response.BadRequest(c, "failed to read request body")

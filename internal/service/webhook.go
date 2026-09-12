@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/yi-nology/git-platform-sdk/pkg/branchfilter"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	"gorm.io/gorm"
 )
 
 // isDuplicateKeyErr 判断错误是否为 DB 唯一约束冲突(MySQL 1062 / SQLite UNIQUE)。
@@ -40,7 +38,7 @@ func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, req *http.
 	}
 
 	existing, err := s.webhooks.FindEventByEventID(event.ID)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return err
 	}
 	if existing != nil {
@@ -93,6 +91,19 @@ func (s *Service) safeApplyRules(ctx context.Context, repoKey string, event *mod
 
 func (s *Service) applyRules(ctx context.Context, repoKey string, event *model.WebhookEvent) {
 	eventID := event.ID
+
+	// 正常入站路径必须闭环状态机:received → processing → processed。
+	// 此前只在 RetryEvent 里标记 processed,首次接收的事件会永远停在
+	// received,历史列表无法区分「待处理」和「已处理完」。
+	if _, err := s.webhooks.MarkEventProcessing(ctx, eventID); err != nil {
+		slog.Warn("mark event processing failed", "eventID", eventID, "error", err)
+	}
+	defer func() {
+		if err := s.webhooks.MarkEventProcessed(event); err != nil {
+			slog.Error("mark event processed failed", "eventID", eventID, "error", err)
+		}
+	}()
+
 	s.webhooks.ApplyRules(ctx, repoKey, event, &s.lastTriggerTime, func(ctx context.Context, taskKey, trigger string, webhookEventID *uint) error {
 		return s.RunTaskWithTrigger(ctx, taskKey, trigger, webhookEventID)
 	}, &eventID)
@@ -103,14 +114,12 @@ func (s *Service) RetryEvent(ctx context.Context, eventID uint) error {
 	if err != nil {
 		return err
 	}
-	// 纳入 WaitGroup + 用 bgCtx,优雅关停时能被等待/取消,不再泄露 goroutine
+	// 纳入 WaitGroup + 用 bgCtx,优雅关停时能被等待/取消,不再泄露 goroutine。
+	// applyRules 内部会闭环 processing → processed,这里不再重复标记。
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
 		s.safeApplyRules(s.bgCtx, event.RepoKey, event)
-		if err := s.webhooks.MarkEventProcessed(event); err != nil {
-			slog.Error("mark event processed failed", "eventID", eventID, "error", err)
-		}
 	}()
 	return nil
 }

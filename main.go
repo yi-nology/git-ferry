@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"runtime/debug"
 	"syscall"
 	"time"
 
-	"github.com/cloudwego/hertz/pkg/app/middlewares/server/recovery"
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
 	"github.com/oklog/run"
@@ -21,6 +23,28 @@ import (
 )
 
 var syncSvc *sync.Service
+
+// customRecovery 返回 JSON 格式的 panic 恢复中间件,
+// 替代 Hertz 默认的 recovery.Recovery() (返回 HTML/text,前端无法解析)。
+func customRecovery() app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("handler panic recovered",
+					"panic", fmt.Sprintf("%v", r),
+					"stack", string(debug.Stack()),
+					"method", string(c.Method()),
+					"path", string(c.Path()),
+				)
+				c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": "internal server error",
+				})
+				c.Abort()
+			}
+		}()
+		c.Next(ctx)
+	}
+}
 
 func main() {
 	cfg, err := sync.LoadConfig("conf/config.yaml")
@@ -76,8 +100,8 @@ func main() {
 		server.WithMaxRequestBodySize(cfg.Webhook.MaxBodySize),
 	)
 
-	// Recovery 中间件:handler panic 时返回 500 而非崩进程(内置实现带栈追踪)
-	h.Use(recovery.Recovery())
+	// Recovery 中间件:handler panic 时返回 JSON 500 而非默认 HTML/text
+	h.Use(customRecovery())
 	// gzip 压缩:JSON 响应体积减 60-80%
 	h.Use(gzip.Gzip(gzip.DefaultCompression))
 

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/robfig/cron/v3"
 	"github.com/yi-nology/git-sync-service/sync/model"
 )
 
@@ -20,6 +21,13 @@ func (s *Service) GetTask(ctx context.Context, key string) (*model.SyncTask, err
 }
 
 func (s *Service) CreateTask(ctx context.Context, req *model.CreateTaskRequest) (*model.SyncTask, error) {
+	// 预校验 cron 表达式,避免写入 DB 后才发现无效
+	if req.Cron != "" {
+		if _, err := cron.ParseStandard(req.Cron); err != nil {
+			return nil, fmt.Errorf("invalid cron expression %q: %w", req.Cron, err)
+		}
+	}
+
 	task, err := s.tasks.CreateTask(ctx, req)
 	if err != nil {
 		return nil, err
@@ -35,6 +43,13 @@ func (s *Service) CreateTask(ctx context.Context, req *model.CreateTaskRequest) 
 }
 
 func (s *Service) UpdateTask(ctx context.Context, req *model.UpdateTaskRequest) (*model.SyncTask, error) {
+	// 预校验 cron 表达式,避免写入 DB 后才发现无效
+	if req.Cron != "" {
+		if _, err := cron.ParseStandard(req.Cron); err != nil {
+			return nil, fmt.Errorf("invalid cron expression %q: %w", req.Cron, err)
+		}
+	}
+
 	task, err := s.tasks.UpdateTask(ctx, req)
 	if err != nil {
 		return nil, err

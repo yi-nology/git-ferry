@@ -2,6 +2,9 @@ package git_sync
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	operation_log "github.com/yi-nology/git-sync-service/biz/model/operation_log"
@@ -27,6 +30,20 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 
 	offset, limit := converter.PageToOffset(req.Page, req.PageSize)
 
+	// 校验日期格式,避免非法字符串导致 DB 查询报错
+	if req.StartDate != "" {
+		if _, err := time.Parse("2006-01-02", req.StartDate); err != nil {
+			response.BadRequest(c, "invalid start_date format, expected YYYY-MM-DD")
+			return
+		}
+	}
+	if req.EndDate != "" {
+		if _, err := time.Parse("2006-01-02", req.EndDate); err != nil {
+			response.BadRequest(c, "invalid end_date format, expected YYYY-MM-DD")
+			return
+		}
+	}
+
 	filter := dao.OperationLogFilter{
 		Search:    req.Search,
 		Action:    req.Action,
@@ -43,8 +60,15 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	svc := GetSyncService()
 	statsCh := make(chan statsResult, 1)
 	go func() {
-		t, w, tot, e := svc.OperationStats(ctx)
-		statsCh <- statsResult{t, w, tot, e}
+		var r statsResult
+		defer func() {
+			if v := recover(); v != nil {
+				r.err = fmt.Errorf("OperationStats panic: %v", v)
+				slog.Error("goroutine panic recovered", "goroutine", "OperationStats", "panic", v)
+			}
+			statsCh <- r
+		}()
+		r.today, r.week, r.total, r.err = svc.OperationStats(ctx)
 	}()
 
 	list, total, err := svc.ListOperations(ctx, offset, limit, &filter)

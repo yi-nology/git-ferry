@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yi-nology/git-platform-sdk/pkg/branchfilter"
 	"github.com/yi-nology/git-sync-service/internal/dao"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	"github.com/yi-nology/git-platform-sdk/pkg/branchfilter"
 )
 
 // WebhookService handles webhook-related operations.
@@ -116,7 +116,8 @@ func (ws *WebhookService) MarkEventProcessing(ctx context.Context, eventID uint)
 		return nil, ErrEventNotFound
 	}
 	event.Status = model.StatusProcessing
-	if err := ws.eventDAO.Update(event); err != nil {
+	// targeted UPDATE,避免全字段回写大 payload
+	if err := ws.eventDAO.UpdateStatus(event.ID, model.StatusProcessing, nil); err != nil {
 		slog.Error("failed to update event status to processing", "eventID", eventID, "error", err)
 	}
 	return event, nil
@@ -203,6 +204,6 @@ func (ws *WebhookService) CreateWebhookEvent(event *model.WebhookEvent) error {
 }
 
 // CleanupOldEvents removes webhook events older than the specified duration.
-func (ws *WebhookService) CleanupOldEvents(maxAge time.Duration) (int64, error) {
-	return ws.eventDAO.CleanupOlderThan(maxAge)
+func (ws *WebhookService) CleanupOldEvents(ctx context.Context, maxAge time.Duration) (int64, error) {
+	return ws.eventDAO.CleanupOlderThan(ctx, maxAge)
 }

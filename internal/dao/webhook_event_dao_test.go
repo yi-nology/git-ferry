@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -218,7 +219,7 @@ func TestWebhookEventDAO_CleanupOlderThan(t *testing.T) {
 	require.NoError(t, err, "create new event failed")
 
 	// Cleanup older than 24 hours
-	count, err := d.CleanupOlderThan(24 * time.Hour)
+	count, err := d.CleanupOlderThan(context.Background(), 24 * time.Hour)
 	require.NoError(t, err, "cleanup failed")
 
 	assert.Equal(t, int64(1), count, "expected count 1")

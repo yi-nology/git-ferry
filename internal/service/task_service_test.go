@@ -367,7 +367,7 @@ func TestTaskService_CleanupOldRuns(t *testing.T) {
 	require.NoError(t, err, "create new run failed")
 
 	// Cleanup older than 24 hours
-	count, err := svc.CleanupOldRuns(24 * time.Hour)
+	count, err := svc.CleanupOldRuns(context.Background(), 24 * time.Hour)
 	require.NoError(t, err, "cleanup failed")
 
 	assert.Equal(t, int64(1), count, "expected count 1")
@@ -408,7 +408,7 @@ func TestTaskService_CleanupOldRunSteps(t *testing.T) {
 	require.NoError(t, err, "create new step failed")
 
 	// Cleanup older than 24 hours
-	count, err := svc.CleanupOldRunSteps(24 * time.Hour)
+	count, err := svc.CleanupOldRunSteps(context.Background(), 24 * time.Hour)
 	require.NoError(t, err, "cleanup failed")
 
 	assert.Equal(t, int64(1), count, "expected count 1")

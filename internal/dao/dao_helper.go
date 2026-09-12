@@ -2,9 +2,19 @@ package dao
 
 import (
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 )
+
+// EscapeLikePattern 转义 SQL LIKE 模式中的通配符(% 和 _),
+// 防止用户搜索词被当作通配符使用导致意外宽匹配。
+func EscapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
 
 // Paginate 执行分页查询
 func Paginate[T any](db *gorm.DB, page Pagination, dest *[]*T) (int64, error) {

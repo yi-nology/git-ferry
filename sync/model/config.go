@@ -36,13 +36,14 @@ type DatabaseConfig struct {
 }
 
 type RedisConfig struct {
-	Addr           string `yaml:"addr" env:"GIT_SYNC_REDIS_ADDR"`
-	Password       string `yaml:"password" env:"GIT_SYNC_REDIS_PASSWORD"`
-	DB             int    `yaml:"db" env:"GIT_SYNC_REDIS_DB"`
-	PoolSize       int    `yaml:"pool_size" env:"GIT_SYNC_REDIS_POOL_SIZE"`         // 连接池大小,0 用 go-redis 默认(10*GOMAXPROCS)
-	MinIdleConns   int    `yaml:"min_idle_conns" env:"GIT_SYNC_REDIS_MIN_IDLE_CONNS"` // 最小空闲连接数,0 不预热
-	DialTimeoutSec int    `yaml:"dial_timeout_sec" env:"GIT_SYNC_REDIS_DIAL_TIMEOUT_SEC"` // 建连超时秒数,0 不设超时
-	ReadTimeoutSec int    `yaml:"read_timeout_sec" env:"GIT_SYNC_REDIS_READ_TIMEOUT_SEC"` // 读超时秒数,0 不设超时
+	Addr            string `yaml:"addr" env:"GIT_SYNC_REDIS_ADDR"`
+	Password        string `yaml:"password" env:"GIT_SYNC_REDIS_PASSWORD"`
+	DB              int    `yaml:"db" env:"GIT_SYNC_REDIS_DB"`
+	PoolSize        int    `yaml:"pool_size" env:"GIT_SYNC_REDIS_POOL_SIZE"`           // 连接池大小,0 用 go-redis 默认(10*GOMAXPROCS)
+	MinIdleConns    int    `yaml:"min_idle_conns" env:"GIT_SYNC_REDIS_MIN_IDLE_CONNS"` // 最小空闲连接数,0 不预热
+	DialTimeoutSec  int    `yaml:"dial_timeout_sec" env:"GIT_SYNC_REDIS_DIAL_TIMEOUT_SEC"`  // 建连超时秒数,0 不设超时
+	ReadTimeoutSec  int    `yaml:"read_timeout_sec" env:"GIT_SYNC_REDIS_READ_TIMEOUT_SEC"`  // 读超时秒数,0 不设超时
+	WriteTimeoutSec int    `yaml:"write_timeout_sec" env:"GIT_SYNC_REDIS_WRITE_TIMEOUT_SEC"` // 写超时秒数,0 不设超时
 }
 
 type GitConfig struct {
@@ -128,10 +129,10 @@ func (c *Config) Validate() error {
 		c.Database.MaxOpenConns = DefaultMaxOpenConns
 	}
 	if c.Database.ConnMaxLifeSec <= 0 {
-		c.Database.ConnMaxLifeSec = 300 // 5 分钟
+		c.Database.ConnMaxLifeSec = DefaultConnMaxLifeSec
 	}
 	if c.Database.ConnMaxIdleSec <= 0 {
-		c.Database.ConnMaxIdleSec = 120 // 2 分钟
+		c.Database.ConnMaxIdleSec = DefaultConnMaxIdleSec
 	}
 	if c.Git.TempDir == "" {
 		c.Git.TempDir = DefaultTempDir
@@ -146,19 +147,35 @@ func (c *Config) Validate() error {
 		c.Sync.RetryCount = DefaultRetryCount
 	}
 	if c.Webhook.RateLimit <= 0 {
-		c.Webhook.RateLimit = 10
+		c.Webhook.RateLimit = DefaultWebhookRateLimit
 	}
 	if c.Webhook.MaxBodySize <= 0 {
-		c.Webhook.MaxBodySize = 10 << 20 // 10MB
+		c.Webhook.MaxBodySize = DefaultMaxBodySize
 	}
 	// Redis 超时默认值:0 意味着无限阻塞,生产环境必须有超时
 	if c.Redis.Addr != "" {
 		if c.Redis.DialTimeoutSec <= 0 {
-			c.Redis.DialTimeoutSec = 5
+			c.Redis.DialTimeoutSec = DefaultRedisDialTimeout
 		}
 		if c.Redis.ReadTimeoutSec <= 0 {
-			c.Redis.ReadTimeoutSec = 3
+			c.Redis.ReadTimeoutSec = DefaultRedisReadTimeout
 		}
+		if c.Redis.WriteTimeoutSec <= 0 {
+			c.Redis.WriteTimeoutSec = DefaultRedisWriteTimeout
+		}
+	}
+	// 数值上限:防止配置错误导致资源耗尽
+	if c.Sync.MaxConcurrent > MaxConcurrent {
+		c.Sync.MaxConcurrent = MaxConcurrent
+	}
+	if c.Database.MaxOpenConns > MaxDBOpenConns {
+		c.Database.MaxOpenConns = MaxDBOpenConns
+	}
+	if c.Webhook.MaxBodySize > MaxWebhookBodySize {
+		c.Webhook.MaxBodySize = MaxWebhookBodySize
+	}
+	if c.Webhook.RateLimit > MaxWebhookRateLimit {
+		c.Webhook.RateLimit = MaxWebhookRateLimit
 	}
 	return nil
 }

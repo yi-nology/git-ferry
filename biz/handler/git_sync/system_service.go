@@ -4,6 +4,8 @@ package git_sync
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"runtime"
 	"time"
 
@@ -30,12 +32,26 @@ func SystemStatus(ctx context.Context, c *app.RequestContext) {
 	repoCh := make(chan repoCountResult, 1)
 	taskCh := make(chan taskCountResult, 1)
 	go func() {
-		c, e := svc.CountRepos()
-		repoCh <- repoCountResult{c, e}
+		var r repoCountResult
+		defer func() {
+			if v := recover(); v != nil {
+				r.err = fmt.Errorf("CountRepos panic: %v", v)
+				slog.Error("goroutine panic recovered", "goroutine", "CountRepos", "panic", v)
+			}
+			repoCh <- r
+		}()
+		r.count, r.err = svc.CountRepos()
 	}()
 	go func() {
-		c, e := svc.CountTasksByStatus()
-		taskCh <- taskCountResult{c, e}
+		var r taskCountResult
+		defer func() {
+			if v := recover(); v != nil {
+				r.err = fmt.Errorf("CountTasksByStatus panic: %v", v)
+				slog.Error("goroutine panic recovered", "goroutine", "CountTasksByStatus", "panic", v)
+			}
+			taskCh <- r
+		}()
+		r.counts, r.err = svc.CountTasksByStatus()
 	}()
 
 	rr := <-repoCh

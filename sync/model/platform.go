@@ -44,6 +44,18 @@ const (
 	PlatformTypeCustom      = "custom"
 )
 
+// ValidPlatformTypes 合法的平台类型集合,用于输入校验。
+var ValidPlatformTypes = map[string]bool{
+	PlatformTypeGitHub:      true,
+	PlatformTypeGitLab:      true,
+	PlatformTypeGitea:       true,
+	PlatformTypeGitee:       true,
+	PlatformTypeGitCode:     true,
+	PlatformTypeAtomGit:     true,
+	PlatformTypeTencentCode: true,
+	PlatformTypeCustom:      true,
+}
+
 // PlatformStatus 平台状态常量
 const (
 	PlatformStatusActive = "active"

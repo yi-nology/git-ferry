@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yi-nology/git-sync-service/internal/lock"
+	"github.com/yi-nology/git-sync-service/sync/model"
 )
 
 // releaseFunc 释放 Acquire 拿到的执行权(任务互斥锁 + 全局并发槽),由调用方 defer。
@@ -46,7 +47,7 @@ type localGuard struct {
 
 func newLocalGuard(maxConcurrent int) *localGuard {
 	if maxConcurrent <= 0 {
-		maxConcurrent = 5
+		maxConcurrent = model.DefaultMaxConcurrent
 	}
 	return &localGuard{sem: make(chan struct{}, maxConcurrent)}
 }
@@ -85,7 +86,7 @@ type redisGuard struct {
 
 func newRedisGuard(addr, password string, db, maxConcurrent int, poolOpts lock.RedisPoolOptions) (*redisGuard, error) {
 	if maxConcurrent <= 0 {
-		maxConcurrent = 5
+		maxConcurrent = model.DefaultMaxConcurrent
 	}
 	rl := lock.NewRedisLock(addr, password, db, lock.WithPoolOptions(poolOpts))
 	if err := rl.Ping(context.Background()); err != nil {
@@ -128,8 +129,12 @@ func (g *redisGuard) Acquire(ctx context.Context, taskKey string) (releaseFunc, 
 		// 用带超时的独立 context 释放,避免 Redis 不可响应时 goroutine 永久挂死
 		releaseCtx, releaseCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer releaseCancel()
-		_ = g.rlock.UnlockWithValue(releaseCtx, lockKey, value)
-		_ = g.sem.Release(releaseCtx, semID)
+		if err := g.rlock.UnlockWithValue(releaseCtx, lockKey, value); err != nil {
+			slog.Warn("release: failed to unlock", "lockKey", lockKey, "error", err)
+		}
+		if err := g.sem.Release(releaseCtx, semID); err != nil {
+			slog.Warn("release: failed to release semaphore slot", "semID", semID, "error", err)
+		}
 	}, nil
 }
 
@@ -137,6 +142,11 @@ func (g *redisGuard) Acquire(ctx context.Context, taskKey string) (releaseFunc, 
 // 使用 context.Background() 是有意为之：watchdog 作为后台 goroutine 需要在请求上下文取消后继续运行，
 // 直到 stop 通道被关闭。这是后台任务续期的标准模式。
 func (g *redisGuard) watchdog(lockKey, value, semID string, stop <-chan struct{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("watchdog goroutine panic recovered", "lockKey", lockKey, "panic", fmt.Sprintf("%v", r))
+		}
+	}()
 	t := time.NewTicker(renewInterval)
 	defer t.Stop()
 	ctx := context.Background() //nolint:gosec // watchdog goroutine intentionally uses background context
@@ -153,7 +163,9 @@ func (g *redisGuard) watchdog(lockKey, value, semID string, stop <-chan struct{}
 				}
 			} else {
 				failures = 0
-				_ = g.sem.Renew(ctx, semID)
+				if err := g.sem.Renew(ctx, semID); err != nil {
+					slog.Warn("watchdog: failed to renew semaphore slot", "semID", semID, "error", err)
+				}
 			}
 		}
 	}

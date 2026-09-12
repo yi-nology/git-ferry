@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/yi-nology/git-platform-sdk/pkg/credential"
 	"github.com/yi-nology/git-platform-sdk/provider"
 	"github.com/yi-nology/git-sync-service/internal/dao"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -148,6 +148,32 @@ func TestCreateRepo_InvalidURL(t *testing.T) {
 	_, err := svc.CreateRepo(ctx, req)
 	if err == nil {
 		t.Fatal("expected error for invalid URL, got nil")
+	}
+}
+
+func TestCreateRepo_NestedGroupPath(t *testing.T) {
+	svc, _ := setupTestService(t)
+	ctx := context.Background()
+
+	// DetectPlatform 对已知平台会拆 (owner, rest);这里主要防手工 URL 解析回退
+	// 再次把嵌套群组截成两段。
+	req := &model.CreateRepoRequest{
+		Name:        "nested",
+		RemoteURL:   "https://gitlab.com/obs/sdk/server.git",
+		AccessToken: "glpat-x",
+	}
+
+	repo, err := svc.CreateRepo(ctx, req)
+	if err != nil {
+		t.Fatalf("CreateRepo nested group failed: %v", err)
+	}
+
+	if repo.PlatformOwner != "obs" {
+		t.Errorf("expected owner 'obs', got %q", repo.PlatformOwner)
+	}
+	// DetectPlatform 语义:第一段作 owner,其余整段作 repo path
+	if repo.PlatformRepo != "sdk/server" {
+		t.Errorf("expected repo path 'sdk/server', got %q", repo.PlatformRepo)
 	}
 }
 

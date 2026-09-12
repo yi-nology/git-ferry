@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -27,6 +27,7 @@ type Config = model.Config
 type Service struct {
 	config    *Config
 	db        *gorm.DB
+	sqlDB     *sql.DB
 	repos     *RepoService
 	tasks     *TaskService
 	webhooks  *WebhookService
@@ -37,9 +38,10 @@ type Service struct {
 	cronMu          sync.RWMutex
 	executor        *executor.Executor
 	lastTriggerTime sync.Map
-	// guard 统一封装“同 taskKey 互斥 + 全局并发上限”;配 redis 时为分布式,否则进程内。
+	// guard 统一封装”同 taskKey 互斥 + 全局并发上限”;配 redis 时为分布式,否则进程内。
 	guard concurrencyGuard
 	cleanupDone chan struct{}
+	stopOnce    sync.Once
 	bgCtx           context.Context
 	bgCancel        context.CancelFunc
 	wg              sync.WaitGroup
@@ -95,6 +97,7 @@ func NewService(cfg *Config) (*Service, error) {
 	svc := &Service{
 		config:       cfg,
 		db:           db,
+		sqlDB:        sqlDB,
 		repos:        repoService,
 		tasks:        taskService,
 		webhooks:     webhookService,
@@ -116,6 +119,7 @@ func NewService(cfg *Config) (*Service, error) {
 		MinIdleConns:    cfg.Redis.MinIdleConns,
 		DialTimeoutSec:  cfg.Redis.DialTimeoutSec,
 		ReadTimeoutSec:  cfg.Redis.ReadTimeoutSec,
+		WriteTimeoutSec: cfg.Redis.WriteTimeoutSec,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "init concurrency guard failed")
@@ -131,6 +135,11 @@ func NewService(cfg *Config) (*Service, error) {
 	svc.wg.Add(1)
 	go func() {
 		defer svc.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("cleanupTriggerTimes goroutine panic recovered", "panic", r)
+			}
+		}()
 		svc.cleanupTriggerTimes()
 	}()
 
@@ -142,6 +151,10 @@ func (s *Service) Start() error {
 }
 
 func (s *Service) Stop() {
+	s.stopOnce.Do(s.doStop)
+}
+
+func (s *Service) doStop() {
 	// Cancel background context to signal all goroutines
 	s.bgCancel()
 	close(s.cleanupDone)
@@ -153,10 +166,12 @@ func (s *Service) Stop() {
 		s.wg.Wait()
 		close(done)
 	}()
+	stopTimer := time.NewTimer(10 * time.Second)
+	defer stopTimer.Stop()
 	select {
 	case <-done:
 		slog.Info("all background goroutines stopped")
-	case <-time.After(10 * time.Second):
+	case <-stopTimer.C:
 		slog.Warn("timeout waiting for background goroutines to stop")
 	}
 
@@ -164,6 +179,13 @@ func (s *Service) Stop() {
 	if s.guard != nil {
 		if err := s.guard.Close(); err != nil {
 			slog.Error("failed to close concurrency guard", "error", err)
+		}
+	}
+
+	// 关闭数据库连接池
+	if s.sqlDB != nil {
+		if err := s.sqlDB.Close(); err != nil {
+			slog.Error("failed to close database connection", "error", err)
 		}
 	}
 }
@@ -216,8 +238,8 @@ func (s *Service) GetRepoByKey(key string) (*model.Repo, error) {
 }
 
 // GetPlatformByID returns a platform by ID. Satisfies executor.PlatformProvider.
-func (s *Service) GetPlatformByID(id uint) (*model.Platform, error) {
-	return s.platforms.GetPlatformByID(context.Background(), id)
+func (s *Service) GetPlatformByID(ctx context.Context, id uint) (*model.Platform, error) {
+	return s.platforms.GetPlatformByID(ctx, id)
 }
 
 // HealthCheck checks the health of all dependencies.
@@ -229,20 +251,10 @@ func (s *Service) HealthCheck() map[string]string {
 		"service":  "ok",
 	}
 
-	// Check database connectivity + 连接池 stats
-	sqlDB, err := s.db.DB()
-	if err != nil {
-		slog.Error("healthcheck: db error", "error", err)
-		status["database"] = "unhealthy"
-	} else if err := sqlDB.Ping(); err != nil {
+	// Check database connectivity (公开端点不暴露连接池内部指标,避免信息泄露)
+	if err := s.sqlDB.Ping(); err != nil {
 		slog.Error("healthcheck: db ping failed", "error", err)
 		status["database"] = "unhealthy"
-	} else {
-		stats := sqlDB.Stats()
-		status["db_open_conns"] = fmt.Sprintf("%d", stats.OpenConnections)
-		status["db_in_use"] = fmt.Sprintf("%d", stats.InUse)
-		status["db_idle"] = fmt.Sprintf("%d", stats.Idle)
-		status["db_wait_count"] = fmt.Sprintf("%d", stats.WaitCount)
 	}
 
 	// Check Redis connectivity (if configured)

@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -140,7 +141,7 @@ func TestSyncRunStepDAO_CleanupOlderThan(t *testing.T) {
 	}
 
 	// Cleanup older than 24 hours
-	count, err := d.CleanupOlderThan(24 * time.Hour)
+	count, err := d.CleanupOlderThan(context.Background(), 24 * time.Hour)
 	if err != nil {
 		t.Fatalf("cleanup failed: %v", err)
 	}

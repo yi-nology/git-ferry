@@ -97,7 +97,7 @@ func (m *mockService) GetConfig() *model.Config {
 	return m.config
 }
 
-func (m *mockService) GetPlatformByID(id uint) (*model.Platform, error) {
+func (m *mockService) GetPlatformByID(_ context.Context, id uint) (*model.Platform, error) {
 	return &model.Platform{
 		ID:          id,
 		Key:         "test-platform",
@@ -251,7 +251,7 @@ func TestAuthConfig_WithToken(t *testing.T) {
 		AccessToken: "test-token",
 	}
 
-	config := exec.authConfig(repo, nil)
+	config := exec.authConfig(context.Background(), repo, nil)
 	assert.Equal(t, gitbackend.AuthHTTPBasic, config.Type, "expected HTTP Basic auth")
 	assert.Equal(t, "test-token", config.Password, "expected password 'test-token'")
 	assert.NotEmpty(t, config.Username, "expected non-empty placeholder username for HTTP Basic")
@@ -264,7 +264,7 @@ func TestAuthConfig_WithoutToken(t *testing.T) {
 
 	repo := &model.Repo{}
 
-	config := exec.authConfig(repo, nil)
+	config := exec.authConfig(context.Background(), repo, nil)
 	assert.Equal(t, gitbackend.AuthNone, config.Type, "expected auth type none")
 }
 
@@ -454,7 +454,7 @@ func TestAuthConfig_WithPlatform(t *testing.T) {
 		PlatformID:  1,
 	}
 
-	config := exec.authConfig(repo, nil)
+	config := exec.authConfig(context.Background(), repo, nil)
 	// mockService returns a platform with AccessToken="test-token"
 	assert.Equal(t, "test-token", config.Password, "expected platform token as password")
 }
@@ -469,7 +469,7 @@ func TestAuthConfig_RepoTokenOverridesPlatform(t *testing.T) {
 		PlatformID:  1,
 	}
 
-	config := exec.authConfig(repo, nil)
+	config := exec.authConfig(context.Background(), repo, nil)
 	// Repo token should take precedence
 	assert.Equal(t, "repo-specific-token", config.Password, "expected repo token as password")
 }
@@ -484,7 +484,7 @@ func TestAuthConfig_NoPlatformID(t *testing.T) {
 		PlatformID:  0,
 	}
 
-	config := exec.authConfig(repo, nil)
+	config := exec.authConfig(context.Background(), repo, nil)
 	assert.Equal(t, "none", string(config.Type), "expected auth type 'none'")
 }
 
@@ -743,4 +743,17 @@ func TestExecute_WithZeroRetryCount(t *testing.T) {
 	ctx := context.Background()
 	run, _ := exec.Execute(ctx, task, "manual", nil)
 	require.NotNil(t, run, "expected non-nil run")
+}
+
+func TestRemoteURLsEqual(t *testing.T) {
+	assert.True(t, remoteURLsEqual("https://a/b.git", "https://a/b.git"))
+	assert.True(t, remoteURLsEqual("https://a/b.git/", "https://a/b.git"))
+	assert.False(t, remoteURLsEqual("https://a/b.git", "https://a/c.git"))
+	assert.False(t, remoteURLsEqual("https://old/x.git", "https://new/x.git"))
+}
+
+func TestDefaultBranchOf(t *testing.T) {
+	assert.Equal(t, "develop", defaultBranchOf(&model.Repo{DefaultBranch: "develop"}))
+	assert.Equal(t, "main", defaultBranchOf(&model.Repo{DefaultBranch: ""}))
+	assert.Equal(t, "main", defaultBranchOf(nil))
 }

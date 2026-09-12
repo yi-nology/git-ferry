@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"time"
 
 	"github.com/yi-nology/git-sync-service/sync/model"
@@ -56,11 +57,15 @@ func (d *SyncRunDAO) FindRecent(page Pagination) ([]*model.SyncRun, error) {
 	return runs, err
 }
 
-func (d *SyncRunDAO) CleanupOlderThan(olderThan time.Duration) (int64, error) {
+func (d *SyncRunDAO) CleanupOlderThan(ctx context.Context, olderThan time.Duration) (int64, error) {
 	cutoff := time.Now().Add(-olderThan)
 	var total int64
 	for {
-		result := d.db.Where("created_at < ?", cutoff).Limit(1000).Delete(&model.SyncRun{})
+		// 每轮检查 context 是否已取消,支持优雅关闭时中断清理
+		if ctx.Err() != nil {
+			return total, ctx.Err()
+		}
+		result := d.db.WithContext(ctx).Where("created_at < ?", cutoff).Limit(1000).Delete(&model.SyncRun{})
 		if result.Error != nil {
 			return total, result.Error
 		}

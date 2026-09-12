@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -60,11 +61,14 @@ func (d *WebhookEventDAO) FindRecent(repoKey string, page Pagination) ([]*model.
 	return events, err
 }
 
-func (d *WebhookEventDAO) CleanupOlderThan(olderThan time.Duration) (int64, error) {
+func (d *WebhookEventDAO) CleanupOlderThan(ctx context.Context, olderThan time.Duration) (int64, error) {
 	cutoff := time.Now().Add(-olderThan)
 	var total int64
 	for {
-		result := d.db.Where("created_at < ?", cutoff).Limit(1000).Delete(&model.WebhookEvent{})
+		if ctx.Err() != nil {
+			return total, ctx.Err()
+		}
+		result := d.db.WithContext(ctx).Where("created_at < ?", cutoff).Limit(1000).Delete(&model.WebhookEvent{})
 		if result.Error != nil {
 			return total, result.Error
 		}

@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +11,22 @@ import (
 	"github.com/yi-nology/git-sync-service/sync/model"
 	"gorm.io/gorm"
 )
+
+// validBranchName 匹配合法的 git 分支名:字母数字._/-,不含冒号/双点/波浪号等危险字符。
+var validBranchName = regexp.MustCompile(`^[a-zA-Z0-9._/\-]+$`)
+
+func validateBranchName(branch string) error {
+	if branch == "" {
+		return nil // 空分支名由调用方处理(通常表示使用默认分支)
+	}
+	if !validBranchName.MatchString(branch) {
+		return fmt.Errorf("invalid branch name %q: only alphanumeric, '.', '_', '/', '-' are allowed", branch)
+	}
+	if branch == "." || branch == ".." {
+		return fmt.Errorf("invalid branch name %q", branch)
+	}
+	return nil
+}
 
 // TaskService handles sync task-related operations.
 type TaskService struct {
@@ -49,6 +67,12 @@ func (ts *TaskService) GetTask(ctx context.Context, key string) (*model.SyncTask
 
 // CreateTask creates a new sync task.
 func (ts *TaskService) CreateTask(ctx context.Context, req *model.CreateTaskRequest) (*model.SyncTask, error) {
+	if err := validateBranchName(req.SourceBranch); err != nil {
+		return nil, err
+	}
+	if err := validateBranchName(req.TargetBranch); err != nil {
+		return nil, err
+	}
 	task := &model.SyncTask{
 		Key:           uuid.New().String(),
 		Name:          req.Name,
@@ -86,9 +110,15 @@ func (ts *TaskService) UpdateTask(ctx context.Context, req *model.UpdateTaskRequ
 		task.Name = req.Name
 	}
 	if req.SourceBranch != "" {
+		if err := validateBranchName(req.SourceBranch); err != nil {
+			return nil, err
+		}
 		task.SourceBranch = req.SourceBranch
 	}
 	if req.TargetBranch != "" {
+		if err := validateBranchName(req.TargetBranch); err != nil {
+			return nil, err
+		}
 		task.TargetBranch = req.TargetBranch
 	}
 	if req.SyncMode != "" {
@@ -163,13 +193,13 @@ func (ts *TaskService) FindTaskByKey(key string) (*model.SyncTask, error) {
 }
 
 // CleanupOldRuns removes sync runs older than the specified duration.
-func (ts *TaskService) CleanupOldRuns(maxAge time.Duration) (int64, error) {
-	return ts.runDAO.CleanupOlderThan(maxAge)
+func (ts *TaskService) CleanupOldRuns(ctx context.Context, maxAge time.Duration) (int64, error) {
+	return ts.runDAO.CleanupOlderThan(ctx, maxAge)
 }
 
 // CleanupOldRunSteps removes sync run steps older than the specified duration.
-func (ts *TaskService) CleanupOldRunSteps(maxAge time.Duration) (int64, error) {
-	return ts.runStepDAO.CleanupOlderThan(maxAge)
+func (ts *TaskService) CleanupOldRunSteps(ctx context.Context, maxAge time.Duration) (int64, error) {
+	return ts.runStepDAO.CleanupOlderThan(ctx, maxAge)
 }
 
 // CreateRun creates a new sync run record for a task.

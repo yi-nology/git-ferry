@@ -37,7 +37,7 @@ func setupTaskTestService(t *testing.T) (*Service, *gorm.DB) {
 
 	svc := &Service{
 		tasks:          taskService,
-		cron:           cron.New(cron.WithSeconds()),
+		cron:           cron.New(),
 		cronEntryIDs:   make(map[string]cron.EntryID),
 		config: &model.Config{
 			Sync: model.SyncConfig{
@@ -106,7 +106,7 @@ func TestCreateTask_WithCron(t *testing.T) {
 		SourceBranch:  "main",
 		TargetRepoKey: "target-repo",
 		TargetBranch:  "main",
-		Cron:          "*/5 * * * * *",
+		Cron:          "*/5 * * * *",
 	}
 
 	task, err := svc.CreateTask(ctx, req)
@@ -114,8 +114,8 @@ func TestCreateTask_WithCron(t *testing.T) {
 		t.Fatalf("CreateTask failed: %v", err)
 	}
 
-	if task.Cron != "*/5 * * * * *" {
-		t.Errorf("expected cron '*/5 * * * * *', got %q", task.Cron)
+	if task.Cron != "*/5 * * * *" {
+		t.Errorf("expected cron '*/5 * * * *', got %q", task.Cron)
 	}
 
 	// Verify cron job was added
@@ -271,7 +271,7 @@ func TestDeleteTask(t *testing.T) {
 		SourceBranch:  "main",
 		TargetRepoKey: "target-repo",
 		TargetBranch:  "main",
-		Cron:          "*/5 * * * * *",
+		Cron:          "*/5 * * * *",
 	}
 
 	created, err := svc.CreateTask(ctx, req)
@@ -400,7 +400,7 @@ func TestPreviewSync_WithRepoDAO(t *testing.T) {
 
 	svc := &Service{
 		tasks:         taskService,
-		cron:          cron.New(cron.WithSeconds()),
+		cron:          cron.New(),
 		cronEntryIDs:  make(map[string]cron.EntryID),
 	}
 
@@ -464,7 +464,7 @@ func TestPreviewSync_MissingRepo(t *testing.T) {
 
 	svc := &Service{
 		tasks:         taskService,
-		cron:          cron.New(cron.WithSeconds()),
+		cron:          cron.New(),
 		cronEntryIDs:  make(map[string]cron.EntryID),
 	}
 

@@ -37,7 +37,7 @@ func (d *OperationLogDAO) List(page Pagination, filter *OperationLogFilter) ([]*
 	query := d.db.Model(&model.OperationLog{})
 
 	if filter.Search != "" {
-		like := "%" + filter.Search + "%"
+		like := "%" + EscapeLikePattern(filter.Search) + "%"
 		query = query.Where("(resource LIKE ? OR detail LIKE ?)", like, like)
 	}
 	if filter.Action != "" {

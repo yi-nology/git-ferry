@@ -7,9 +7,9 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 	"github.com/yi-nology/git-sync-service/internal/dao"
 	"github.com/yi-nology/git-sync-service/sync/model"
-	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 	"gorm.io/gorm"
 )
 
@@ -248,12 +248,38 @@ func TestPlatformService_GetByIDNotFound(t *testing.T) {
 	assert.Nil(t, p, "expected nil platform for non-existent ID")
 }
 
+func TestSplitRepoPath(t *testing.T) {
+	cases := []struct {
+		name      string
+		fullName  string
+		sdkOwner  string
+		sdkName   string
+		wantOwner string
+		wantPath  string
+	}{
+		{"普通两段路径", "yi-nology/iam-sdk", "wrong-user", "iam-sdk", "yi-nology", "iam-sdk"},
+		{"GitLab 嵌套群组", "obs/sdk/server", "obs", "server", "obs", "sdk/server"},
+		{"GitLab 展示名场景", "obs/insights-mcp-gateway", "obs", "Insights Mcp", "obs", "insights-mcp-gateway"},
+		{"FullName 缺失回退", "", "owner", "repo", "owner", "repo"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			owner, path := splitRepoPath(c.fullName, c.sdkOwner, c.sdkName)
+			assert.Equal(t, c.wantOwner, owner)
+			assert.Equal(t, c.wantPath, path)
+			if c.fullName != "" {
+				assert.Equal(t, c.fullName, owner+"/"+path, "pidOf 应还原完整路径")
+			}
+		})
+	}
+}
+
 func TestRewriteCloneHost(t *testing.T) {
 	cases := []struct {
-		name       string
-		rawURL     string
-		instance   string
-		want       string
+		name     string
+		rawURL   string
+		instance string
+		want     string
 	}{
 		{"私有实例重写公网地址", "https://gitcode.com/yi-nology/iam-web.git", "gitcode.kylinos.cn", "https://gitcode.kylinos.cn/yi-nology/iam-web.git"},
 		{"实例地址带 scheme", "https://gitcode.com/a/b.git", "https://gitcode.kylinos.cn", "https://gitcode.kylinos.cn/a/b.git"},
