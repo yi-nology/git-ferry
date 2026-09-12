@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	handler "github.com/yi-nology/git-sync-service/biz/handler/git_sync"
-	"github.com/yi-nology/git-sync-service/sync"
+	"github.com/yi-nology/git-sync-core"
 )
 
 const testAPIKey = "test-secret-api-key-12345"

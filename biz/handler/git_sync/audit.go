@@ -5,15 +5,22 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	syncmodel "github.com/yi-nology/git-sync-service/sync/model"
+	syncmodel "github.com/yi-nology/git-sync-core/model"
 )
 
 // recordAudit 记录一条审计日志（best-effort：写入失败仅告警，不影响主流程）。
 //
-// 系统采用共享 API Key 鉴权，无用户登录概念，因此 actor 取自请求头 X-User，
-// 缺省为 "admin"；待接入多用户鉴权后自然细化为真实用户。
+// actor 优先级：
+//  1. 壳层鉴权中间件写入的身份（SetAuthUser，内网 SSO/网关头）
+//  2. 请求头 X-User（兼容旧调用方/脚本）
+//  3. "admin"（共享 API Key 且未带用户头时的缺省）
+//
+// core 不感知登录态，只持久化 OperationLog.Actor。
 func recordAudit(ctx context.Context, c *app.RequestContext, action, resourceType, resourceKey, resource string) {
-	actor := string(c.GetHeader("X-User"))
+	actor := GetAuthUser(c)
+	if actor == "" {
+		actor = string(c.GetHeader("X-User"))
+	}
 	if actor == "" {
 		actor = "admin"
 	}

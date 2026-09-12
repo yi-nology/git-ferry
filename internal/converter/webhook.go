@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	webhookmodel "github.com/yi-nology/git-sync-service/biz/model/webhook"
-	"github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/model"
 )
 
 func ToRuleInfo(r *model.WebhookRule) *webhookmodel.WebhookRuleInfo {

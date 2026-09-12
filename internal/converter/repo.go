@@ -4,7 +4,7 @@ import (
 	"time"
 
 	repomodel "github.com/yi-nology/git-sync-service/biz/model/repo"
-	"github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/model"
 )
 
 func ToRepoInfo(r *model.Repo) *repomodel.RepoInfo {

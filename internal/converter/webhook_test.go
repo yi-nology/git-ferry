@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/model"
 )
 
 func TestToRuleInfo(t *testing.T) {

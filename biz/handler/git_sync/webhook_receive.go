@@ -1,16 +1,14 @@
 package git_sync
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"log/slog"
-	"net/http"
 	"strings"
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	synccore "github.com/yi-nology/git-sync-core"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
 	"golang.org/x/time/rate"
 )
@@ -98,27 +96,19 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	headers := make(map[string]string)
+	// 壳层负责 HTTP 协议；core 只收协议无关载荷，不在库内起 Web 服务。
+	header := make(map[string][]string)
 	c.Request.Header.VisitAll(func(k, v []byte) {
-		headers[string(k)] = string(v)
+		header[string(k)] = append(header[string(k)], string(v))
 	})
 
-	httpReq, err := http.NewRequest(
-		string(c.Method()),
-		string(c.Path()),
-		io.LimitReader(bytes.NewReader(bodyBytes), int64(bodySizeLimit)),
-	)
-	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-
-	for k, v := range headers {
-		httpReq.Header.Set(k, v)
-	}
-	httpReq.RemoteAddr = c.ClientIP()
-
-	err = GetSyncService().ReceiveWebhook(ctx, repoKey, httpReq)
+	err := GetSyncService().ReceiveWebhook(ctx, repoKey, &synccore.WebhookPayload{
+		Method:     string(c.Method()),
+		Path:       string(c.Path()),
+		Header:     header,
+		Body:       bodyBytes,
+		RemoteAddr: c.ClientIP(),
+	})
 	if err != nil {
 		// 签名验证失败是认证错误,返 401 而非 500;细节记服务端日志,不暴露给调用方
 		if strings.Contains(err.Error(), "signature") || strings.Contains(err.Error(), "unauthorized") {

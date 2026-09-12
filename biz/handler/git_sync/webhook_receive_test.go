@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/yi-nology/git-sync-service/sync"
+	"github.com/yi-nology/git-sync-core"
 )
 
 const testAPIKey = "test-secret-api-key-12345"

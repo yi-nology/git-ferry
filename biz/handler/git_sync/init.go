@@ -3,7 +3,7 @@ package git_sync
 import (
 	"sync"
 
-	synccore "github.com/yi-nology/git-sync-service/sync"
+	synccore "github.com/yi-nology/git-sync-core"
 )
 
 var (

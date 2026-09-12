@@ -11,7 +11,7 @@ import (
 	platform "github.com/yi-nology/git-sync-service/biz/model/platform"
 	"github.com/yi-nology/git-sync-service/internal/converter"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/model"
 )
 
 // CreatePlatform 创建平台

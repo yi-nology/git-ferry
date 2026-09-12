@@ -17,6 +17,36 @@ A service for synchronizing Git repositories across different platforms.
 - RESTful API for manual operations
 - SQLite and MySQL database support
 
+## Related repositories
+
+本服务是三仓架构中的**公网壳**：
+
+| Repository | Import path | Role |
+|------------|-------------|------|
+| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP) |
+| **git-sync-service**（本仓） | `github.com/yi-nology/git-sync-service` | Public shell: hz API + Vue UI |
+| [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | Intranet shell (gateway/SSO auth) |
+
+本地开发请将三仓放在同一父目录；`go.mod` 中 `replace github.com/yi-nology/git-sync-core => ../git-sync-core`。core 发布正式 tag 后可改为版本依赖。
+
+```text
+my_project/
+  git-sync-core/
+  git-sync-service/    # this repo
+  git-sync-intranet/
+```
+
+### Intranet auth env
+
+见 [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet)：`INTRANET_AUTH_MODE` / `INTRANET_AUTH_USER_HEADER` / `INTRANET_AUTH_ALLOW_EMPTY`。
+
+### Build image
+
+```bash
+# 父目录（含 git-sync-core）下
+make -C git-sync-service docker-build
+```
+
 ## Installation
 
 ### From Release
@@ -81,17 +111,18 @@ database:
 ## Development
 
 ```bash
-# Install dependencies
-go mod tidy
+# Install dependencies (tidy both modules)
+make tidy
 
-# Run tests
+# Run tests (core + shell)
 make test
 
 # Build
 make build
 
-# Lint (requires golangci-lint)
+# Lint (requires golangci-lint; run in both module roots)
 golangci-lint run
+(cd core && golangci-lint run)
 ```
 
 ## API Documentation

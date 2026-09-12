@@ -1,4 +1,4 @@
-.PHONY: build run restart clean test tidy generate
+.PHONY: build run restart clean test tidy generate docker-build
 
 APP_NAME := git-sync-service
 BUILD_DIR := ./output
@@ -17,7 +17,6 @@ run:
 	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; go run .
 
 # 一键重启:先停掉占用 8890 的旧后端(连同 go run 包装进程),再以当前代码重新编译启动。
-# 避免改完代码(如版本号)后旧进程仍跑旧二进制,导致行为/版本不更新
 restart:
 	@pid=$$(lsof -ti tcp:8890 2>/dev/null); \
 	if [ -n "$$pid" ]; then \
@@ -29,11 +28,12 @@ restart:
 	fi
 	@$(MAKE) run
 
+# 本地依赖同级仓 ../git-sync-core（go.mod replace）。core 已发布 tag 后可去掉 replace。
 tidy:
 	@go mod tidy
 
 test:
-	@go test ./... -v -race -count=1
+	@go test ./... -race -count=1
 
 clean:
 	@rm -rf $(BUILD_DIR) data/
@@ -42,5 +42,6 @@ generate:
 	@echo "Generating code from IDL..."
 	@cd idl && thriftgo --out ../biz --go --go-recurse 10 git_sync.thrift
 
+# 在父目录（含 git-sync-core）执行：make -C git-sync-service docker-build
 docker-build:
-	@docker build -t $(APP_NAME):latest .
+	@cd .. && docker build -f git-sync-service/Dockerfile -t $(APP_NAME):latest .

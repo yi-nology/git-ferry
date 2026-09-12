@@ -4,7 +4,7 @@ import (
 	"time"
 
 	platformmodel "github.com/yi-nology/git-sync-service/biz/model/platform"
-	"github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/model"
 )
 
 // ToPlatformInfo 将平台模型转为 IDL 生成的对外结构 platformmodel.PlatformInfo。

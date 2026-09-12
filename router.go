@@ -4,18 +4,11 @@ package main
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	handler "github.com/yi-nology/git-sync-service/biz/handler"
-	"github.com/yi-nology/git-sync-service/biz/handler/git_sync"
+	"github.com/yi-nology/git-sync-service/biz/router"
 )
 
 // customizeRegister registers customize routers.
+// 实现放在 biz/router.CustomizedRegister，公网/内网壳共用。
 func customizedRegister(r *server.Hertz) {
-	// Liveness probe (no auth, no middleware)
-	r.GET("/ping", handler.Ping)
-
-	// Readiness probe (checks database and Redis, no auth)
-	r.GET("/health", git_sync.HealthCheck)
-
-	// Webhook 接收端点（带速率限制，不走 API 鉴权）
-	r.POST("/api/webhook/receive/:repoKey", git_sync.RateLimitMiddleware(), git_sync.ReceiveWebhook)
+	router.CustomizedRegister(r)
 }

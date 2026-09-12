@@ -16,10 +16,18 @@ jobs:
     strategy:
       matrix:
         go-version: ['1.26']
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout core
         uses: actions/checkout@v7
+        with:
+          repository: yi-nology/git-sync-core
+          path: git-sync-core
+
+      - name: Checkout service
+        uses: actions/checkout@v7
+        with:
+          path: git-sync-service
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -28,24 +36,37 @@ jobs:
           cache: true
 
       - name: Download dependencies
+        working-directory: git-sync-service
         run: go mod download
 
       - name: Run vet
+        working-directory: git-sync-service
         run: go vet ./...
 
       - name: Run tests
+        working-directory: git-sync-service
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         if: matrix.go-version == '1.26'
         uses: codecov/codecov-action@v7
+        with:
+          files: git-sync-service/coverage.out
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout core
         uses: actions/checkout@v7
+        with:
+          repository: yi-nology/git-sync-core
+          path: git-sync-core
+
+      - name: Checkout service
+        uses: actions/checkout@v7
+        with:
+          path: git-sync-service
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -56,15 +77,24 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.1
+          working-directory: git-sync-service
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: [test, lint]
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout core
         uses: actions/checkout@v7
+        with:
+          repository: yi-nology/git-sync-core
+          path: git-sync-core
+
+      - name: Checkout service
+        uses: actions/checkout@v7
+        with:
+          path: git-sync-service
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -72,10 +102,11 @@ jobs:
           go-version: '1.26'
 
       - name: Build
+        working-directory: git-sync-service
         run: go build -o ./output/git-sync-service .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
           name: git-sync-service-linux-amd64
-          path: ./output/git-sync-service
+          path: git-sync-service/output/git-sync-service

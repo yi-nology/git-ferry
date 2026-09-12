@@ -9,10 +9,10 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-sync-service/biz/model/sync_task"
 	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/dao"
+	"github.com/yi-nology/git-sync-core/dao"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-service/internal/service"
-	syncmodel "github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/service"
+	syncmodel "github.com/yi-nology/git-sync-core/model"
 )
 
 func TaskList(ctx context.Context, c *app.RequestContext) {

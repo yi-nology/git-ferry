@@ -2,7 +2,7 @@ package converter
 
 import (
 	taskmodel "github.com/yi-nology/git-sync-service/biz/model/sync_task"
-	"github.com/yi-nology/git-sync-service/sync/model"
+	"github.com/yi-nology/git-sync-core/model"
 )
 
 func ToTaskInfo(t *model.SyncTask) *taskmodel.SyncTaskInfo {

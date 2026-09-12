@@ -9,7 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	operation_log "github.com/yi-nology/git-sync-service/biz/model/operation_log"
 	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/dao"
+	"github.com/yi-nology/git-sync-core/dao"
 	"github.com/yi-nology/git-sync-service/internal/pkg/response"
 )
 

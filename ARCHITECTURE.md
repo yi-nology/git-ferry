@@ -5,35 +5,41 @@
 ### 1.1 服务命名
 **git-sync-service** - 独立的 Git 仓库同步微服务
 
-### 1.2 双模式架构
+### 1.2 三仓架构
+
+| 仓库 | Import path | 角色 | 开源策略 |
+|------|-------------|------|----------|
+| `git-sync-core` | `github.com/yi-nology/git-sync-core` | 同步引擎（无 HTTP） | 公网开源 |
+| `git-sync-service`（本仓） | `github.com/yi-nology/git-sync-service` | 公网壳：hz API + Vue | 公网开源 |
+| `git-sync-intranet` | `github.com/yi-nology/git-sync-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
+
+本地开发将三仓放在同一父目录，用 `go.mod` 的 `replace` 指向同级路径（core 发布 tag 后可改版本依赖）。
 
 ```
-模式 A: 独立服务                    模式 B: 作为库
-┌─────────────────────┐           ┌─────────────────────┐
-│   git-sync-service  │           │  git-manage-service  │
-│  ┌───────────────┐  │           │  ┌───────────────┐  │
-│  │  biz/handler  │  │           │  │  sync handler  │  │
-│  │  (hz 生成)    │  │           │  └───────┬───────┘  │
-│  └───────┬───────┘  │           │          │          │
-│          │          │           │  ┌───────▼───────┐  │
-│  ┌───────▼───────┐  │           │  │  sync/ 核心库  │  │
-│  │  sync/ 核心库 │  │           │  │  (同一个包)   │  │
-│  └───────┬───────┘  │           │  └───────┬───────┘  │
-│          │          │           │          │          │
-│  ┌───────▼───────┐  │           │  ┌───────▼───────┐  │
-│  │ git-platform  │  │           │  │ git-platform  │  │
-│  │    -sdk       │  │           │  │    -sdk       │  │
-│  └───────────────┘  │           │  └───────────────┘  │
-└─────────────────────┘           └─────────────────────┘
+模式 A: 公网独立服务                 模式 B: 作为库              模式 C: 内网壳
+┌────────────────────────┐      ┌──────────────────────┐   ┌────────────────────────┐
+│ git-sync-service       │      │  git-manage-service  │   │ git-sync-intranet      │
+│  main / biz / frontend │      │  ┌────────────────┐  │   │  auth(proxy/SSO hook)  │
+│         │              │      │  │  自有 handler  │  │   │  main                  │
+│         ▼              │      │  └───────┬────────┘  │   │    │                   │
+│  git-sync-core         │◄─────┤          ▼           │   │    ▼                   │
+│  model/service/…       │      │  git-sync-core       │   │  biz/serve（复用路由）  │
+│         │              │      └──────────────────────┘   │    │                   │
+│         ▼              │                                 │    ▼                   │
+│  git-platform-sdk      │                                 │  git-sync-core         │
+└────────────────────────┘                                 └────────────────────────┘
 ```
+
+内网差异只放在 `git-sync-intranet/auth`（`SetAuthMiddlewareProvider`）与配置默认值，不复制业务逻辑。
 
 ### 1.3 设计原则
 
 | 原则 | 说明 |
 |------|------|
-| **完全独立** | 不依赖 git-manage-service，自包含所有数据模型 |
-| **单一依赖** | 只依赖 git-platform-sdk 进行 Git 平台操作 |
-| **可复用库** | `sync/` 目录可被任何项目直接引用 |
+| **完全独立** | core 不依赖壳与 git-manage-service，自包含数据模型 |
+| **单一依赖** | core 只依赖 git-platform-sdk 做 Git 平台操作 |
+| **可复用库** | 独立仓 `git-sync-core`，外部 `require github.com/yi-nology/git-sync-core` |
+| **壳不渗入** | hz handler / response / converter / version 留在本仓 |
 | **hz 标准** | HTTP 层遵循 hz IDL 代码生成规范 |
 
 ### 1.4 核心功能
@@ -47,80 +53,31 @@
 ## 2. 目录结构
 
 ```
-git-sync-service/
-├── main.go                          # 独立服务入口 (模式 A)
-├── go.mod
-├── go.sum
-├── router.go                        # 自定义路由注册
-├── router_gen.go                    # hz 生成
+my_project/
+├── git-sync-core/                   # 同步引擎库（独立仓）
+│   ├── go.mod                       # github.com/yi-nology/git-sync-core
+│   ├── sync.go                      # 库入口 (package sync)
+│   ├── model/  service/  executor/  dao/  lock/
 │
-├── sync/                            # 核心库包装层 (模式 B)
-│   ├── service.go                   # 包装 internal/service
-│   └── model/                       # 数据模型
-│       ├── config.go
-│       ├── init.go
-│       ├── repo.go
-│       ├── requests.go
-│       ├── sync_task.go
-│       ├── sync_run.go
-│       ├── webhook_event.go
-│       └── webhook_rule.go
+├── git-sync-service/                # 本仓：公网壳
+│   ├── go.mod                       # replace core => ../git-sync-core
+│   ├── main.go
+│   ├── router.go / router_gen.go
+│   ├── biz/
+│   │   ├── handler/git_sync/
+│   │   ├── model/                   # thrift 生成请求/响应
+│   │   ├── router/                  # 路由 + 可替换鉴权 Provider
+│   │   └── serve/                   # HTTP 启动（内网壳亦复用）
+│   ├── internal/                    # converter / response / version
+│   ├── frontend/
+│   ├── idl/
+│   └── conf/config.yaml
 │
-├── internal/                        # 内部实现
-│   ├── service/                     # 业务逻辑层
-│   │   ├── service.go
-│   │   ├── repo.go
-│   │   ├── task.go
-│   │   ├── webhook.go
-│   │   └── rule_test.go
-│   ├── executor/                    # Git 操作执行器
-│   │   └── executor.go
-│   ├── dao/                         # 数据访问层
-│   │   ├── repo_dao.go
-│   │   ├── sync_task_dao.go
-│   │   ├── sync_run_dao.go
-│   │   ├── webhook_rule_dao.go
-│   │   └── webhook_event_dao.go
-│   ├── provider/                    # Git Provider 管理
-│   │   └── manager.go
-│   ├── lock/                        # 分布式锁
-│   │   └── lock.go
-│   ├── converter/                   # 数据转换器
-│   │   ├── repo.go
-│   │   ├── task.go
-│   │   └── webhook.go
-│   └── pkg/                         # 内部工具包
-│       └── response/
-│           └── response.go
-│
-├── idl/                             # Thrift IDL 定义
-│   ├── base.thrift
-│   ├── git_sync.thrift
-│   ├── repo.thrift
-│   ├── sync_task.thrift
-│   └── webhook.thrift
-│
-├── biz/                             # hz 生成的代码
-│   ├── handler/                     # HTTP handlers
-│   │   ├── ping.go
-│   │   └── git_sync/
-│   │       ├── init.go
-│   │       ├── repo_service.go
-│   │       ├── sync_task_service.go
-│   │       ├── webhook_service.go
-│   │       └── webhook_receive.go
-│   ├── model/                       # 请求/响应模型
-│   │   ├── repo/
-│   │   ├── sync_task/
-│   │   └── webhook/
-│   └── router/                      # 路由注册
-│
-├── conf/
-│   └── config.yaml
-├── data/                            # SQLite 数据文件
-├── Makefile
-├── build.sh
-└── test_api.sh
+└── git-sync-intranet/               # 内网壳（独立仓）
+    ├── go.mod                       # replace core + service => 同级路径
+    ├── main.go
+    ├── auth/                        # proxy 头 / API Key / SSO 钩子
+    └── conf/config.yaml
 ```
 
 ## 3. 核心库 API 设计
@@ -128,7 +85,7 @@ git-sync-service/
 ### 3.1 对外暴露的接口
 
 ```go
-// sync/service.go - 核心库入口
+// core/sync.go - 核心库入口（仓 git-sync-core）
 
 package sync
 
@@ -184,7 +141,7 @@ func (s *Service) DeleteRule(id uint) error
 
 // ===== Webhook 事件 API =====
 
-func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, r *http.Request) error
+func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, payload *WebhookPayload) error
 func (s *Service) ListEvents(repoKey string, limit int) ([]*WebhookEvent, error)
 func (s *Service) RetryEvent(ctx context.Context, eventID uint) error
 
@@ -199,30 +156,18 @@ func (s *Service) Stop()
 #### 模式 A: 独立部署
 
 ```go
-// main.go
-package main
+// main.go（壳）
+import synccore "github.com/yi-nology/git-sync-core"
 
-import (
-    "github.com/yi-nology/git-sync-service/server"
-    "github.com/yi-nology/git-sync-service/sync"
-)
-
-func main() {
-    cfg := sync.LoadConfig("config.yaml")
-    svc, _ := sync.NewService(cfg)
-    svc.Start()
-    defer svc.Stop()
-
-    router := server.NewRouter(svc)
-    router.Run(":8890")
-}
+cfg, _ := synccore.LoadConfig("conf/config.yaml")
+svc, _ := synccore.NewService(cfg)
 ```
 
 #### 模式 B: 作为库引用
 
 ```go
-// git-manage-service 中使用
-import synccore "github.com/yi-nology/git-sync-service/sync"
+// 外部项目（如 git-manage-service）
+import synccore "github.com/yi-nology/git-sync-core"
 
 cfg := &synccore.Config{
     Database: synccore.DatabaseConfig{
@@ -572,7 +517,7 @@ func (m *ProviderManager) GetProvider(repo *Repo) (sdkprov.Provider, error) {
 
 ```go
 // sync/webhook.go
-func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, r *http.Request) error {
+func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, payload *WebhookPayload) error {
     repo, _ := s.repoDAO.FindByKey(repoKey)
     provider, _ := s.providerMgr.GetProvider(repo)
 

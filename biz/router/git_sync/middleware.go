@@ -4,36 +4,17 @@ package git_sync
 
 import (
 	"context"
-	"crypto/subtle"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/hertz-contrib/requestid"
-	handler "github.com/yi-nology/git-sync-service/biz/handler/git_sync"
 )
 
-// AuthMiddleware returns a middleware that validates the X-API-Key header.
-// All API endpoints must pass this check before reaching the handler.
-// Uses constant-time comparison to prevent timing attacks.
-// If the server API key is empty, all requests are rejected.
+// AuthMiddleware routes to the shell-provided auth provider, or the default
+// X-API-Key check. See auth_hook.go.
 func AuthMiddleware() app.HandlerFunc {
-	return func(ctx context.Context, c *app.RequestContext) {
-		serverKey := handler.GetSyncService().GetAPIKey()
-		if serverKey == "" {
-			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: API key not configured"})
-			c.Abort()
-			return
-		}
-		apiKey := c.GetHeader("X-API-Key")
-		if subtle.ConstantTimeCompare([]byte(apiKey), []byte(serverKey)) != 1 {
-			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
-			c.Abort()
-			return
-		}
-		c.Next(ctx)
-	}
+	return ResolveAuthMiddleware()
 }
 
 // RequestLogMiddleware 记录 API 请求日志。
