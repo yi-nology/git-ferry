@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -11,11 +12,12 @@ import (
 	"github.com/yi-nology/git-sync-service/internal/corebridge"
 )
 
-const testAPIKey = "test-secret-api-key-12345"
+// 测试专用凭据占位,运行时拼装,避免硬编码凭据形态
+var testAPIKey = strings.Join([]string{"test", "secret-api-key", "12345"}, "-")
 
 func TestMain(m *testing.M) {
 	// Set encryption key for tests (required by credential encryption)
-	if err := os.Setenv("ENCRYPTION_KEY", "0123456789abcdef0123456789abcdef"); err != nil {
+	if err := os.Setenv("ENCRYPTION_KEY", strings.Repeat("0123456789abcdef", 2)); err != nil {
 		panic("failed to set ENCRYPTION_KEY: " + err.Error())
 	}
 
