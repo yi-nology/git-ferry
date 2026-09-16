@@ -361,13 +361,8 @@ github.com/yargevad/filepathx v1.0.0 h1:SYcT+N3tYGi+NvazubCNlvgIPbzAk7i7y2dwg3I5
 github.com/yargevad/filepathx v1.0.0/go.mod h1:BprfX/gpYNJHJfc35GjRRpVcwWXS89gGulUIU5tK3tA=
 github.com/yi-nology/git-platform-sdk v0.49.0 h1:2s3DOrJaZmX1tNjKdwHoZO2sblYBGcT69djV0bWUE2E=
 github.com/yi-nology/git-platform-sdk v0.49.0/go.mod h1:jNrlwaPuIRssoPxJuFyjelDj+RamEr5LGzZ9UP7DabQ=
-<<<<<<< HEAD
 github.com/yi-nology/git-sync-core v0.3.3 h1:9XBwY4FEm6VbNqGBBoQq3a2NGHdY/nczVmPl/fVritQ=
 github.com/yi-nology/git-sync-core v0.3.3/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
-=======
-github.com/yi-nology/git-sync-core v0.3.0 h1:oDhpqox3br9cO+7++ZMTCZ88WB8z7h73kARmW5sVNbw=
-github.com/yi-nology/git-sync-core v0.3.0/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
->>>>>>> 1bad251 (feat(ai): /api/v1/ai/status 与 /ai/chat SSE 端点(未启用 501 降级))
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
 github.com/yi-nology/go-gitcode v0.7.2/go.mod h1:YE9snaa9ChVY7FoPj/4huVDkVNJaI/gpxHcWgNNGYls=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

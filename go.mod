@@ -14,11 +14,7 @@ require (
 	github.com/oklog/run v1.2.0
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-platform-sdk v0.49.0
-<<<<<<< HEAD
 	github.com/yi-nology/git-sync-core v0.3.3
-=======
-	github.com/yi-nology/git-sync-core v0.3.0
->>>>>>> 1bad251 (feat(ai): /api/v1/ai/status 与 /ai/chat SSE 端点(未启用 501 降级))
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 )
