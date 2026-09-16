@@ -70,7 +70,7 @@ func TestLastConfirm_TakeOnce(t *testing.T) {
 	assert.Empty(t, name) // 未设置时全空
 
 	s.SetLastConfirm("run_task", "tok1", `{"task_key":"t1"}`)
-	name, token, args = s.LastConfirm()
+	name, token, args := s.LastConfirm()
 	assert.Equal(t, "run_task", name)
 	assert.Equal(t, "tok1", token)
 	assert.Contains(t, args, "t1")
