@@ -116,7 +116,7 @@ func TestRunTask_RequiresConfirmation(t *testing.T) {
 	out, err := reg.ByName("run_task").InvokableRun(ctx, `{"task_key":"t1"}`)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"status":"confirmation_required"`)
-	assert.Empty(t, m.LastRunTaskKey, "未确认前不得执行")
+	assert.Empty(t, m.RunTaskKey(), "未确认前不得执行")
 	assert.True(t, sc.pendingSet)
 	assert.Equal(t, "run_task", sc.lastTool)
 	assert.Equal(t, "tok123", sc.lastToken)
@@ -137,7 +137,7 @@ func TestRunTask_ExecutesAfterConfirmation(t *testing.T) {
 	out, err := reg.ByName("run_task").InvokableRun(ctx, `{"task_key":"t1"}`)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"status":"ok"`)
-	assert.Equal(t, "t1", m.LastRunTaskKey)
+	assert.Equal(t, "t1", m.RunTaskKey())
 }
 
 func TestRunTask_WithoutScope_Refused(t *testing.T) {

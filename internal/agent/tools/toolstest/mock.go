@@ -3,6 +3,7 @@ package toolstest
 
 import (
 	"context"
+	"sync"
 
 	"github.com/yi-nology/git-platform-sdk/provider"
 	coremodel "github.com/yi-nology/git-sync-core/model"
@@ -30,8 +31,11 @@ type Mock struct {
 	ConnResult  *coremodel.TestConnectionResult
 	PlatConnRes *provider.TestConnectionResult
 
-	LastRunTaskKey string
-	RunTaskErr     error
+	RunTaskErr error
+
+	// mu 保护在请求 goroutine 与测试 goroutine 间并发的字段。
+	mu             sync.Mutex
+	lastRunTaskKey string
 
 	LastFilter *corebridge.RepoFilter
 }
@@ -107,6 +111,15 @@ func (m *Mock) CountTasksByStatus() (map[string]int64, error) { return m.TaskSta
 func (m *Mock) HealthCheck() map[string]string { return m.Health }
 
 func (m *Mock) RunTaskWithTrigger(_ context.Context, taskKey, _ string, _ *uint) error {
-	m.LastRunTaskKey = taskKey
+	m.mu.Lock()
+	m.lastRunTaskKey = taskKey
+	m.mu.Unlock()
 	return m.RunTaskErr
+}
+
+// RunTaskKey 返回最近一次触发同步的任务 key(-race 下并发安全)。
+func (m *Mock) RunTaskKey() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.lastRunTaskKey
 }

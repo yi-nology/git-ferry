@@ -89,13 +89,13 @@ func TestRunner_ToolLoop_WithConfirm(t *testing.T) {
 	require.NotNil(t, confirm, "应有 tool_confirm 事件")
 	assert.Equal(t, "run_task", confirm.Tool)
 	assert.NotEmpty(t, confirm.Token)
-	assert.Empty(t, m.LastRunTaskKey, "未确认不执行")
+	assert.Empty(t, m.RunTaskKey(), "未确认不执行")
 
 	// 确认直达执行(不经模型)
 	out, err := r.ExecuteConfirmed(context.Background(), sess, "run_task", confirm.Token)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"status":"ok"`)
-	assert.Equal(t, "t1", m.LastRunTaskKey)
+	assert.Equal(t, "t1", m.RunTaskKey())
 
 	// 令牌一次性:再次执行报错
 	_, err = r.ExecuteConfirmed(context.Background(), sess, "run_task", confirm.Token)

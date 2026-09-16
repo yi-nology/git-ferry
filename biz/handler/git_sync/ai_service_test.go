@@ -164,7 +164,7 @@ func TestAIChat_ConfirmFlow(t *testing.T) {
 	assert.Contains(t, body, "event:tool_start")
 	assert.Contains(t, body, "event:tool_confirm")
 	assert.Contains(t, body, "event:done")
-	assert.Empty(t, mock.LastRunTaskKey, "未确认不得执行")
+	assert.Empty(t, mock.RunTaskKey(), "未确认不得执行")
 
 	var token string
 	for _, line := range strings.Split(body, "\n") {
@@ -197,7 +197,7 @@ func TestAIChat_ConfirmFlow(t *testing.T) {
 	assert.Contains(t, body2, "event:tool_end")
 	// result 是字符串字段,内层 JSON 被转义
 	assert.Contains(t, body2, "同步已执行完成")
-	assert.Equal(t, "t1", mock.LastRunTaskKey, "确认后应真实执行")
+	assert.Equal(t, "t1", mock.RunTaskKey(), "确认后应真实执行")
 }
 
 func TestAIStatus_Enabled(t *testing.T) {
