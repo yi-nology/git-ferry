@@ -1,0 +1,65 @@
+name: Update README
+
+on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    name: Update README badges and stats
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Update release version in README
+        if: github.event_name == 'release'
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          sed -i "s/\[!\[Latest Release\].*/[![Latest Release](https:\/\/img.shields.io\/github\/v\/release\/yi-nology\/git-sync-service)](https:\/\/github.com\/yi-nology\/git-sync-service\/releases\/tag\/${VERSION})/" README.md
+
+      - name: Generate test stats
+        id: test-stats
+        run: |
+          TOTAL_TESTS=$(find . -name "*_test.go" -exec grep -c "func Test" {} + 2>/dev/null | awk -F: '{sum += $2} END {print sum}' || echo "0")
+          echo "total_tests=${TOTAL_TESTS}" >> $GITHUB_OUTPUT
+          
+          TOTAL_FILES=$(find . -name "*_test.go" | wc -l)
+          echo "test_files=${TOTAL_FILES}" >> $GITHUB_OUTPUT
+
+      - name: Update README with stats
+        run: |
+          if ! grep -q "<!-- STATS_START -->" README.md; then
+            cat >> README.md << 'EOF'
+          
+          ## Project Stats
+          
+          <!-- STATS_START -->
+          | Metric | Value |
+          |--------|-------|
+          | Test Files | 0 |
+          | Total Tests | 0 |
+          <!-- STATS_END -->
+          EOF
+          fi
+          
+          sed -i "/<!-- STATS_START -->/,/<!-- STATS_END -->/c\<!-- STATS_START -->\n| Metric | Value |\n|--------|-------|\n| Test Files | ${{ steps.test-stats.outputs.test_files }} |\n| Total Tests | ${{ steps.test-stats.outputs.total_tests }} |\n<!-- STATS_END -->" README.md
+
+      - name: Commit changes
+        if: github.event_name == 'release'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add README.md
+          git diff --staged --quiet || git commit -m "docs: update README with release ${GITHUB_REF#refs/tags/} [skip ci]"
+          git push

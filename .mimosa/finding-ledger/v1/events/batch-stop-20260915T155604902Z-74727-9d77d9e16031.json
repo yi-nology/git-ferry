@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260915T155604902Z-74727-9d77d9e16031",
+  "runId": "20260915T155604902Z-74727-9d77d9e16031",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": [
+      {
+        "code": "baseline_partial",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline capture had enumeration or snapshot errors",
+        "affectsCompletion": false
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "b3f87eb2aeafd8ba95dceee1266b90b4a3854fe9",
+  "diffHash": "e5957f28c3932be5d2fdc4e2e139d58f06be942e82098a6ede1c168a625a48be",
+  "rulesVersion": "unavailable",
+  "sessionHash": "778d38b358ab5101dc8b124dc7001f3ba37d34b5e0333ba183256610778a520e",
+  "reportRef": ".mimosa/reports/task-review-sess_cf42333c-d399-48d7-9617-6dae2f6d5329-20260915T155604902Z-74727-9d77d9e16031.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "biz/handler/git_sync/webhook_receive_test.go",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "biz/router/git_sync/middleware_test.go",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-09-15T15:56:05.093Z"
+}

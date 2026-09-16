@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test before release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+
+      - name: Run tests
+        run: go test -v ./...
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          # SQLite 驱动已改用纯 Go 的 glebarez/sqlite(modernc 内核),
+          # 全平台交叉编译无需 C 工具链,统一关闭 CGO。
+          CGO_ENABLED: 0
+        run: |
+          # 带平台后缀,避免 6 个二进制同名碰撞(release 资产才能各平台独立)
+          binary_name="git-sync-service-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then
+            binary_name="${binary_name}.exe"
+          fi
+          # 版本号编译注入(tag 触发时 GITHUB_REF_NAME 即 v1.7.x 形式的 tag)
+          go build -ldflags "-X github.com/yi-nology/git-sync-service/internal/version.Version=${GITHUB_REF_NAME}" -o "./dist/${binary_name}" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: git-sync-service-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ./dist/*
+
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: ./artifacts
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG="Initial release"
+          else
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## Changes
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Artifacts
+            - `git-sync-service-linux-amd64` - Linux x86_64
+            - `git-sync-service-linux-arm64` - Linux ARM64
+            - `git-sync-service-darwin-amd64` - macOS x86_64
+            - `git-sync-service-darwin-arm64` - macOS ARM64 (Apple Silicon)
+            - `git-sync-service-windows-amd64.exe` - Windows x86_64
+            - `git-sync-service-windows-arm64.exe` - Windows ARM64
+          files: ./artifacts/**/*
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
