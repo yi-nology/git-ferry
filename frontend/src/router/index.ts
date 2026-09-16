@@ -60,7 +60,7 @@ router.beforeEach((to) => {
 // 页面标题联动
 router.afterEach((to) => {
   const title = to.meta.title as string | undefined
-  document.title = title ? `${title} · Git Sync` : 'Git Sync'
+  document.title = title ? `${title} · GitFerry` : 'GitFerry'
 })
 
 export default router

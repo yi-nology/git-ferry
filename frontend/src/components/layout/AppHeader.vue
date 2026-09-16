@@ -54,7 +54,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const currentTitle = computed(() => (route.meta.title as string) || 'Git Sync')
+const currentTitle = computed(() => (route.meta.title as string) || 'GitFerry')
 
 const maskedKey = computed(() => {
   const k = authStore.getApiKey() || ''

@@ -1,4 +1,6 @@
-# Git Sync Service
+# GitFerry
+
+> 中文名「摆渡」:把代码摆渡到该去的地方——内网之间、内网到开源世界、渡入备份港。
 
 [![CI](https://github.com/yi-nology/git-sync-service/actions/workflows/ci.yml/badge.svg)](https://github.com/yi-nology/git-sync-service/actions/workflows/ci.yml)
 [![Release](https://github.com/yi-nology/git-sync-service/actions/workflows/release.yml/badge.svg)](https://github.com/yi-nology/git-sync-service/actions/workflows/release.yml)
@@ -7,13 +9,14 @@
 [![License](https://img.shields.io/github/license/yi-nology/git-sync-service)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-sync-service)](https://github.com/yi-nology/git-sync-service/releases/tag/v1.10.0)
 
-A service for synchronizing Git repositories across different platforms.
+GitFerry is a self-hosted hub for Git repositories: sync across platforms, publish to the open-source world (dual-identity module mirrors), and back up — all in one place.
 
 ## Features
 
 - Multi-platform Git synchronization
 - Scheduled sync with cron support
 - Webhook-based real-time sync
+- **镜像中心:开源公开发布(双仓/多仓 module 身份改写快照,预检/编译门禁/分歧确认)与仓库备份**
 - RESTful API for manual operations
 - SQLite and MySQL database support
 
