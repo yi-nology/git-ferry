@@ -147,11 +147,13 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 			text = turns[1].text
 		}
 		writeChunk(w, req.Model, "assistant", "", nil, "")
-		for i := 0; i+8 <= len(text); i += 8 {
-			writeChunk(w, req.Model, "assistant", text[i:i+8], nil, "")
-		}
-		if len(text)%8 != 0 {
-			writeChunk(w, req.Model, "assistant", text[len(text)-len(text)%8:], nil, "")
+		runes := []rune(text)
+		for i := 0; i < len(runes); i += 4 {
+			end := i + 4
+			if end > len(runes) {
+				end = len(runes)
+			}
+			writeChunk(w, req.Model, "assistant", string(runes[i:end]), nil, "")
 		}
 		writeChunk(w, req.Model, "", "", nil, "stop")
 		fmt.Fprint(w, "data: [DONE]\n\n")
