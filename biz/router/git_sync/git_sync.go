@@ -63,6 +63,23 @@ func Register(r *server.Hertz) {
 				_system.GET("/status", append(_systemstatusMw(), git_sync.SystemStatus)...)
 			}
 			{
+				// 镜像中心:开源发布 / 仓库备份
+				_mirror := _v1.Group("/mirror")
+				_mirror.GET("/channels", git_sync.MirrorChannelList)
+				_mirror.POST("/channels", git_sync.MirrorChannelCreate)
+				_mirror.GET("/channels/:id", git_sync.MirrorChannelGet)
+				_mirror.POST("/channels/:id/delete", git_sync.MirrorChannelDelete)
+				_mirror.GET("/channels/:id/versions", git_sync.MirrorVersions)
+				_mirror.POST("/channels/:id/preview", git_sync.MirrorPreview)
+				_mirror.POST("/channels/:id/runs", git_sync.MirrorRunCreate)
+				_mirror.GET("/channels/:id/runs", git_sync.MirrorRunList)
+				_mirror.POST("/targets/:id/update", git_sync.MirrorTargetUpdate)
+				_mirror.POST("/targets/:id/delete", git_sync.MirrorTargetDelete)
+				_mirror.POST("/targets/:id/test", git_sync.MirrorTargetTest)
+				_mirror.POST("/channels/:id/verify", git_sync.MirrorVerify)
+				_mirror.GET("/runs/:id", git_sync.MirrorRunGet)
+			}
+			{
 				_webhook := _v1.Group("/webhook", _webhookMw()...)
 				_webhook.GET("/events", append(_listeventsMw(), git_sync.ListEvents)...)
 				_webhook.GET("/rule", append(_rulegetMw(), git_sync.RuleGet)...)

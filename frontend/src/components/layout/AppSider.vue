@@ -41,6 +41,11 @@
         <span>仓库管理</span>
       </a-menu-item>
 
+      <a-menu-item key="/mirror">
+        <template #icon><CloudUploadOutlined /></template>
+        <span>镜像中心</span>
+      </a-menu-item>
+
       <a-menu-item key="/webhook/rules">
         <template #icon><ApiOutlined /></template>
         <span>Webhook 规则</span>
@@ -71,6 +76,7 @@ import {
   FolderOutlined,
   SettingOutlined,
   FileTextOutlined,
+  CloudUploadOutlined,
 } from '@ant-design/icons-vue'
 
 defineProps<{ collapsed: boolean }>()
