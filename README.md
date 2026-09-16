@@ -19,6 +19,26 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 - **镜像中心:开源公开发布(双仓/多仓 module 身份改写快照,预检/编译门禁/分歧确认)与仓库备份**
 - RESTful API for manual operations
 - SQLite and MySQL database support
+- AI 运维助手(eino):自然语言查询仓库/任务/历史/平台,危险操作需界面确认
+
+## AI 助手(eino)
+
+基于 [CloudWeGo eino](https://github.com/cloudwego/eino) 的对话式运维助手,默认**关闭**,
+不影响现有功能(未启用时 `/api/v1/ai/*` 返回 501,前端隐藏入口)。
+
+**启用三步:**
+
+1. `conf/config.yaml` 打开 `ai` 段(`base_url` 可指向任意 OpenAI 兼容端点;
+   生产内网可指向 vLLM / Ollama,如 `http://127.0.0.1:11434/v1`);
+2. 设置环境变量 `GIT_SYNC_AI_API_KEY`(密钥不写入配置文件);
+3. 重启服务。
+
+**能力:** 13 个工具映射核心 API —— 仓库/分支/任务/执行历史/执行详情/平台/Webhook 规则/
+系统概览等只读查询直接执行;`run_task`(立即同步)、`test_repo_connection`、
+`test_platform_connection` 为危险操作,后端强制弹确认卡片并校验一次性令牌后才会执行。
+
+**安全边界:** 只读默认;git 凭据与模型 Key 永不进入 prompt/日志;工具结果仅作为数据注入
+(防 prompt 注入);不提供任何增删改与命令执行类工具。
 
 ## Related repositories
 
