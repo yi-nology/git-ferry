@@ -100,7 +100,7 @@ func writeChunk(w io.Writer, model, role, content string, calls []wireToolCall, 
 		Choices: []chunkChoice{{Index: 0, Delta: chunkDelta{Role: role, Content: content, ToolCalls: calls}, FinishReason: finish}},
 	}
 	b, _ := json.Marshal(c)
-	fmt.Fprintf(w, "data: %s\n\n", b)
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", b) //nolint:errcheck // 客户端断开时写入失败属预期
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
@@ -156,7 +156,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 			writeChunk(w, req.Model, "assistant", string(runes[i:end]), nil, "")
 		}
 		writeChunk(w, req.Model, "", "", nil, "stop")
-		fmt.Fprint(w, "data: [DONE]\n\n")
+		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 		return
 	}
 
@@ -165,13 +165,13 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 	if t.toolName == "" {
 		// 无工具脚本:直接输出文本
 		writeChunk(w, req.Model, "assistant", t.text, nil, "stop")
-		fmt.Fprint(w, "data: [DONE]\n\n")
+		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 		return
 	}
 	call := wireToolCall{Index: 0, ID: fmt.Sprintf("call-%d", time.Now().UnixNano()), Type: "function",
 		Function: wireFunction{Name: t.toolName, Arguments: t.toolArgs}}
 	writeChunk(w, req.Model, "assistant", "", []wireToolCall{call}, "tool_calls")
-	fmt.Fprint(w, "data: [DONE]\n\n")
+	_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 }
 
 func main() {
@@ -181,7 +181,7 @@ func main() {
 	mux.HandleFunc("/v1/chat/completions", handleChat)
 	mux.HandleFunc("/v1/models", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"object":"list","data":[{"id":"stub","object":"model"}]}`)
+		_, _ = fmt.Fprint(w, `{"object":"list","data":[{"id":"stub","object":"model"}]}`)
 	})
 	log.Printf("aistub listening on 127.0.0.1:%d", *port)
 	srv := &http.Server{
