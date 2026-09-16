@@ -177,7 +177,7 @@ func TestAIChat_ConfirmFlow(t *testing.T) {
 	// 取会话继续
 	var sessionID string
 	for _, line := range strings.Split(body, "\n") {
-		if strings.HasPrefix(line, "data:") && strings.Contains(line, "event") {
+		if strings.HasPrefix(line, "data:") && strings.Contains(line, `"session_id":"`) {
 			if v := betweenQuotes(line, `"session_id":"`, `"`); v != "" {
 				sessionID = v
 			}
@@ -195,7 +195,8 @@ func TestAIChat_ConfirmFlow(t *testing.T) {
 	body2 := buf2.String()
 
 	assert.Contains(t, body2, "event:tool_end")
-	assert.Contains(t, body2, `"status":"ok"`)
+	// result 是字符串字段,内层 JSON 被转义
+	assert.Contains(t, body2, "同步已执行完成")
 	assert.Equal(t, "t1", mock.LastRunTaskKey, "确认后应真实执行")
 }
 

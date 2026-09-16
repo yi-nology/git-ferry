@@ -4,6 +4,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	handler "github.com/yi-nology/git-sync-service/biz/handler"
 	"github.com/yi-nology/git-sync-service/biz/handler/git_sync"
+	routergitsync "github.com/yi-nology/git-sync-service/biz/router/git_sync"
 )
 
 // CustomizedRegister 注册非 IDL 生成的定制路由（探活、webhook 接收等）。
@@ -17,4 +18,9 @@ func CustomizedRegister(r *server.Hertz) {
 
 	// Webhook 接收端点（带速率限制，不走 API 鉴权）
 	r.POST("/api/webhook/receive/:repoKey", git_sync.RateLimitMiddleware(), git_sync.ReceiveWebhook)
+
+	// AI 助手（未启用时 handler 返回 501;鉴权与业务 API 同强度）
+	ai := r.Group("/api/v1/ai", routergitsync.AuthMiddleware())
+	ai.GET("/status", git_sync.AIStatus)
+	ai.POST("/chat", git_sync.AIChat)
 }

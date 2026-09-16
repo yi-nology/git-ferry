@@ -31,3 +31,15 @@ webhook:
 log:
   level: info
   format: json
+
+# AI 助手(eino):默认关闭。启用需同时:
+#   1. 打开下方 ai 段;2. 设置环境变量 GIT_SYNC_AI_API_KEY
+# base_url 可指向任意 OpenAI 兼容端点;生产内网可指向 vLLM/Ollama,如:
+#   ai:
+#     enabled: true
+#     base_url: "http://127.0.0.1:11434/v1"
+#     model: "qwen2.5:14b"
+#     temperature: 0.3        # 可选,默认 0.3
+#     max_tokens: 2048        # 可选,默认 2048
+#     timeout_seconds: 60     # 可选,默认 60
+#     max_concurrent_chats: 4 # 可选,默认 4
