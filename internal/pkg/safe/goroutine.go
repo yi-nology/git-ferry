@@ -25,8 +25,10 @@ func Go(name string, fn func()) {
 	}()
 }
 
-// RecoverToErr 用于 defer recover,将 panic 转为 error 写入 channel。
+// RecoverToErr 用于 defer recover,将 panic 转为 error 写回调用方变量。
 // 适用于需要把 panic 信息传递给调用方的场景(如并行 DB 查询)。
+//
+//nolint:gocritic // errPtr 必须为指针以写回调用方 error
 func RecoverToErr(name string, errPtr *error) {
 	if r := recover(); r != nil {
 		*errPtr = fmt.Errorf("goroutine %s panic: %v", name, r)

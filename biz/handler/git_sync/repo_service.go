@@ -241,11 +241,12 @@ func BatchRepos(ctx context.Context, c *app.RequestContext) {
 		Errors:  errs,
 	}
 	// 全部失败返 400,部分失败返 207 Multi-Status,全部成功返 200
-	if failed > 0 && success == 0 {
+	switch {
+	case failed > 0 && success == 0:
 		response.Error(c, 400, "all deletions failed")
-	} else if failed > 0 {
+	case failed > 0:
 		c.JSON(207, resp)
-	} else {
+	default:
 		response.Success(c, resp)
 	}
 }

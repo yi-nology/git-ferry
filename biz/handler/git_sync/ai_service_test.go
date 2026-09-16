@@ -202,12 +202,12 @@ func TestAIChat_ConfirmFlow(t *testing.T) {
 
 func TestAIStatus_Enabled(t *testing.T) {
 	base := startAITestServer(t, newTextRunner(t, "ok"))
-	req, err := http.NewRequest(http.MethodGet, base+"/api/v1/ai/status", nil)
+	req, err := http.NewRequest(http.MethodGet, base+"/api/v1/ai/status", http.NoBody)
 	require.NoError(t, err)
 	req.Header.Set("X-API-Key", "test-key")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	buf := new(bytes.Buffer)
 	_, _ = buf.ReadFrom(resp.Body)
