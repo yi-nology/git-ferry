@@ -73,7 +73,7 @@ func (r *Registry) testRepoConnection(ctx context.Context, in connTestInput) (st
 		_ = json.Unmarshal([]byte(args), &in)
 		res, err := r.svc.TestConnection(ctx, in.Key)
 		if err != nil {
-			return fmt.Sprintf(`{"connected":false,"error":"%s"}`, err), nil
+			return fmt.Sprintf(`{"connected":false,"error":%q}`, err.Error()), nil
 		}
 		return marshalJSON(map[string]any{"connected": res.Success, "message": res.Message}), nil
 	})
@@ -85,7 +85,7 @@ func (r *Registry) testPlatformConnection(ctx context.Context, in connTestInput)
 		_ = json.Unmarshal([]byte(args), &in)
 		res, err := r.svc.TestPlatformConnection(ctx, in.Key)
 		if err != nil {
-			return fmt.Sprintf(`{"connected":false,"error":"%s"}`, err), nil
+			return fmt.Sprintf(`{"connected":false,"error":%q}`, err.Error()), nil
 		}
 		return marshalJSON(map[string]any{"connected": res.Connected, "message": res.Message}), nil
 	})

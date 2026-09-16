@@ -66,7 +66,7 @@ func TestLastConfirm_TakeOnce(t *testing.T) {
 	st := NewSessionStore(30*time.Minute, 20)
 	s := st.Create()
 
-	name, token, args := s.LastConfirm()
+	name, _, _ := s.LastConfirm()
 	assert.Empty(t, name) // 未设置时全空
 
 	s.SetLastConfirm("run_task", "tok1", `{"task_key":"t1"}`)
