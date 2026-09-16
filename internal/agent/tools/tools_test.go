@@ -62,7 +62,8 @@ func TestListRepos(t *testing.T) {
 	out, err := reg.ByName("list_repos").InvokableRun(context.Background(), `{"page":1}`)
 	require.NoError(t, err)
 	assert.Contains(t, out, "demo")
-	assert.Nil(t, m.LastFilter, "无关键字时 filter 应为 nil")
+	require.NotNil(t, m.LastFilter, "始终传非 nil filter(core 无 nil 防护)")
+	assert.Empty(t, m.LastFilter.Search)
 }
 
 func TestListRepos_WithKeyword(t *testing.T) {

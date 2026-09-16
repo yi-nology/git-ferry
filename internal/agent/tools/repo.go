@@ -87,9 +87,10 @@ type repoSummary struct {
 }
 
 func (r *Registry) listRepos(ctx context.Context, in listReposInput) (map[string]any, error) {
-	var filter *corebridge.RepoFilter
+	// 始终传非 nil filter:core 的 ListWithFilter 不做空指针防护
+	filter := &corebridge.RepoFilter{}
 	if in.Keyword != "" {
-		filter = &corebridge.RepoFilter{Search: in.Keyword}
+		filter.Search = in.Keyword
 	}
 	list, total, err := r.svc.ListReposWithFilter(ctx, pageBounds(in.Page), pageLimit, filter)
 	if err != nil {
