@@ -1,6 +1,6 @@
 module github.com/yi-nology/git-ferry
 
-go 1.26
+go 1.26.3
 
 require (
 	github.com/apache/thrift v0.13.0
@@ -13,7 +13,7 @@ require (
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oklog/run v1.2.0
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-platform-sdk v0.49.0
+	github.com/yi-nology/git-platform-sdk v0.61.0
 	github.com/yi-nology/git-sync-core v0.3.3
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -23,11 +23,9 @@ require (
 	code.gitea.io/sdk/gitea v0.25.1 // indirect
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3 v3.0.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
-	gitee.com/openeuler/go-gitee v0.0.0-20251225091545-a0f78272dafc // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
-	github.com/antihax/optional v1.0.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
@@ -95,6 +93,7 @@ require (
 	github.com/meguminnnnnnnnn/go-openai v0.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
