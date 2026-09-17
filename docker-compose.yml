@@ -1,5 +1,5 @@
 services:
-  git-sync-service:
+  git-ferry:
     build: .
     ports:
       - "8890:8890"

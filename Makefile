@@ -1,8 +1,8 @@
 .PHONY: build run restart clean test tidy generate docker-build
 
-APP_NAME := git-sync-service
+APP_NAME := git-ferry
 BUILD_DIR := ./output
-VERSION_PKG := github.com/yi-nology/git-sync-service/internal/version
+VERSION_PKG := github.com/yi-nology/git-ferry/internal/version
 # 版本号编译时注入:默认取 git describe(tag 或 commit),可用 `make build VERSION=v1.7.1` 覆盖
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 

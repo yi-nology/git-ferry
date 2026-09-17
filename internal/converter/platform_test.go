@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	platformmodel "github.com/yi-nology/git-sync-service/biz/model/platform"
+	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
 	"github.com/yi-nology/git-sync-core/model"
 )
 

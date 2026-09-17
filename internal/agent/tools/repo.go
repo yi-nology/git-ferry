@@ -7,7 +7,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // Registry 工具注册表:构建 eino 工具集,并支持按名调用(确认执行路径复用)。

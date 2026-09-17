@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 	"golang.org/x/time/rate"
 )
 

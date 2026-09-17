@@ -3,7 +3,7 @@ package converter
 import (
 	"time"
 
-	repomodel "github.com/yi-nology/git-sync-service/biz/model/repo"
+	repomodel "github.com/yi-nology/git-ferry/biz/model/repo"
 	"github.com/yi-nology/git-sync-core/model"
 )
 

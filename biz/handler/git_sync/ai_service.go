@@ -5,25 +5,36 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	hertzsse "github.com/hertz-contrib/sse"
 
-	"github.com/yi-nology/git-sync-service/internal/agent"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/agent"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
-var agentRunner func() *agent.Runner
+var (
+	agentRunnerMu sync.RWMutex
+	agentRunnerFn func() *agent.Runner
+)
 
 // SetAgentRunner 注入 AI Runner(nil = AI 未启用)。
-func SetAgentRunner(fn func() *agent.Runner) { agentRunner = fn }
+func SetAgentRunner(fn func() *agent.Runner) {
+	agentRunnerMu.Lock()
+	defer agentRunnerMu.Unlock()
+	agentRunnerFn = fn
+}
 
 func getAgentRunner() *agent.Runner {
-	if agentRunner == nil {
+	agentRunnerMu.RLock()
+	fn := agentRunnerFn
+	agentRunnerMu.RUnlock()
+	if fn == nil {
 		return nil
 	}
-	return agentRunner()
+	return fn()
 }
 
 // AIStatus GET /api/v1/ai/status —— 前端探测 AI 是否可用。

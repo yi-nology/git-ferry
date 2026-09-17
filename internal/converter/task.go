@@ -1,7 +1,7 @@
 package converter
 
 import (
-	taskmodel "github.com/yi-nology/git-sync-service/biz/model/sync_task"
+	taskmodel "github.com/yi-nology/git-ferry/biz/model/sync_task"
 	"github.com/yi-nology/git-sync-core/model"
 )
 

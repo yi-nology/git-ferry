@@ -3,10 +3,10 @@ package main
 import (
 	"log/slog"
 
-	"github.com/yi-nology/git-sync-service/biz/handler/git_sync"
-	"github.com/yi-nology/git-sync-service/biz/serve"
-	"github.com/yi-nology/git-sync-service/internal/agent"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
+	"github.com/yi-nology/git-ferry/biz/serve"
+	"github.com/yi-nology/git-ferry/internal/agent"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
 	_ "github.com/yi-nology/git-platform-sdk/backends/all"

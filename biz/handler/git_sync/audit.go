@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // recordAudit 记录一条审计日志（best-effort：写入失败仅告警，不影响主流程）。

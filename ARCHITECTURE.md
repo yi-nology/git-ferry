@@ -3,14 +3,14 @@
 ## 1. 项目概述
 
 ### 1.1 服务命名
-**git-sync-service** - 独立的 Git 仓库同步微服务
+**git-ferry** - 独立的 Git 仓库同步微服务
 
 ### 1.2 三仓架构
 
 | 仓库 | Import path | 角色 | 开源策略 |
 |------|-------------|------|----------|
 | `git-sync-core` | `github.com/yi-nology/git-sync-core` | 同步引擎（无 HTTP） | 公网开源 |
-| `git-sync-service`（本仓） | `github.com/yi-nology/git-sync-service` | 公网壳：hz API + Vue | 公网开源 |
+| `git-ferry`（本仓） | `github.com/yi-nology/git-ferry` | 公网壳：hz API + Vue | 公网开源 |
 | `git-sync-intranet` | `github.com/yi-nology/git-sync-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
 
 本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-sync-core v0.2.0`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
@@ -18,7 +18,7 @@
 ```
 模式 A: 公网独立服务                 模式 B: 作为库              模式 C: 内网壳
 ┌────────────────────────┐      ┌──────────────────────┐   ┌────────────────────────┐
-│ git-sync-service       │      │  git-manage-service  │   │ git-sync-intranet      │
+│ git-ferry       │      │  git-manage-service  │   │ git-sync-intranet      │
 │  main / biz / frontend │      │  ┌────────────────┐  │   │  auth(proxy/SSO hook)  │
 │         │              │      │  │  自有 handler  │  │   │  main                  │
 │         ▼              │      │  └───────┬────────┘  │   │    │                   │
@@ -59,7 +59,7 @@ my_project/
 │   ├── sync.go                      # 库入口 (package sync)
 │   ├── model/  service/  executor/  dao/  lock/
 │
-├── git-sync-service/                # 本仓：公网壳
+├── git-ferry/                # 本仓：公网壳
 │   ├── go.mod                       # require git-sync-core v0.1.0（无 replace）
 │   ├── main.go
 │   ├── router.go / router_gen.go
@@ -564,7 +564,7 @@ func matchBranch(pattern, branch string) bool {
 ### 7.1 直接依赖
 
 ```
-git-sync-service
+git-ferry
     │
     ├── git-platform-sdk          # 唯一 Git 依赖
     │   ├── provider/             # Webhook 解析、平台 API
@@ -580,7 +580,7 @@ git-sync-service
 
 ### 7.2 与 git-manage-service 关系
 
-| 维度 | git-manage-service | git-sync-service |
+| 维度 | git-manage-service | git-ferry |
 |------|-------------------|------------------|
 | 数据库 | 独立 | 独立 |
 | API | 独立 | 独立 |
@@ -594,10 +594,10 @@ git-sync-service
 ```
 阶段 1: 引入依赖
     git-manage-service/go.mod
-    require github.com/yi-nology/git-sync-service v0.1.0
+    require github.com/yi-nology/git-ferry v0.1.0
 
 阶段 2: 替换代码
-    import synccore "github.com/yi-nology/git-sync-service/sync"
+    import synccore "github.com/yi-nology/git-ferry/sync"
     svc, _ := synccore.NewService(cfg)
 
 阶段 3: 删除旧代码
@@ -683,15 +683,15 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o git-sync-service .
+RUN CGO_ENABLED=0 GOOS=linux go build -o git-ferry .
 
 FROM alpine:3.18
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
-COPY --from=builder /app/git-sync-service .
+COPY --from=builder /app/git-ferry .
 COPY --from=builder /app/conf ./conf
 EXPOSE 8890
-ENTRYPOINT ["./git-sync-service", "-env", "prod"]
+ENTRYPOINT ["./git-ferry", "-env", "prod"]
 ```
 
 ### 10.2 Makefile
@@ -699,7 +699,7 @@ ENTRYPOINT ["./git-sync-service", "-env", "prod"]
 ```makefile
 .PHONY: build run clean test gen
 
-APP_NAME := git-sync-service
+APP_NAME := git-ferry
 BUILD_DIR := ./output
 
 build:
@@ -749,4 +749,4 @@ docker-run:
 **文档版本**: 2.0
 **创建日期**: 2026-05-15
 **更新日期**: 2026-05-16
-**维护者**: git-sync-service team
+**维护者**: git-ferry team

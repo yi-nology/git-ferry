@@ -3,7 +3,7 @@ package git_sync
 import (
 	"sync"
 
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 var (

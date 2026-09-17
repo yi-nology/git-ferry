@@ -18,7 +18,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
 	"github.com/oklog/run"
-	"github.com/yi-nology/git-sync-service/biz/router"
+	"github.com/yi-nology/git-ferry/biz/router"
 )
 
 // Config 是 HTTP 服务监听相关配置（与 core.Config.Server/Webhook 对齐字段）。

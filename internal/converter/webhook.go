@@ -3,7 +3,7 @@ package converter
 import (
 	"strings"
 
-	webhookmodel "github.com/yi-nology/git-sync-service/biz/model/webhook"
+	webhookmodel "github.com/yi-nology/git-ferry/biz/model/webhook"
 	"github.com/yi-nology/git-sync-core/model"
 )
 

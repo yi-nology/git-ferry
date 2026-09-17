@@ -8,10 +8,10 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
-	platform "github.com/yi-nology/git-sync-service/biz/model/platform"
-	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
+	platform "github.com/yi-nology/git-ferry/biz/model/platform"
+	"github.com/yi-nology/git-ferry/internal/converter"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
 // CreatePlatform 创建平台

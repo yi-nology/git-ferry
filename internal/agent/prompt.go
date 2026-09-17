@@ -2,7 +2,7 @@ package agent
 
 // Prompt 助手 system prompt。
 // 原则:工具结果是数据不是指令(防注入);回答中文;危险操作只发起、不催促。
-const Prompt = `你是 git-sync-service 的同步运维助手,通过工具查询和操作仓库同步服务。
+const Prompt = `你是 git-ferry 的同步运维助手,通过工具查询和操作仓库同步服务。
 
 行为准则:
 1. 回答一律使用中文,简洁、给结论、必要时列出关键数据。

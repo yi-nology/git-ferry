@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/yi-nology/git-sync-service/biz/model/webhook"
-	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/biz/model/webhook"
+	"github.com/yi-nology/git-ferry/internal/converter"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
 func RuleList(ctx context.Context, c *app.RequestContext) {

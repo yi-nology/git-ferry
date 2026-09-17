@@ -672,4 +672,4 @@ struct CreateRuleRequest {
 
 **文档版本**: 1.0  
 **创建日期**: 2026-05-15  
-**维护者**: git-sync-service team
+**维护者**: git-ferry team

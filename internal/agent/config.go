@@ -1,4 +1,4 @@
-// Package agent 提供 git-sync-service 的 AI 助手能力(eino 编排层)。
+// Package agent 提供 git-ferry 的 AI 助手能力(eino 编排层)。
 // 本包不 import hertz:SSE/HTTP 适配在 biz/handler 层,便于内网壳复用。
 package agent
 

@@ -1,7 +1,7 @@
 package converter
 
 import (
-	olmodel "github.com/yi-nology/git-sync-service/biz/model/operation_log"
+	olmodel "github.com/yi-nology/git-ferry/biz/model/operation_log"
 	"github.com/yi-nology/git-sync-core/model"
 )
 

@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	corebridge "github.com/yi-nology/git-sync-service/internal/corebridge"
+	corebridge "github.com/yi-nology/git-ferry/internal/corebridge"
 
-	"github.com/yi-nology/git-sync-service/internal/agent/tools/toolstest"
+	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
 )
 
 type fakeScope struct {

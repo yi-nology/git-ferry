@@ -6,12 +6,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/yi-nology/git-sync-service/biz/model/operation_log"
-	"github.com/yi-nology/git-sync-service/biz/model/platform"
-	"github.com/yi-nology/git-sync-service/biz/model/repo"
-	"github.com/yi-nology/git-sync-service/biz/model/sync_task"
-	"github.com/yi-nology/git-sync-service/biz/model/system"
-	"github.com/yi-nology/git-sync-service/biz/model/webhook"
+	"github.com/yi-nology/git-ferry/biz/model/operation_log"
+	"github.com/yi-nology/git-ferry/biz/model/platform"
+	"github.com/yi-nology/git-ferry/biz/model/repo"
+	"github.com/yi-nology/git-ferry/biz/model/sync_task"
+	"github.com/yi-nology/git-ferry/biz/model/system"
+	"github.com/yi-nology/git-ferry/biz/model/webhook"
 )
 
 type RepoService interface {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	handler "github.com/yi-nology/git-sync-service/biz/handler/git_sync"
+	handler "github.com/yi-nology/git-ferry/biz/handler/git_sync"
 )
 
 // AuthMiddlewareProvider 允许壳层（公网 / 内网）替换默认 X-API-Key 鉴权，

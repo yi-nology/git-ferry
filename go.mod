@@ -1,4 +1,4 @@
-module github.com/yi-nology/git-sync-service
+module github.com/yi-nology/git-ferry
 
 go 1.26
 

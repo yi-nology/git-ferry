@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/yi-nology/git-sync-service/biz/model/sync_task"
-	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/biz/model/sync_task"
+	"github.com/yi-nology/git-ferry/internal/converter"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
 func TaskList(ctx context.Context, c *app.RequestContext) {

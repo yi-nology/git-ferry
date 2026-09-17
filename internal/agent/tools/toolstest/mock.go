@@ -7,7 +7,7 @@ import (
 
 	"github.com/yi-nology/git-platform-sdk/provider"
 	coremodel "github.com/yi-nology/git-sync-core/model"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // Mock 可配置的 SyncService 假实现。

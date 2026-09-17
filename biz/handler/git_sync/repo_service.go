@@ -8,10 +8,10 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
-	"github.com/yi-nology/git-sync-service/biz/model/repo"
-	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/biz/model/repo"
+	"github.com/yi-nology/git-ferry/internal/converter"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
 func RepoList(ctx context.Context, c *app.RequestContext) {

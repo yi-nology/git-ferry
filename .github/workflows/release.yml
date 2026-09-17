@@ -55,17 +55,17 @@ jobs:
           CGO_ENABLED: 0
         run: |
           # 带平台后缀,避免 6 个二进制同名碰撞(release 资产才能各平台独立)
-          binary_name="git-sync-service-${GOOS}-${GOARCH}"
+          binary_name="git-ferry-${GOOS}-${GOARCH}"
           if [ "$GOOS" = "windows" ]; then
             binary_name="${binary_name}.exe"
           fi
           # 版本号编译注入(tag 触发时 GITHUB_REF_NAME 即 v1.7.x 形式的 tag)
-          go build -ldflags "-X github.com/yi-nology/git-sync-service/internal/version.Version=${GITHUB_REF_NAME}" -o "./dist/${binary_name}" .
+          go build -ldflags "-X github.com/yi-nology/git-ferry/internal/version.Version=${GITHUB_REF_NAME}" -o "./dist/${binary_name}" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: git-sync-service-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: git-ferry-${{ matrix.goos }}-${{ matrix.goarch }}
           path: ./dist/*
 
   publish:
@@ -105,12 +105,12 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
 
             ## Artifacts
-            - `git-sync-service-linux-amd64` - Linux x86_64
-            - `git-sync-service-linux-arm64` - Linux ARM64
-            - `git-sync-service-darwin-amd64` - macOS x86_64
-            - `git-sync-service-darwin-arm64` - macOS ARM64 (Apple Silicon)
-            - `git-sync-service-windows-amd64.exe` - Windows x86_64
-            - `git-sync-service-windows-arm64.exe` - Windows ARM64
+            - `git-ferry-linux-amd64` - Linux x86_64
+            - `git-ferry-linux-arm64` - Linux ARM64
+            - `git-ferry-darwin-amd64` - macOS x86_64
+            - `git-ferry-darwin-arm64` - macOS ARM64 (Apple Silicon)
+            - `git-ferry-windows-amd64.exe` - Windows x86_64
+            - `git-ferry-windows-arm64.exe` - Windows ARM64
           files: ./artifacts/**/*
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}

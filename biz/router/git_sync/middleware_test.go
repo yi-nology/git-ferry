@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	handler "github.com/yi-nology/git-sync-service/biz/handler/git_sync"
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	handler "github.com/yi-nology/git-ferry/biz/handler/git_sync"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // 测试专用凭据占位,运行时拼装,避免硬编码凭据形态

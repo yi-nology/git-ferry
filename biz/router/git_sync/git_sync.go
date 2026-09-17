@@ -4,7 +4,7 @@ package git_sync
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	git_sync "github.com/yi-nology/git-sync-service/biz/handler/git_sync"
+	git_sync "github.com/yi-nology/git-ferry/biz/handler/git_sync"
 )
 
 /*

@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/yi-nology/git-sync-service/internal/agent/tools"
-	"github.com/yi-nology/git-sync-service/internal/agent/tools/toolstest"
+	"github.com/yi-nology/git-ferry/internal/agent/tools"
+	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
 )
 
 func newTestRunner(t *testing.T, m *toolstest.Mock, steps ...toolstest.FakeStep) *Runner {

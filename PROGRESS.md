@@ -1,4 +1,4 @@
-# Git Sync Service 开发进度
+# GitFerry 开发进度
 
 ## ✅ 已完成
 
@@ -112,7 +112,7 @@ make tidy
 ## 📌 架构说明
 
 ```
-git-sync-service/
+git-ferry/
 ├── idl/                          # Thrift API 定义
 ├── biz/
 │   ├── handler/git_sync/        # Handler（调用 service 层）

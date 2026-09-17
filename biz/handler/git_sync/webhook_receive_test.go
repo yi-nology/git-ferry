@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yi-nology/git-sync-service/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // 测试专用凭据占位,运行时拼装,避免硬编码凭据形态

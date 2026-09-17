@@ -8,7 +8,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
-	"github.com/yi-nology/git-sync-service/internal/agent/tools"
+	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
 
 type sinkKey struct{}

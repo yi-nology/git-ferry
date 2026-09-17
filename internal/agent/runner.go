@@ -16,7 +16,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/eino-ext/components/model/openai"
 
-	"github.com/yi-nology/git-sync-service/internal/agent/tools"
+	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
 
 // Runner AI 助手编排器:eino ChatModelAgent + 工具装饰器 + 会话存储。

@@ -26,7 +26,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          sed -i "s/\[!\[Latest Release\].*/[![Latest Release](https:\/\/img.shields.io\/github\/v\/release\/yi-nology\/git-sync-service)](https:\/\/github.com\/yi-nology\/git-sync-service\/releases\/tag\/${VERSION})/" README.md
+          sed -i "s/\[!\[Latest Release\].*/[![Latest Release](https:\/\/img.shields.io\/github\/v\/release\/yi-nology\/git-ferry)](https:\/\/github.com\/yi-nology\/git-ferry\/releases\/tag\/${VERSION})/" README.md
 
       - name: Generate test stats
         id: test-stats

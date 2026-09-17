@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	handler "github.com/yi-nology/git-sync-service/biz/handler"
-	"github.com/yi-nology/git-sync-service/biz/handler/git_sync"
-	routergitsync "github.com/yi-nology/git-sync-service/biz/router/git_sync"
+	handler "github.com/yi-nology/git-ferry/biz/handler"
+	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
+	routergitsync "github.com/yi-nology/git-ferry/biz/router/git_sync"
 )
 
 // CustomizedRegister 注册非 IDL 生成的定制路由（探活、webhook 接收等）。

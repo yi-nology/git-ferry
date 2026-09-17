@@ -4,7 +4,7 @@ package main
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/yi-nology/git-sync-service/biz/router"
+	"github.com/yi-nology/git-ferry/biz/router"
 )
 
 // customizeRegister registers customize routers.

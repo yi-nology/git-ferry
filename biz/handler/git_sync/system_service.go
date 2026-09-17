@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	system "github.com/yi-nology/git-sync-service/biz/model/system"
-	"github.com/yi-nology/git-sync-service/internal/converter"
-	"github.com/yi-nology/git-sync-service/internal/pkg/response"
-	"github.com/yi-nology/git-sync-service/internal/version"
+	system "github.com/yi-nology/git-ferry/biz/model/system"
+	"github.com/yi-nology/git-ferry/internal/converter"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/version"
 )
 
 // SystemStatus 返回系统状态信息（管理面板用）。

@@ -2,12 +2,12 @@
 
 > 中文名「摆渡」:把代码摆渡到该去的地方——内网之间、内网到开源世界、渡入备份港。
 
-[![CI](https://github.com/yi-nology/git-sync-service/actions/workflows/ci.yml/badge.svg)](https://github.com/yi-nology/git-sync-service/actions/workflows/ci.yml)
-[![Release](https://github.com/yi-nology/git-sync-service/actions/workflows/release.yml/badge.svg)](https://github.com/yi-nology/git-sync-service/actions/workflows/release.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/yi-nology/git-sync-service)](https://goreportcard.com/report/github.com/yi-nology/git-sync-service)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-sync-service)](https://go.dev/)
-[![License](https://img.shields.io/github/license/yi-nology/git-sync-service)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-sync-service)](https://github.com/yi-nology/git-sync-service/releases/tag/v1.10.0)
+[![CI](https://github.com/yi-nology/git-ferry/actions/workflows/ci.yml/badge.svg)](https://github.com/yi-nology/git-ferry/actions/workflows/ci.yml)
+[![Release](https://github.com/yi-nology/git-ferry/actions/workflows/release.yml/badge.svg)](https://github.com/yi-nology/git-ferry/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yi-nology/git-ferry)](https://goreportcard.com/report/github.com/yi-nology/git-ferry)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-ferry)](https://go.dev/)
+[![License](https://img.shields.io/github/license/yi-nology/git-ferry)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases/tag/v1.10.0)
 
 GitFerry is a self-hosted hub for Git repositories: sync across platforms, publish to the open-source world (dual-identity module mirrors), and back up — all in one place.
 
@@ -47,7 +47,7 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 | Repository | Import path | Role |
 |------------|-------------|------|
 | [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP)，当前 `v0.2.0` |
-| **git-sync-service**（本仓） | `github.com/yi-nology/git-sync-service` | Public shell: hz API + Vue UI |
+| **git-ferry**（本仓） | `github.com/yi-nology/git-ferry` | Public shell: hz API + Vue UI |
 | [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | Intranet shell (gateway/SSO auth) |
 
 单仓即可构建（`git clone` 后 `go build`），无需同级 checkout。
@@ -73,21 +73,21 @@ make docker-build
 
 ### From Release
 
-Download the latest binary from [Releases](https://github.com/yi-nology/git-sync-service/releases).
+Download the latest binary from [Releases](https://github.com/yi-nology/git-ferry/releases).
 
 ### From Source
 
 ```bash
-git clone https://github.com/yi-nology/git-sync-service.git
-cd git-sync-service
-go build -o git-sync-service .
+git clone https://github.com/yi-nology/git-ferry.git
+cd git-ferry
+go build -o git-ferry .
 ```
 
 ## Usage
 
 ```bash
 # Run the service
-./git-sync-service
+./git-ferry
 
 # Or use make
 make run
