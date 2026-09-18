@@ -1,5 +1,5 @@
 # Logs
-logs
+# 注意:不要写裸 `logs`——会连带忽略 src/views/logs/ 页面目录(SystemLogs.vue 曾因此从未入库)
 *.log
 npm-debug.log*
 yarn-debug.log*

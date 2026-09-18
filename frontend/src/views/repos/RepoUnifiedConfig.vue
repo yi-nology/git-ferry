@@ -135,6 +135,7 @@ import {
 import { useRepoStore } from '@/stores/repo'
 import { useSyncTaskStore } from '@/stores/syncTask'
 import { copyToClipboard } from '@/utils'
+import { buildWebhookReceiveUrl } from '@/constants/webhook'
 import { platformColor, platformLabel } from '@/utils/platform'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -150,7 +151,7 @@ const repo = ref<Repo | null>(null)
 const tasks = ref<SyncTask[]>([])
 
 const repoKey = computed(() => route.params.id as string)
-const webhookUrl = computed(() => `${window.location.origin}/api/v1/webhook/receive/${repoKey.value}`)
+const webhookUrl = computed(() => buildWebhookReceiveUrl(repoKey.value))
 
 onMounted(async () => {
   try {

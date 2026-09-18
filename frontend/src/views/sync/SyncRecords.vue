@@ -301,7 +301,7 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'SyncRecords' })
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Empty } from 'ant-design-vue'
 import {
   ReloadOutlined,
@@ -546,6 +546,11 @@ onMounted(async () => {
   } catch (e) {
     notifyError(e, '加载任务失败')
   }
+  fetchRecords()
+})
+
+// keep-alive 缓存页:每次切回刷新执行记录
+onActivated(() => {
   fetchRecords()
 })
 </script>

@@ -56,8 +56,10 @@ http.interceptors.response.use(
     const config = error.config
     const status = error.response?.status
 
-    // 5xx 自动重试(最多 2 次,指数退避)
-    if (status >= 500 && status < 600) {
+    // 5xx 自动重试(最多 2 次,指数退避)——仅限幂等方法。
+    // POST(触发同步/删除/创建)可能已在服务端生效,盲目重试会造成重复副作用。
+    const method = (config.method || 'get').toUpperCase()
+    if (status >= 500 && status < 600 && (method === 'GET' || method === 'HEAD')) {
       const retryCount = config.__retryCount || 0
       if (retryCount < 2) {
         config.__retryCount = retryCount + 1

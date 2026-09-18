@@ -303,7 +303,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'RepoList' })
 
-import { onMounted, ref, shallowRef, reactive, computed, markRaw } from 'vue'
+import { onMounted, onActivated, ref, shallowRef, reactive, computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   PlusOutlined,
@@ -594,6 +594,11 @@ onMounted(() => {
   loadRepos()
   taskStore.fetchTasks({ page: 1, page_size: 100 }).catch((e) => notifyError(e, '加载任务失败'))
   loadConfiguredPlatforms()
+})
+
+// keep-alive 缓存页:每次切回刷新,避免看到过期数据
+onActivated(() => {
+  loadRepos()
 })
 
 function openCreate() {

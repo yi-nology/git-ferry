@@ -1,9 +1,12 @@
 /** 状态字典 —— StatusBadge 组件与 statusText 工具函数的统一来源 */
+/* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+// 用 Record<string, ...> 而非 Record<StatusValue, ...>:入参来自后端任意 string,
+// 索引函数已做兜底(未知状态原样展示/归 idle),无需收窄类型
 
 export type StatusKind = 'success' | 'running' | 'failed' | 'warning' | 'idle'
 export type StatusValue = 'success' | 'running' | 'failed' | 'received' | 'processed' | 'active' | 'idle' | 'stopped' | 'pending' | 'error' | 'warning' | 'disabled'
 
-export const STATUS_LABEL: Record<StatusValue, string> = {
+export const STATUS_LABEL: Record<string, string> = {
   success: '成功',
   running: '运行中',
   failed: '失败',
@@ -19,7 +22,7 @@ export const STATUS_LABEL: Record<StatusValue, string> = {
 }
 
 /** 把业务状态映射到展示样式分类 */
-export const STATUS_KIND: Record<StatusValue, StatusKind> = {
+export const STATUS_KIND: Record<string, StatusKind> = {
   success: 'success',
   running: 'running',
   failed: 'failed',

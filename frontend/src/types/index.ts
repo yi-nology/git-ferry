@@ -42,6 +42,9 @@ export interface SyncRun {
   commit_range: string
   details: string
   error_message: string
+  error_type: string
+  retry_total: number
+  duration_ms: number
   created_at: string
 }
 

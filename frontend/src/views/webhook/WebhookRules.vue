@@ -264,6 +264,7 @@ import { useSyncTaskStore } from '@/stores/syncTask'
 import type { WebhookRule } from '@/types'
 import { eventTypeColor } from '@/utils/dictionaries'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
+import { buildWebhookReceiveUrl } from '@/constants/webhook'
 import { webhookApi } from '@/api'
 
 const webhookStore = useWebhookStore()
@@ -418,7 +419,7 @@ function openPlatform() {
     notifyWarning('请先选择仓库')
     return
   }
-  platForm.callback_url = `${window.location.origin}/api/webhook/receive/${repoKey.value}`
+  platForm.callback_url = buildWebhookReceiveUrl(repoKey.value)
   platForm.secret = ''
   platForm.events = ['push']
   platVisible.value = true

@@ -288,7 +288,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'SyncTaskList' })
 
-import { onMounted, ref, reactive, computed } from 'vue'
+import { onMounted, onActivated, ref, reactive, computed } from 'vue'
 import {
   PlusOutlined,
   PlayCircleOutlined,
@@ -308,7 +308,10 @@ import type { SyncTask } from '@/types'
 import type { TablePaginationConfig } from 'ant-design-vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
+const router = useRouter()
 const taskStore = useSyncTaskStore()
 const repoStore = useRepoStore()
 const dialogVisible = ref(false)
@@ -450,9 +453,22 @@ const cronPresets = [
 ]
 
 // -- Lifecycle --
-onMounted(() => {
-  loadTasks()
+onMounted(async () => {
+  await loadTasks()
   repoStore.fetchRepos().catch((e) => notifyError(e, '加载仓库失败'))
+  // 支持 /sync?edit=<taskKey> 深链(仓库详情页"编辑"按钮跳转目标)
+  const editKey = route.query.edit as string | undefined
+  if (editKey) {
+    const task = taskStore.tasks.find((t) => t.key === editKey)
+    if (task) openEdit(task)
+    else notifyWarning(`未找到任务 ${editKey}`)
+    router.replace({ query: {} }) // 清掉参数,避免刷新重复弹窗
+  }
+})
+
+// keep-alive 缓存页:每次切回刷新任务列表
+onActivated(() => {
+  loadTasks()
 })
 
 // -- CRUD actions --

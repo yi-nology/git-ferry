@@ -164,6 +164,7 @@ import {
 import { useRepoStore } from '@/stores/repo'
 import { useSyncTaskStore } from '@/stores/syncTask'
 import { copyToClipboard } from '@/utils'
+import { buildWebhookReceiveUrl } from '@/constants/webhook'
 import { triggerColor, triggerLabel } from '@/utils/dictionaries'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -181,7 +182,7 @@ const history = ref<SyncRun[]>([])
 const activeTab = ref('tasks')
 
 const repoKey = computed(() => route.params.id as string)
-const webhookUrl = computed(() => `${window.location.origin}/api/v1/webhook/receive/${repoKey.value}`)
+const webhookUrl = computed(() => buildWebhookReceiveUrl(repoKey.value))
 
 const getTaskName = (taskKey: string) => {
   const task = tasks.value.find(t => t.key === taskKey)

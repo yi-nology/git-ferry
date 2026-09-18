@@ -323,7 +323,7 @@ import {
   CheckCircleFilled,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { platformApi, type Platform } from '@/api/platform'
+import { platformApi, type Platform, type CreatePlatformRequest, type UpdatePlatformRequest } from '@/api/platform'
 import { PLATFORM_COLOR } from '@/utils/platform'
 import { formatTime } from '@/utils'
 
@@ -613,7 +613,7 @@ async function handleSubmit() {
     return
   }
 
-  const platformData: Record<string, unknown> = {
+  const platformData: CreatePlatformRequest = {
     type: formData.type,
     name: formData.name,
     instance_url: formData.instance_url,
@@ -632,11 +632,19 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (isEditing.value) {
-      // 编辑
-      await platformApi.update({
+      // 编辑:不含 type(后端不支持改平台类型),令牌仅在重填时更新
+      const updateData: UpdatePlatformRequest = {
         key: editingId.value,
-        ...platformData,
-      })
+        name: platformData.name,
+        instance_url: platformData.instance_url,
+        api_url: platformData.api_url,
+        skip_tls_verify: platformData.skip_tls_verify,
+        ca_cert_path: platformData.ca_cert_path,
+        proxy_url: platformData.proxy_url,
+        is_default: platformData.is_default,
+      }
+      if (formData.token) updateData.access_token = formData.token
+      await platformApi.update(updateData)
     } else {
       // 添加
       await platformApi.create(platformData)

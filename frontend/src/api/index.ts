@@ -16,13 +16,8 @@ import type {
   RuleData,
   EventsData,
   SystemStatusData,
-  HealthData,
   OperationLogListData,
   OperationLogParams,
-  SyncLogListData,
-  SyncLogParams,
-  SystemLogListData,
-  SystemLogParams,
   PlatformWebhookData,
   PlatformWebhookListData,
 } from '@/types/api'
@@ -119,15 +114,12 @@ export const webhookApi = {
 export const logApi = {
   listOperations: (params?: OperationLogParams) =>
     http.get<unknown, OperationLogListData>('/logs/operations', { params }),
-  listSync: (params?: SyncLogParams) =>
-    http.get<unknown, SyncLogListData>('/logs/sync', { params }),
-  listSystem: (params?: SystemLogParams) =>
-    http.get<unknown, SystemLogListData>('/logs/system', { params }),
+  // 注:listSync/listSystem 已删除——后端从未注册 /logs/sync、/logs/system 路由,
+  // 对应孤儿页面 SystemLogs.vue 已移除
 }
 
 export const systemApi = {
   status: () => http.get<unknown, SystemStatusData>('/system/status'),
-  health: () => http.get<unknown, HealthData>('/system/health'),
 }
 
 // 统一错误类型,供业务层 catch 后判断

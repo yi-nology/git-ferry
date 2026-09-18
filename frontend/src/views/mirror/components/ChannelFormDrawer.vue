@@ -162,13 +162,18 @@ async function submit() {
     if (form.mode === 'publish' && !t.targetModule.trim())
       return message.error('publish 模式需要填写目标 module')
   }
-  const ch = await createMutation.mutateAsync({
-    name: form.name.trim(),
-    mode: form.mode,
-    repoKey: form.repoKey,
-    targets: form.targets.map((t) => ({ ...t })),
-  })
-  emit('created', ch)
+  try {
+    const ch = await createMutation.mutateAsync({
+      name: form.name.trim(),
+      mode: form.mode,
+      repoKey: form.repoKey,
+      targets: form.targets.map((t) => ({ ...t })),
+    })
+    emit('created', ch)
+  } catch (e) {
+    // 创建失败(如克隆校验不过)必须可见,否则用户卡在开着抽屉的 loading
+    message.error((e as Error)?.message || '创建失败')
+  }
 }
 </script>
 

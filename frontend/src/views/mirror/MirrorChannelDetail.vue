@@ -121,7 +121,7 @@
         size="small"
         :columns="runColumns"
         :loading="runsLoading"
-        @row-click="(r: MirrorRun) => openRun(r)"
+        :custom-row="(r: MirrorRun) => ({ onClick: () => openRun(r), style: { cursor: 'pointer' } })"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
@@ -410,9 +410,13 @@ const deleteMutation = useDeleteMirrorChannelMutation()
 async function doDelete() {
   if (!channel.value) return
   if (deleteConfirm.value !== channel.value.name) return message.error('通道名不匹配')
-  await deleteMutation.mutateAsync({ id: channel.value.id, confirm: deleteConfirm.value })
-  message.success('已删除')
-  router.push('/mirror')
+  try {
+    await deleteMutation.mutateAsync({ id: channel.value.id, confirm: deleteConfirm.value })
+    message.success('已删除')
+    router.push('/mirror')
+  } catch (e) {
+    message.error((e as Error)?.message || '删除失败')
+  }
 }
 </script>
 

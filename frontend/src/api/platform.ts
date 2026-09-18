@@ -37,7 +37,8 @@ export interface CreatePlatformRequest {
   type: string
   instance_url?: string
   api_url: string
-  access_token: string
+  // 可选:编辑已有平台时通常不重传令牌(表单层对"新建"强制校验必填)
+  access_token?: string
   skip_tls_verify?: boolean
   ca_cert_path?: string
   proxy_url?: string
