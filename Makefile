@@ -1,4 +1,4 @@
-.PHONY: build run restart clean test tidy generate docker-build
+.PHONY: build run restart clean clean-data test lint fmt vet tidy generate docker-build
 
 APP_NAME := git-ferry
 BUILD_DIR := ./output
@@ -28,20 +28,33 @@ restart:
 	fi
 	@$(MAKE) run
 
-# 依赖 github.com/yi-nology/git-sync-core v0.1.0（go.mod，可从模块代理拉取）。
-# 本地改 core 时可用 go.work 或临时 replace，勿提交 replace。
+# 依赖 github.com/yi-nology/git-sync-core(go.mod,可从模块代理拉取)。
+# 本地改 core 时可用 go.work 或临时 replace,勿提交 replace。
 tidy:
 	@go mod tidy
 
 test:
 	@go test ./... -race -count=1
 
+lint:
+	@golangci-lint run ./...
+
+fmt:
+	@gofmt -s -w .
+
+vet:
+	@go vet ./...
+
+# clean 只清编译产物;开发数据库用 clean-data 单独清,防止误删
 clean:
-	@rm -rf $(BUILD_DIR) data/
+	@rm -rf $(BUILD_DIR)
+
+clean-data:
+	@rm -rf data/
 
 generate:
 	@echo "Generating code from IDL..."
-	@cd idl && thriftgo --out ../biz --go --go-recurse 10 git_sync.thrift
+	@cd idl && thriftgo -r -g "go:package_prefix=github.com/yi-nology/git-ferry/biz" --out ../biz git_sync.thrift
 
 docker-build:
-	@docker build -t $(APP_NAME):latest .
+	@docker build --build-arg VERSION=$(VERSION) -t $(APP_NAME):latest .

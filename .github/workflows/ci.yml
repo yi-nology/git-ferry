@@ -9,13 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.26']
 
     steps:
       - name: Checkout service
@@ -24,7 +25,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: '1.26'
           cache: true
 
       - name: Download dependencies
@@ -37,8 +38,9 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
-        if: matrix.go-version == '1.26'
         uses: codecov/codecov-action@v7
+        with:
+          files: coverage.out
 
   lint:
     name: Lint
@@ -72,6 +74,9 @@ jobs:
           go-version: '1.26'
 
       - name: Build
+        # CGO 与 release/Dockerfile 保持一致(go.mod 用纯 Go sqlite)
+        env:
+          CGO_ENABLED: '0'
         run: go build -o ./output/git-ferry .
 
       - name: Upload build artifact
@@ -79,3 +84,30 @@ jobs:
         with:
           name: git-ferry-linux-amd64
           path: ./output/git-ferry
+
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout service
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx vue-tsc -b
+
+      - name: Build
+        run: npm run build

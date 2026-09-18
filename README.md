@@ -46,7 +46,7 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 
 | Repository | Import path | Role |
 |------------|-------------|------|
-| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP)，当前 `v0.2.0` |
+| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP)，当前 `v0.3.4` |
 | **git-ferry**（本仓） | `github.com/yi-nology/git-ferry` | Public shell: hz API + Vue UI |
 | [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | Intranet shell (gateway/SSO auth) |
 
@@ -127,24 +127,28 @@ server:
 
 database:
   driver: sqlite
-  source: "data/git-sync.db"
+  dsn: "data/git_sync.db"
 ```
 
 ## Development
 
 ```bash
-# Install dependencies (tidy both modules)
+# Install dependencies
 make tidy
 
-# Run tests (core + shell)
+# Run tests
 make test
 
 # Build
 make build
 
-# Lint (requires golangci-lint; run in both module roots)
-golangci-lint run
-(cd core && golangci-lint run)
+# Lint / format / vet
+make lint
+make fmt
+make vet
+
+# Frontend (in frontend/, or just `make -C frontend build`)
+cd frontend && npm ci && npm run build
 ```
 
 ## API Documentation
@@ -168,6 +172,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <!-- STATS_START -->
 | Metric | Value |
 |--------|-------|
-| Test Files | 45 |
-| Total Tests | 330 |
+| Test Files | 19 |
+| Total Tests | 104 |
 <!-- STATS_END -->

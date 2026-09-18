@@ -68,3 +68,13 @@ gui-test-screenshots/
 
 # 本地 Redis 调试产生的持久化文件
 dump.rdb
+
+# 本地 AI 工具会话状态与插件目录(勿入库)
+.mimosa/
+.v2c/
+.playwright-mcp/
+
+# 本地编译产物与设计源文件
+aistub
+design.pen
+docs/quality-reports/

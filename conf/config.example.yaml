@@ -1,0 +1,45 @@
+server:
+  host: 0.0.0.0
+  port: 8890
+  mode: debug
+  api_key: "change-me-to-a-strong-random-key"
+
+database:
+  driver: sqlite
+  dsn: data/git_sync.db
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 0
+
+git:
+  backend: gogit
+  temp_dir: /tmp/git-sync
+
+sync:
+  max_concurrent: 5
+  default_timeout: 300
+  retry_count: 3
+
+webhook:
+  rate_limit: 100
+  max_body_size: 10485760
+
+log:
+  level: info
+  format: json
+
+# AI 助手(eino):默认关闭。启用需同时:
+#   1. 打开下方 ai 段;2. 设置环境变量 GIT_SYNC_AI_API_KEY
+# base_url 可指向任意 OpenAI 兼容端点;生产内网可指向 vLLM/Ollama,如:
+#   ai:
+#     enabled: true
+#     base_url: "http://127.0.0.1:11434/v1"
+#     model: "qwen2.5:14b"
+#     temperature: 0.3        # 可选,默认 0.3
+#     max_tokens: 2048        # 可选,默认 2048
+#     timeout_seconds: 60     # 可选,默认 60
+#     max_concurrent_chats: 4 # 可选,默认 4

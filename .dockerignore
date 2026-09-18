@@ -36,3 +36,13 @@ test_flow.sh
 
 # Coverage
 coverage.out
+aistub
+coverage.out
+design.pen
+.mimosa/
+.v2c/
+.playwright-mcp/
+gui-test-screenshots/
+docs/
+output/
+data/
