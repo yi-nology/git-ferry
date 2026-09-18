@@ -69,6 +69,11 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, err.Error())
 		return
 	}
+	// 校验前置:先建会话后校验会让空消息请求留下垃圾会话
+	if req.Confirmed == nil && strings.TrimSpace(req.Message) == "" {
+		response.BadRequest(c, "message 不能为空")
+		return
+	}
 
 	store := r.Sessions()
 	var sess *agent.Session
@@ -110,12 +115,7 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	if strings.TrimSpace(req.Message) == "" {
-		response.BadRequest(c, "message 不能为空")
-		return
-	}
-
-	events, err := r.Run(ctx, sess, req.Message)
+	events, cancel, err := r.Run(ctx, sess, req.Message)
 	if err != nil {
 		if errors.Is(err, agent.ErrBusy) {
 			response.Error(c, consts.StatusTooManyRequests, agent.ErrBusy.Error())
@@ -125,9 +125,11 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	defer cancel()
 	for ev := range events {
 		if !publish(ev) {
-			return // 客户端断开;Runner 的 goroutine 随 ctx 取消收敛
+			cancel() // 客户端断开:立即终止模型流与事件发送,释放信号量,不再烧 token
+			return
 		}
 	}
 }

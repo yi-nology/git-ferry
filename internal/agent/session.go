@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -90,6 +91,39 @@ func (st *SessionStore) Append(s *Session, role, content string) {
 		s.Messages = s.Messages[len(s.Messages)-maxMsgs:]
 	}
 	s.LastAt = time.Now()
+}
+
+// Snapshot 返回会话消息的拷贝:构建模型输入用,避免与并发 Append 竞态。
+func (st *SessionStore) Snapshot(s *Session) []Message {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	out := make([]Message, len(s.Messages))
+	copy(out, s.Messages)
+	return out
+}
+
+// StartJanitor 启动周期性过期回收:Get 只做惰性清理,再无人访问的会话
+// (如爬虫创建后即弃)靠 janitor 兜底,防止 map 只增不减。
+func (st *SessionStore) StartJanitor(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				st.mu.Lock()
+				now := time.Now()
+				for id, s := range st.sessions {
+					if now.Sub(s.LastAt) > st.ttl {
+						delete(st.sessions, id)
+					}
+				}
+				st.mu.Unlock()
+			}
+		}
+	}()
 }
 
 // SetPending 在会话上登记一次待确认调用(代理给 Session 的接口适配)。

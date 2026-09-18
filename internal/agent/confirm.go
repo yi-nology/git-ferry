@@ -63,6 +63,11 @@ func (st *SessionStore) consumePending(s *Session, toolName, token string) (stri
 
 // PendingSnapshot 只读拷贝当前待确认调用(测试用)。
 func (s *Session) PendingSnapshot() *PendingConfirm {
+	if s.store == nil {
+		return nil
+	}
+	s.store.mu.Lock()
+	defer s.store.mu.Unlock()
 	if s.pending == nil {
 		return nil
 	}

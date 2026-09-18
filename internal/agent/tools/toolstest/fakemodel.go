@@ -32,25 +32,33 @@ func (f *FakeModel) Append(s FakeStep) {
 	f.steps = append(f.steps, s)
 }
 
-func (f *FakeModel) pop() (FakeStep, bool) {
+func (f *FakeModel) pop(ctx context.Context) (FakeStep, bool, error) {
 	f.mu.Lock()
 	hold := f.Hold
 	f.mu.Unlock()
 	if hold != nil {
-		<-hold // 时序测试:模型挂起期间信号量被占住
+		// 时序测试:模型挂起期间信号量被占住;与真实模型一样响应 ctx 取消
+		select {
+		case <-hold:
+		case <-ctx.Done():
+			return FakeStep{}, false, ctx.Err()
+		}
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if len(f.steps) == 0 {
-		return FakeStep{}, false
+		return FakeStep{}, false, nil
 	}
 	s := f.steps[0]
 	f.steps = f.steps[1:]
-	return s, true
+	return s, true, nil
 }
 
-func (f *FakeModel) Generate(_ context.Context, _ []*schema.Message, _ ...model.Option) (*schema.Message, error) {
-	step, ok := f.pop()
+func (f *FakeModel) Generate(ctx context.Context, _ []*schema.Message, _ ...model.Option) (*schema.Message, error) {
+	step, ok, err := f.pop(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, errors.New("fake: 脚本耗尽")
 	}

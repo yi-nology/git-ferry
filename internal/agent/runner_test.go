@@ -50,13 +50,32 @@ func drainEvents(t *testing.T, ch <-chan Event) (string, []Event) {
 	}
 }
 
+// drainEventsTolerant 收完事件流但容忍 error 事件(取消场景的收敛测试用)。
+func drainEventsTolerant(t *testing.T, ch <-chan Event) []Event {
+	t.Helper()
+	deadline := time.After(10 * time.Second)
+	var events []Event
+	for {
+		select {
+		case ev, ok := <-ch:
+			if !ok {
+				return events
+			}
+			events = append(events, ev)
+		case <-deadline:
+			t.Fatal("等待事件超时")
+		}
+	}
+}
+
 func TestRunner_TextReply(t *testing.T) {
 	r := newTestRunner(t, toolstest.NewMock(), toolstest.FakeStep{Content: "你好,我是同步助手"})
 	st := NewSessionStore(time.Minute, 20)
 	sess := st.Create()
 
-	ch, err := r.Run(context.Background(), sess, "你是谁")
+	ch, cancel, err := r.Run(context.Background(), sess, "你是谁")
 	require.NoError(t, err)
+	defer cancel()
 	text, events := drainEvents(t, ch)
 
 	assert.Equal(t, "你好,我是同步助手", text)
@@ -65,6 +84,31 @@ func TestRunner_TextReply(t *testing.T) {
 	assert.Equal(t, "done", events[len(events)-1].Type)
 	assert.Len(t, sess.Messages, 2, "会话应存 user+assistant 两条")
 	assert.Equal(t, "你好,我是同步助手", sess.Messages[1].Content)
+}
+
+func TestRunner_CancelStopsAndReleasesSemaphore(t *testing.T) {
+	fm := toolstest.NewFakeModel()
+	hold := make(chan struct{})
+	fm.Hold = hold
+	fm.Append(toolstest.FakeStep{Content: "long"})
+	r, err := NewRunnerWithModel(&Config{MaxConcurrentChats: 1}, fm, tools.NewRegistry(toolstest.NewMock()))
+	require.NoError(t, err)
+	st := NewSessionStore(time.Minute, 20)
+
+	ch, cancel, err := r.Run(context.Background(), st.Create(), "a")
+	require.NoError(t, err)
+	time.Sleep(80 * time.Millisecond) // 进入模型调用
+	cancel()                          // 消费方消失
+	drainEventsTolerant(t, ch)        // goroutine 应收敛、chan 关闭
+	close(hold)
+
+	// 信号量必须已释放:再次 Run 可成功且正常完成
+	ch2, cancel2, err := r.Run(context.Background(), st.Create(), "b")
+	require.NoError(t, err, "取消后信号量应已释放")
+	text2, events2 := drainEvents(t, ch2)
+	assert.Equal(t, "long", text2)
+	assert.Equal(t, "done", events2[len(events2)-1].Type)
+	cancel2()
 }
 
 func TestRunner_ToolLoop_WithConfirm(t *testing.T) {
@@ -76,8 +120,9 @@ func TestRunner_ToolLoop_WithConfirm(t *testing.T) {
 	st := NewSessionStore(time.Minute, 20)
 	sess := st.Create()
 
-	ch, err := r.Run(context.Background(), sess, "帮我同步 t1")
+	ch, cancel, err := r.Run(context.Background(), sess, "帮我同步 t1")
 	require.NoError(t, err)
+	defer cancel()
 	_, events := drainEvents(t, ch)
 
 	var confirm *Event
@@ -111,11 +156,12 @@ func TestRunner_Busy(t *testing.T) {
 	require.NoError(t, err)
 	st := NewSessionStore(time.Minute, 20)
 
-	ch1, err := r.Run(context.Background(), st.Create(), "a")
+	ch1, cancel1, err := r.Run(context.Background(), st.Create(), "a")
 	require.NoError(t, err)
+	defer cancel1()
 	time.Sleep(100 * time.Millisecond) // 等 goroutine 进入模型调用并占住信号量
 
-	_, err = r.Run(context.Background(), st.Create(), "b")
+	_, _, err = r.Run(context.Background(), st.Create(), "b")
 	assert.ErrorIs(t, err, ErrBusy)
 
 	close(hold) // 放行

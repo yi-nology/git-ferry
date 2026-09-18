@@ -65,7 +65,7 @@ func NewRunnerWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *t
 	if maxChats <= 0 {
 		maxChats = 4
 	}
-	return &Runner{
+	r := &Runner{
 		runner: adk.NewRunner(context.Background(), adk.RunnerConfig{
 			Agent:           agent,
 			EnableStreaming: true, // 真实模型走 Stream,SSE 增量输出
@@ -74,7 +74,10 @@ func NewRunnerWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *t
 		sessions:  NewSessionStore(sessionTTL, sessionMaxRounds),
 		sem:       make(chan struct{}, maxChats),
 		modelName: cfg.Model,
-	}, nil
+	}
+	// 进程级生命周期:回收再无人访问的过期会话,防内存慢涨
+	r.sessions.StartJanitor(context.Background(), 5*time.Minute)
+	return r, nil
 }
 
 func decoratedTools(reg *tools.Registry) []tool.BaseTool {
@@ -94,37 +97,45 @@ func (r *Runner) ModelName() string { return r.modelName }
 
 // Run 执行一轮对话:写入用户消息 → 跑 agent → 事件推入返回的 chan。
 // chan 关闭即本轮结束;error 事件后 chan 也会关闭。
-func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan Event, error) {
+// 返回的 cancel 供消费方提前终止(如客户端断开):取消后所有事件发送与
+// 模型流读取立即收敛,goroutine 退出并释放并发信号量,不再产生 token 消耗。
+func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan Event, context.CancelFunc, error) {
 	select {
 	case r.sem <- struct{}{}:
 	default:
-		return nil, ErrBusy
+		return nil, nil, ErrBusy
 	}
 
+	// 独立可取消:消费方断开时 cancel,模型流与事件发送随之终止
+	ctx, cancel := context.WithCancel(ctx)
+
 	out := make(chan Event, 64)
-	sink := func(e Event) {
+	// emit 是唯一的事件出口:select 双路保证消费方消失后 goroutine 必然收敛,
+	// 不会因 chan 无消费者而永久阻塞(否则信号量永不释放,AI 功能自锁)。
+	emit := func(e Event) {
 		select {
 		case out <- e:
 		case <-ctx.Done():
 		}
 	}
-	ctx = withEventSink(ctx, sink)
+	ctx = withEventSink(ctx, func(e Event) { emit(e) })
 	ctx = tools.WithScope(ctx, sess)
 
 	r.sessions.Append(sess, "user", userMsg)
-	msgs := historyMessages(sess.Messages)
+	msgs := historyMessages(r.sessions.Snapshot(sess))
 
 	go func() {
 		defer close(out)
+		defer cancel()
 		defer func() { <-r.sem }()
 		defer func() {
 			if rec := recover(); rec != nil {
-				out <- Event{Type: "error", Content: fmt.Sprintf("内部错误: %v", rec)}
+				emit(Event{Type: "error", Content: fmt.Sprintf("内部错误: %v", rec)})
 				slog.Error("ai agent panic", "panic", rec, "session", sess.ID)
 			}
 		}()
 
-		out <- Event{Type: "start", SessionID: sess.ID}
+		emit(Event{Type: "start", SessionID: sess.ID})
 
 		iter := r.runner.Run(ctx, msgs)
 		var (
@@ -137,7 +148,7 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 				break
 			}
 			if ev.Err != nil {
-				out <- Event{Type: "error", Content: errText(ev.Err)}
+				emit(Event{Type: "error", Content: errText(ev.Err)})
 				r.sessions.Append(sess, "assistant", full.String())
 				return
 			}
@@ -156,7 +167,7 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 					}
 					if err != nil {
 						mo.MessageStream.Close()
-						out <- Event{Type: "error", Content: errText(err)}
+						emit(Event{Type: "error", Content: errText(err)})
 						r.sessions.Append(sess, "assistant", full.String())
 						return
 					}
@@ -168,22 +179,22 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 					}
 					if chunk.Content != "" {
 						full.WriteString(chunk.Content)
-						out <- Event{Type: "delta", Content: chunk.Content}
+						emit(Event{Type: "delta", Content: chunk.Content})
 					}
 					accumulateUsage(&usage, chunk)
 				}
 			} else if mo.Message != nil {
 				if mo.Message.Content != "" {
 					full.WriteString(mo.Message.Content)
-					out <- Event{Type: "delta", Content: mo.Message.Content}
+					emit(Event{Type: "delta", Content: mo.Message.Content})
 				}
 				accumulateUsage(&usage, mo.Message)
 			}
 		}
 		r.sessions.Append(sess, "assistant", full.String())
-		out <- Event{Type: "done", Usage: &usage}
+		emit(Event{Type: "done", Usage: &usage})
 	}()
-	return out, nil
+	return out, cancel, nil
 }
 
 // ExecuteConfirmed 确认后直达执行:校验令牌 → 标记放行 → 直调工具 →

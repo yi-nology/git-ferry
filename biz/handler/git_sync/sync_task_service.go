@@ -138,7 +138,9 @@ func TaskRun(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "key is required")
 		return
 	}
-	if err := GetSyncService().RunTask(ctx, req.Key); err != nil {
+	// 异步受理:同步执行可能分钟级,HTTP 不等它跑完;校验(存在/启用/并发快速失败)仍同步返回。
+	// 真实结果落执行历史,前端靠列表/历史刷新观察。
+	if err := GetSyncService().RunTaskAsync(req.Key, corebridge.TriggerManual, nil); err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}

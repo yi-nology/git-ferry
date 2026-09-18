@@ -41,6 +41,9 @@ type (
 
 const StatusSuccess = model.StatusSuccess
 
+// 触发来源常量(手动触发路径使用)
+const TriggerManual = model.TriggerManual
+
 // 平台常量 / 工具（平台管理 handler 使用）
 const (
 	PlatformTypeCustom   = model.PlatformTypeCustom
