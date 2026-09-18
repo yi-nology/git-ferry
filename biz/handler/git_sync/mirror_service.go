@@ -267,7 +267,21 @@ func MirrorRunList(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, err.Error())
 		return
 	}
-	response.Success(c, map[string]any{"list": runs, "total": total})
+	// 列表剥掉 Report/Steps 等大 TEXT 字段(单条可达数百 KB),详情接口保留全量
+	light := make([]map[string]any, 0, len(runs))
+	for _, r := range runs {
+		if r == nil {
+			continue
+		}
+		light = append(light, map[string]any{
+			"id": r.ID, "channelId": r.ChannelID, "targetId": r.TargetID,
+			"kind": r.Kind, "tags": r.Tags, "status": r.Status,
+			"allowOverwrite": r.AllowOverwrite,
+			"startedAt":      r.StartedAt, "finishedAt": r.FinishedAt,
+			"error": truncateRunes(r.Error, 300),
+		})
+	}
+	response.Success(c, map[string]any{"list": light, "total": total})
 }
 
 func MirrorRunGet(ctx context.Context, c *app.RequestContext) {

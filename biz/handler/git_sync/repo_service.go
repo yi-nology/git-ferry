@@ -249,4 +249,8 @@ func BatchRepos(ctx context.Context, c *app.RequestContext) {
 	default:
 		response.Success(c, resp)
 	}
+	// 批量删除是高危写操作,无论成败整体记一条审计(此前唯一漏审计的写路径)
+	recordAudit(ctx, c, "batch_delete", "repo",
+		fmt.Sprintf("%d keys", total),
+		fmt.Sprintf("批量删除仓库: total=%d success=%d failed=%d", total, success, failed))
 }
