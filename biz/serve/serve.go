@@ -77,7 +77,11 @@ func New(cfg Config, extra ...app.HandlerFunc) *server.Hertz {
 		server.WithMaxRequestBodySize(maxBody),
 	)
 	h.Use(Recovery())
-	h.Use(gzip.Gzip(gzip.DefaultCompression))
+	// gzip 排除 AI SSE 路径:压缩层缓冲与流式 flush 语义相性差,
+	// EventSource/流式 fetch 需要事件即时可见
+	h.Use(gzip.Gzip(gzip.DefaultCompression,
+		gzip.WithExcludedPathRegexes([]string{`^/api/v1/ai/.*`}),
+	))
 	for _, mw := range extra {
 		if mw != nil {
 			h.Use(mw)

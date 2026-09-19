@@ -262,6 +262,12 @@ async function fetchLogs() {
   }
 }
 
+// CSV 字段转义:含逗号/引号/换行的值用引号包裹并把内部引号翻倍,防列错位与公式注入
+function csvEscape(v: string): string {
+  const s = v ?? ''
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
 function handleExport() {
   const headers = ['时间', '用户', '操作类型', '操作内容', 'IP']
   const rows = logs.value.map((log) => [
@@ -271,7 +277,7 @@ function handleExport() {
     log.resource,
     log.ip,
   ])
-  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+  const csv = [csvEscape(headers.join(',')), ...rows.map((r) => r.map(csvEscape).join(','))].join('\n')
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

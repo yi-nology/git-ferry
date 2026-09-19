@@ -8,9 +8,16 @@ linters:
   default: standard
   enable:
     - gocritic
+    - gosec
     - misspell
 
   settings:
+    gosec:
+      # G304:文件路径来自部署方控制启动参数,相关入口已逐处 //nolint:gosec 标注;
+      # G115:整数转换告警量大且多为安全范围内的位宽收窄,暂整体豁免
+      excludes:
+        - G304
+        - G115
     gocritic:
       enabled-tags:
         - diagnostic

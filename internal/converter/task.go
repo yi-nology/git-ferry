@@ -17,7 +17,9 @@ func ToTaskInfo(t *model.SyncTask) *taskmodel.SyncTaskInfo {
 		ID: SafeUintToInt64(t.ID), Key: t.Key, Name: t.Name,
 		SourceRepoKey: t.SourceRepoKey, SourceBranch: t.SourceBranch,
 		TargetRepoKey: t.TargetRepoKey, TargetBranch: t.TargetBranch,
-		SyncMode: t.SyncMode, Cron: t.Cron, WebhookToken: t.WebhookToken,
+		SyncMode: t.SyncMode, Cron: t.Cron,
+		// WebhookToken 不下发:字段已无消费点(webhook 鉴权走平台签名),
+		// 避免每次列表把 secret 形态的 token 拖给所有调用方
 		Enabled: t.Enabled, GitTags: t.GitTags, GitForce: t.GitForce,
 		GitPrune: t.GitPrune,
 		LastRunAt: lastRunAt, LastStatus: t.LastStatus,

@@ -46,6 +46,7 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAIChat } from '@/composables/useAIChat'
 
 defineProps<{ collapsed: boolean }>()
 defineEmits<{ (e: 'toggle'): void }>()
@@ -64,6 +65,8 @@ const maskedKey = computed(() => {
 })
 
 function handleLogout() {
+  // AI 会话含业务上下文,换账号登录不应延续上一账号的对话
+  useAIChat().reset()
   authStore.clearApiKey()
   router.push('/login')
 }

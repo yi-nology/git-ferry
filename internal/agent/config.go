@@ -11,7 +11,7 @@ import (
 )
 
 // APIKeyEnvVar 模型 API Key 的环境变量名。密钥不写入 config.yaml。
-const APIKeyEnvVar = "GIT_SYNC_AI_API_KEY"
+const APIKeyEnvVar = "GIT_SYNC_AI_API_KEY" //nolint:gosec // 环境变量名,非凭据字面量
 
 // Config 对应 conf/config.yaml 的 ai 段(独立于 core 配置,core 的
 // yaml.Unmarshal 忽略未知字段,新增段不影响引擎加载)。

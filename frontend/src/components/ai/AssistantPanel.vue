@@ -117,8 +117,10 @@ function submit() {
   void send(text)
 }
 
+// 新消息与流式增量都要滚动:流式时最后一条 content 增长但列表长度不变,
+// 只 watch length 会导致输出期间停在上次位置
 watch(
-  () => messages.value.length,
+  () => [messages.value.length, messages.value[messages.value.length - 1]?.content] as const,
   async () => {
     await nextTick()
     listRef.value?.scrollTo({ top: listRef.value.scrollHeight })

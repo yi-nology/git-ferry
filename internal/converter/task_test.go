@@ -71,8 +71,9 @@ func TestToTaskInfo(t *testing.T) {
 		t.Errorf("Expected Cron '0 * * * *', got '%s'", result.Cron)
 	}
 
-	if result.WebhookToken != "token123" {
-		t.Errorf("Expected WebhookToken 'token123', got '%s'", result.WebhookToken)
+	// WebhookToken 不再下发(零消费点的 secret 字段),转换后必须为空
+	if result.WebhookToken != "" {
+		t.Errorf("Expected WebhookToken to be omitted, got '%s'", result.WebhookToken)
 	}
 
 	if !result.Enabled {

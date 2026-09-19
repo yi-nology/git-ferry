@@ -15,8 +15,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # 不发布宿主端口:仅 git-ferry 内网可达,避免无密码 Redis 暴露宿主机
+    expose:
+      - "6379"
     volumes:
       - redis-data:/data
     healthcheck:

@@ -51,15 +51,6 @@ func (r *Registry) add(t tool.InvokableTool) {
 
 func (r *Registry) ByName(name string) tool.InvokableTool { return r.byName[name] }
 
-// Tools 返回全部工具(给 adk)。
-func (r *Registry) Tools() []tool.BaseTool {
-	out := make([]tool.BaseTool, 0, len(r.byName))
-	for _, t := range r.byName {
-		out = append(out, t)
-	}
-	return out
-}
-
 // Names 返回全部工具名。
 func (r *Registry) Names() []string {
 	out := make([]string, 0, len(r.byName))
