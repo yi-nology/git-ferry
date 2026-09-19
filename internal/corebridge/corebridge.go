@@ -51,7 +51,8 @@ const (
 	PlatformStatusError  = model.PlatformStatusError
 )
 
-var ValidPlatformTypes = model.ValidPlatformTypes
+// ValidPlatformType 检查平台类型是否合法(SDK 注册表 + 扩展白名单)。
+func ValidPlatformType(t string) bool { return model.ValidPlatformType(t) }
 
 func GetAPIURL(platformType, instanceURL string) string {
 	return model.GetAPIURL(platformType, instanceURL)

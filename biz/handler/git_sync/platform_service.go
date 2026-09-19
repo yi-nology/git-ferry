@@ -25,7 +25,7 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "name, type, access_token are required")
 		return
 	}
-	if !corebridge.ValidPlatformTypes[req.Type] {
+	if !corebridge.ValidPlatformType(req.Type) {
 		response.BadRequest(c, fmt.Sprintf("unsupported platform type: %s (valid: github, gitlab, gitea, gitee, gitcode, atomgit, tencent_code, custom)", req.Type))
 		return
 	}

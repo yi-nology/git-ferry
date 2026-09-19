@@ -3,11 +3,11 @@ package git_sync
 import (
 	"context"
 	"log/slog"
-	"strings"
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	sdkprov "github.com/yi-nology/git-platform-sdk/provider"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 	"golang.org/x/time/rate"
@@ -111,7 +111,7 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 	})
 	if err != nil {
 		// 签名验证失败是认证错误,返 401 而非 500;细节记服务端日志,不暴露给调用方
-		if strings.Contains(err.Error(), "signature") || strings.Contains(err.Error(), "unauthorized") {
+		if sdkprov.IsWebhookValidation(err) {
 			slog.Warn("webhook signature verification failed", "repo", repoKey, "error", err, "client_ip", c.ClientIP())
 			response.Error(c, consts.StatusUnauthorized, "invalid webhook signature")
 		} else {
