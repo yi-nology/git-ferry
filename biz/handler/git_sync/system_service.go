@@ -21,6 +21,8 @@ func SystemStatus(ctx context.Context, c *app.RequestContext) {
 	svc := GetSyncService()
 
 	// CountRepos 与 CountTasksByStatus 互不依赖,并行执行。
+	// 注:CountRepos/CountTasksByStatus 不接受 ctx(core API 限制),
+	// goroutine 无法被取消,但都是快速 count 查询,泄漏风险可忽略
 	type repoCountResult struct {
 		count int64
 		err   error

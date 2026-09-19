@@ -92,11 +92,13 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	// bool 字段转指针:壳层表单总是携带全部字段,此处显式转为指针
+	// 传给 core(指针语义:非 nil 即"更新为该值")
 	t, err := GetSyncService().UpdateTask(ctx, &corebridge.UpdateTaskRequest{
 		Key: req.Key, Name: req.Name, SourceBranch: req.SourceBranch,
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
-		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
-		GitPrune: req.GitPrune,
+		Enabled: &req.Enabled, GitTags: &req.GitTags, GitForce: &req.GitForce,
+		GitPrune: &req.GitPrune,
 	})
 	if err != nil {
 		if errors.Is(err, corebridge.ErrTaskNotFound) {

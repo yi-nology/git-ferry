@@ -364,6 +364,8 @@ github.com/yi-nology/git-sync-core v0.3.4 h1:zu6UO18XSgG68SrwGTRrp9Cej1rN+Mppwop
 github.com/yi-nology/git-sync-core v0.3.4/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
 github.com/yi-nology/git-sync-core v0.3.5 h1:TUu61k/GKEiOBxK/fUGHrHlDkO/zGt4qySCsh7tBHaU=
 github.com/yi-nology/git-sync-core v0.3.5/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
+github.com/yi-nology/git-sync-core v0.3.6 h1:vv4gUSNNmsi/2DCpRCLVuDZnua2K4d7QBF332eRlGqA=
+github.com/yi-nology/git-sync-core v0.3.6/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
 github.com/yi-nology/go-gitcode v0.7.2/go.mod h1:YE9snaa9ChVY7FoPj/4huVDkVNJaI/gpxHcWgNNGYls=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

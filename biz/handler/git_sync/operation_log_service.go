@@ -53,12 +53,16 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// ListOperations 与 OperationStats 互不依赖,并行执行缩短响应时间。
+	// stats goroutine 使用独立 context:handler 提前返回(如列表查询失败)
+	// 时请求 ctx 被取消,goroutine 中的 DB 查询也会被终止而非泄漏。
 	type statsResult struct {
 		today, week, total int64
 		err                error
 	}
 	svc := GetSyncService()
 	statsCh := make(chan statsResult, 1)
+	statsCtx, statsCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer statsCancel()
 	go func() {
 		var r statsResult
 		defer func() {
@@ -68,7 +72,7 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 			}
 			statsCh <- r
 		}()
-		r.today, r.week, r.total, r.err = svc.OperationStats(ctx)
+		r.today, r.week, r.total, r.err = svc.OperationStats(statsCtx)
 	}()
 
 	list, total, err := svc.ListOperations(ctx, offset, limit, &filter)
