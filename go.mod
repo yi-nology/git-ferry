@@ -14,7 +14,7 @@ require (
 	github.com/oklog/run v1.2.0
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-platform-sdk v0.62.0
-	github.com/yi-nology/git-sync-core v0.3.6
+	github.com/yi-nology/git-sync-core v0.3.7
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 )

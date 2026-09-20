@@ -360,6 +360,8 @@ github.com/yi-nology/git-platform-sdk v0.62.0 h1:jhCTDWTNNYG6XzxorpboGTptkoTH18L
 github.com/yi-nology/git-platform-sdk v0.62.0/go.mod h1:wAIJ9IzNpIIP2pG7iKmKQQUT0wUC3XAdJQdAllXxlVA=
 github.com/yi-nology/git-sync-core v0.3.6 h1:vv4gUSNNmsi/2DCpRCLVuDZnua2K4d7QBF332eRlGqA=
 github.com/yi-nology/git-sync-core v0.3.6/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
+github.com/yi-nology/git-sync-core v0.3.7 h1:6mN1q/I4P03vo1GMdShLByYk5o016/r0CdVfvp0sEI0=
+github.com/yi-nology/git-sync-core v0.3.7/go.mod h1:82TyrmMBs7y7FffTj9Fjt/iTuO6n0oS2VnaI3Z+A6f0=
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
 github.com/yi-nology/go-gitcode v0.7.2/go.mod h1:YE9snaa9ChVY7FoPj/4huVDkVNJaI/gpxHcWgNNGYls=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
