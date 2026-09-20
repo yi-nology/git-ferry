@@ -1,0 +1,2950 @@
+{
+  "components": {
+    "schemas": {
+      "BatchReposReq": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "BatchReposResp": {
+        "properties": {
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "success": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "CreatePlatformReq": {
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "api_url": {
+            "type": "string"
+          },
+          "ca_cert_path": {
+            "type": "string"
+          },
+          "instance_url": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "proxy_url": {
+            "type": "string"
+          },
+          "skip_tls_verify": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreatePlatformResp": {
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/PlatformInfo"
+          }
+        },
+        "type": "object"
+      },
+      "CreateRepoReq": {
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "remote_url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreateRepoResp": {
+        "properties": {
+          "repo": {
+            "$ref": "#/components/schemas/RepoInfo"
+          }
+        },
+        "type": "object"
+      },
+      "CreateRuleReq": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "branch_pattern": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "min_interval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "sync_task_keys": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreateRuleResp": {
+        "properties": {
+          "rule": {
+            "$ref": "#/components/schemas/WebhookRuleInfo"
+          }
+        },
+        "type": "object"
+      },
+      "CreateTaskReq": {
+        "properties": {
+          "cron": {
+            "type": "string"
+          },
+          "git_force": {
+            "type": "boolean"
+          },
+          "git_prune": {
+            "type": "boolean"
+          },
+          "git_tags": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_branch": {
+            "type": "string"
+          },
+          "source_repo_key": {
+            "type": "string"
+          },
+          "sync_mode": {
+            "type": "string"
+          },
+          "target_branch": {
+            "type": "string"
+          },
+          "target_repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreateTaskResp": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/SyncTaskInfo"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteHistoryReq": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteHistoryResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DeletePlatformReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DeletePlatformResp": {
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "DeletePlatformWebhookReq": {
+        "properties": {
+          "repo_key": {
+            "type": "string"
+          },
+          "webhook_id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DeletePlatformWebhookResp": {
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteRepoReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteRepoResp": {
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteRuleReq": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteRuleResp": {
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteTaskReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DeleteTaskResp": {
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "EmptyResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GetPlatformReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GetPlatformResp": {
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/PlatformInfo"
+          }
+        },
+        "type": "object"
+      },
+      "GetRepoReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GetRepoResp": {
+        "properties": {
+          "repo": {
+            "$ref": "#/components/schemas/RepoInfo"
+          }
+        },
+        "type": "object"
+      },
+      "GetRuleReq": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "GetRuleResp": {
+        "properties": {
+          "rule": {
+            "$ref": "#/components/schemas/WebhookRuleInfo"
+          }
+        },
+        "type": "object"
+      },
+      "GetTaskReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GetTaskResp": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/SyncTaskInfo"
+          }
+        },
+        "type": "object"
+      },
+      "ListBranchesReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListBranchesResp": {
+        "properties": {
+          "branches": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListEventsReq": {
+        "properties": {
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListEventsResp": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventInfo"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListHistoryReq": {
+        "properties": {
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "task_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListHistoryResp": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRunInfo"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListOperationLogsReq": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "search": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListOperationLogsResp": {
+        "properties": {
+          "list": {
+            "items": {
+              "$ref": "#/components/schemas/OperationLogInfo"
+            },
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/OperationLogPagination"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/OperationLogStats"
+          }
+        },
+        "type": "object"
+      },
+      "ListPlatformReposReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "per_page": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListPlatformReposResp": {
+        "properties": {
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ListPlatformWebhooksReq": {
+        "properties": {
+          "repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListPlatformWebhooksResp": {
+        "properties": {
+          "webhooks": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformWebhookInfo"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListPlatformsResp": {
+        "properties": {
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformInfo"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ListReposReq": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListReposResp": {
+        "properties": {
+          "repos": {
+            "items": {
+              "$ref": "#/components/schemas/RepoInfo"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ListRulesReq": {
+        "properties": {
+          "repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListRulesResp": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookRuleInfo"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListTasksReq": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListTasksResp": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/SyncTaskInfo"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "OperationLogInfo": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "OperationLogPagination": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_pages": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "OperationLogStats": {
+        "properties": {
+          "today": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "week": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PaginationReq": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_size": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PaginationResp": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "page_size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PlatformInfo": {
+        "properties": {
+          "api_url": {
+            "type": "string"
+          },
+          "ca_cert_path": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "has_token": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "instance_url": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "last_test_at": {
+            "type": "string"
+          },
+          "last_test_result": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "proxy_url": {
+            "type": "string"
+          },
+          "repo_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "skip_tls_verify": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PlatformWebhookInfo": {
+        "properties": {
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PreviewSyncReq": {
+        "properties": {
+          "source_branch": {
+            "type": "string"
+          },
+          "source_repo_key": {
+            "type": "string"
+          },
+          "target_branch": {
+            "type": "string"
+          },
+          "target_repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PreviewSyncResp": {
+        "properties": {
+          "can_sync": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "source_exists": {
+            "type": "boolean"
+          },
+          "target_exists": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "RegisterPlatformWebhookReq": {
+        "properties": {
+          "callback_url": {
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RegisterPlatformWebhookResp": {
+        "properties": {
+          "webhook": {
+            "$ref": "#/components/schemas/PlatformWebhookInfo"
+          }
+        },
+        "type": "object"
+      },
+      "RepoInfo": {
+        "properties": {
+          "clone_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "platform_owner": {
+            "type": "string"
+          },
+          "platform_repo": {
+            "type": "string"
+          },
+          "ssh_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RetryEventReq": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "RetryEventResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "RunTaskReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RunTaskResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "SetDefaultPlatformReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SetDefaultPlatformResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SyncPlatformReposReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SyncPlatformReposResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "synced_count": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SyncRunInfo": {
+        "properties": {
+          "commit_range": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "duration_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          },
+          "error_type": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "retry_total": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SyncRunStepInfo"
+            },
+            "type": "array"
+          },
+          "task_key": {
+            "type": "string"
+          },
+          "trigger_source": {
+            "type": "string"
+          },
+          "webhook_event_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SyncRunStepInfo": {
+        "properties": {
+          "duration_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "error_msg": {
+            "type": "string"
+          },
+          "error_type": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "retry_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "step_name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SyncTaskInfo": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "cron": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "git_force": {
+            "type": "boolean"
+          },
+          "git_prune": {
+            "type": "boolean"
+          },
+          "git_tags": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "last_run_at": {
+            "type": "string"
+          },
+          "last_status": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_branch": {
+            "type": "string"
+          },
+          "source_repo_key": {
+            "type": "string"
+          },
+          "sync_mode": {
+            "type": "string"
+          },
+          "target_branch": {
+            "type": "string"
+          },
+          "target_repo_key": {
+            "type": "string"
+          },
+          "webhook_token": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SystemStatusData": {
+        "properties": {
+          "failed_task": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "go_version": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "repo_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "running_task": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "task_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "uptime": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TestConnectionReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TestConnectionResp": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "TestPlatformConnectionReq": {
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TestPlatformConnectionResp": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdatePlatformReq": {
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "api_url": {
+            "type": "string"
+          },
+          "ca_cert_path": {
+            "type": "string"
+          },
+          "instance_url": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "proxy_url": {
+            "type": "string"
+          },
+          "skip_tls_verify": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdatePlatformResp": {
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/PlatformInfo"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateRepoReq": {
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateRepoResp": {
+        "properties": {
+          "repo": {
+            "$ref": "#/components/schemas/RepoInfo"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateRuleReq": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "branch_pattern": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "min_interval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sync_task_keys": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateRuleResp": {
+        "properties": {
+          "rule": {
+            "$ref": "#/components/schemas/WebhookRuleInfo"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateTaskReq": {
+        "properties": {
+          "cron": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "git_force": {
+            "type": "boolean"
+          },
+          "git_prune": {
+            "type": "boolean"
+          },
+          "git_tags": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_branch": {
+            "type": "string"
+          },
+          "sync_mode": {
+            "type": "string"
+          },
+          "target_branch": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateTaskResp": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/SyncTaskInfo"
+          }
+        },
+        "type": "object"
+      },
+      "WebhookEventInfo": {
+        "properties": {
+          "actor_name": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "commit_sha": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "processed_at": {
+            "type": "string"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "WebhookRuleInfo": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "branch_pattern": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "min_interval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "sync_task_keys": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "GitFerry:多平台 Git 同步/镜像/备份 + AI 运维助手。认证方式:请求头 X-API-Key。",
+    "title": "GitFerry API",
+    "version": "1.15.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/v1/ai/chat": {
+      "post": {
+        "description": "POST SSE 流式响应。事件: start → delta*/tool_start/tool_end/tool_confirm → done|error。危险操作需前端确认卡。",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "confirmed_tool_call": {
+                    "properties": {
+                      "token": {
+                        "description": "tool_confirm 返回的确认令牌",
+                        "type": "string"
+                      },
+                      "tool": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "message": {
+                    "description": "用户消息",
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "description": "会话 ID(空=新建)",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "SSE 流"
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "429": {
+            "description": "并发上限"
+          },
+          "501": {
+            "description": "AI 未启用"
+          }
+        },
+        "summary": "AI 对话(SSE 流式)",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/v1/ai/status": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "AI 已启用"
+          },
+          "501": {
+            "description": "AI 未启用"
+          }
+        },
+        "summary": "AI 助手状态",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/v1/logs/operations": {
+      "get": {
+        "operationId": "ListOperationLogs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOperationLogsResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "OperationLog"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "镜像中心接口(/api/v1/mirror/channels)",
+        "tags": [
+          "Mirror"
+        ]
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "镜像中心操作(/api/v1/mirror/channels)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/runs": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "镜像中心接口(/api/v1/mirror/runs)",
+        "tags": [
+          "Mirror"
+        ]
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "镜像中心操作(/api/v1/mirror/runs)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/targets": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "镜像中心接口(/api/v1/mirror/targets)",
+        "tags": [
+          "Mirror"
+        ]
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "镜像中心操作(/api/v1/mirror/targets)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/platform": {
+      "get": {
+        "operationId": "GetPlatform",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPlatformResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platform/create": {
+      "post": {
+        "operationId": "CreatePlatform",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlatformReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePlatformResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platform/delete": {
+      "post": {
+        "operationId": "DeletePlatform",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePlatformReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePlatformResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platform/repos": {
+      "get": {
+        "operationId": "ListPlatformRepos",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPlatformReposResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Repo"
+        ]
+      }
+    },
+    "/api/v1/platform/set-default": {
+      "post": {
+        "operationId": "SetDefaultPlatform",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDefaultPlatformReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetDefaultPlatformResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platform/sync-repos": {
+      "post": {
+        "operationId": "SyncPlatformRepos",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncPlatformReposReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncPlatformReposResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platform/test": {
+      "post": {
+        "operationId": "TestPlatformConnection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestPlatformConnectionReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestPlatformConnectionResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platform/update": {
+      "post": {
+        "operationId": "UpdatePlatform",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlatformReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePlatformResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/platforms": {
+      "get": {
+        "operationId": "ListPlatforms",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPlatformsResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Platform"
+        ]
+      }
+    },
+    "/api/v1/repo": {
+      "get": {
+        "operationId": "RepoGet",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRepoResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Other"
+        ]
+      }
+    },
+    "/api/v1/repo/branches": {
+      "get": {
+        "operationId": "RepoBranches",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListBranchesResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Other"
+        ]
+      }
+    },
+    "/api/v1/repo/create": {
+      "post": {
+        "operationId": "RepoCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRepoReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateRepoResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Other"
+        ]
+      }
+    },
+    "/api/v1/repo/delete": {
+      "post": {
+        "operationId": "RepoDelete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRepoReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteRepoResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Other"
+        ]
+      }
+    },
+    "/api/v1/repo/test": {
+      "post": {
+        "operationId": "RepoTest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestConnectionReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestConnectionResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Other"
+        ]
+      }
+    },
+    "/api/v1/repo/update": {
+      "post": {
+        "operationId": "RepoUpdate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRepoReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateRepoResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Other"
+        ]
+      }
+    },
+    "/api/v1/repos": {
+      "get": {
+        "operationId": "RepoList",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_order",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListReposResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Repo"
+        ]
+      }
+    },
+    "/api/v1/repos/batch": {
+      "post": {
+        "operationId": "BatchRepos",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchReposReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchReposResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Repo"
+        ]
+      }
+    },
+    "/api/v1/sync/history": {
+      "get": {
+        "operationId": "TaskHistory",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "task_key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListHistoryResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/history/delete": {
+      "post": {
+        "operationId": "DeleteHistory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteHistoryReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteHistoryResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/preview": {
+      "post": {
+        "operationId": "TaskPreview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewSyncReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewSyncResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/task": {
+      "get": {
+        "operationId": "TaskGet",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTaskResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/task/create": {
+      "post": {
+        "operationId": "TaskCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTaskResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/task/delete": {
+      "post": {
+        "operationId": "TaskDelete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteTaskReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteTaskResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/task/run": {
+      "post": {
+        "operationId": "TaskRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunTaskReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunTaskResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/task/update": {
+      "post": {
+        "operationId": "TaskUpdate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateTaskResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/sync/tasks": {
+      "get": {
+        "operationId": "TaskList",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "repo_key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTasksResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "SyncTask"
+        ]
+      }
+    },
+    "/api/v1/system/status": {
+      "get": {
+        "operationId": "SystemStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusData"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/v1/webhook/event/retry": {
+      "post": {
+        "operationId": "RetryEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryEventReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetryEventResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/events": {
+      "get": {
+        "operationId": "ListEvents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "repo_key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEventsResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/platform/delete": {
+      "post": {
+        "operationId": "DeletePlatformWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePlatformWebhookReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePlatformWebhookResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/platform/list": {
+      "get": {
+        "operationId": "ListPlatformWebhooks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "repo_key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPlatformWebhooksResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/platform/register": {
+      "post": {
+        "operationId": "RegisterPlatformWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPlatformWebhookReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterPlatformWebhookResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/rule": {
+      "get": {
+        "operationId": "RuleGet",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRuleResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/rule/create": {
+      "post": {
+        "operationId": "RuleCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRuleReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateRuleResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/rule/delete": {
+      "post": {
+        "operationId": "RuleDelete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRuleReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteRuleResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/rule/update": {
+      "post": {
+        "operationId": "RuleUpdate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuleReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateRuleResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/v1/webhook/rules": {
+      "get": {
+        "operationId": "RuleList",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "repo_key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListRulesResp"
+                }
+              }
+            },
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/api/webhook/receive/{repoKey}": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repoKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "接收成功"
+          },
+          "401": {
+            "description": "签名验证失败"
+          },
+          "429": {
+            "description": "速率限制"
+          }
+        },
+        "summary": "接收平台 Webhook",
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "所有依赖正常"
+          },
+          "503": {
+            "description": "有依赖不可用"
+          }
+        },
+        "summary": "健康检查(DB/Redis/Service)",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/ping": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "探活",
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "servers": [
+    {
+      "description": "本地开发",
+      "url": "http://localhost:8890"
+    }
+  ]
+}

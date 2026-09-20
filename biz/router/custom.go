@@ -5,6 +5,7 @@ import (
 	handler "github.com/yi-nology/git-ferry/biz/handler"
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	routergitsync "github.com/yi-nology/git-ferry/biz/router/git_sync"
+	"github.com/yi-nology/git-ferry/internal/pkg/swagger"
 )
 
 // CustomizedRegister 注册非 IDL 生成的定制路由（探活、webhook 接收等）。
@@ -23,4 +24,9 @@ func CustomizedRegister(r *server.Hertz) {
 	ai := r.Group("/api/v1/ai", routergitsync.AuthMiddleware())
 	ai.GET("/status", git_sync.AIStatus)
 	ai.POST("/chat", git_sync.AIChat)
+
+	// Swagger API 文档(公开,无需鉴权)
+	r.GET("/swagger/", swagger.SwaggerUI)
+	r.GET("/swagger/index.html", swagger.SwaggerUI)
+	r.GET("/swagger/openapi.json", swagger.OpenAPISpec)
 }

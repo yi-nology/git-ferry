@@ -1,4 +1,4 @@
-.PHONY: build run restart clean clean-data test lint fmt vet tidy generate docker-build
+.PHONY: build run restart clean clean-data test lint fmt vet tidy generate apidoc docker-build
 
 APP_NAME := git-ferry
 BUILD_DIR := ./output
@@ -55,6 +55,12 @@ clean-data:
 generate:
 	@echo "Generating code from IDL..."
 	@cd idl && thriftgo -r -g "go:package_prefix=github.com/yi-nology/git-ferry/biz" --out ../biz git_sync.thrift
+
+# 从 IDL 生成 OpenAPI 3.0 spec → docs/openapi.json(同时更新内嵌副本)
+apidoc:
+	@go run ./cmd/apidoc idl docs/openapi.json
+	@cp docs/openapi.json internal/pkg/swagger/openapi.json
+	@echo ">> generated docs/openapi.json + internal/pkg/swagger/openapi.json"
 
 docker-build:
 	@docker build --build-arg VERSION=$(VERSION) -t $(APP_NAME):latest .
