@@ -5,7 +5,7 @@ import (
 	"time"
 
 	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
-	"github.com/yi-nology/git-sync-core/model"
+	"github.com/yi-nology/git-ferry-core/model"
 )
 
 func TestToPlatformInfo(t *testing.T) {

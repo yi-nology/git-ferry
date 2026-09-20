@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	coremodel "github.com/yi-nology/git-sync-core/model"
+	coremodel "github.com/yi-nology/git-ferry-core/model"
 )
 
 // ===== 执行历史 =====

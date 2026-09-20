@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/yi-nology/git-platform-sdk/provider"
-	coremodel "github.com/yi-nology/git-sync-core/model"
+	coremodel "github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 

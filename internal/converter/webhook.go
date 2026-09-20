@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	webhookmodel "github.com/yi-nology/git-ferry/biz/model/webhook"
-	"github.com/yi-nology/git-sync-core/model"
+	"github.com/yi-nology/git-ferry-core/model"
 )
 
 func ToRuleInfo(r *model.WebhookRule) *webhookmodel.WebhookRuleInfo {

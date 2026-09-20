@@ -4,7 +4,7 @@ import (
 	"time"
 
 	repomodel "github.com/yi-nology/git-ferry/biz/model/repo"
-	"github.com/yi-nology/git-sync-core/model"
+	"github.com/yi-nology/git-ferry-core/model"
 )
 
 func ToRepoInfo(r *model.Repo) *repomodel.RepoInfo {

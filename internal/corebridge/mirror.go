@@ -1,9 +1,9 @@
 package corebridge
 
 import (
-	"github.com/yi-nology/git-sync-core/dao"
-	"github.com/yi-nology/git-sync-core/model"
-	coreservice "github.com/yi-nology/git-sync-core/service"
+	"github.com/yi-nology/git-ferry-core/dao"
+	"github.com/yi-nology/git-ferry-core/model"
+	coreservice "github.com/yi-nology/git-ferry-core/service"
 )
 
 // ===== 镜像中心(开源发布 / 仓库备份) =====

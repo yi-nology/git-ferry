@@ -1,10 +1,10 @@
 package corebridge
 
 import (
-	synccore "github.com/yi-nology/git-sync-core"
-	"github.com/yi-nology/git-sync-core/dao"
-	"github.com/yi-nology/git-sync-core/model"
-	coreservice "github.com/yi-nology/git-sync-core/service"
+	synccore "github.com/yi-nology/git-ferry-core"
+	"github.com/yi-nology/git-ferry-core/dao"
+	"github.com/yi-nology/git-ferry-core/model"
+	coreservice "github.com/yi-nology/git-ferry-core/service"
 )
 
 // ===== 入口 =====
