@@ -18,6 +18,9 @@
       <a-tab-pane key="deploykey" tab="部署密钥">
         <DeployKeyPanel />
       </a-tab-pane>
+      <a-tab-pane key="backup" tab="冷备恢复">
+        <BackupPanel />
+      </a-tab-pane>
     </a-tabs>
   </div>
 </template>
@@ -30,6 +33,7 @@ import HealthScorePanel from './HealthScorePanel.vue'
 import InventoryPanel from './InventoryPanel.vue'
 import TemplatesPanel from './TemplatesPanel.vue'
 import DeployKeyPanel from './DeployKeyPanel.vue'
+import BackupPanel from './BackupPanel.vue'
 
 defineOptions({ name: 'OpsCenter' })
 

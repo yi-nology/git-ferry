@@ -87,6 +87,15 @@ export interface DeployKeyResult {
   note?: string
 }
 
+export interface BundleInfo {
+  name: string
+  path: string
+  size: number
+  mod_time: string
+  valid?: boolean
+  ref_specs?: string[]
+}
+
 export const opsApi = {
   overview: () => http.get<unknown, OverviewData>('/ops/overview'),
   healthScore: (limit?: number) =>
@@ -111,6 +120,14 @@ export const opsApi = {
     ),
   generateDeployKey: (comment: string) =>
     http.post<unknown, DeployKeyResult>('/ops/deploy-key', { comment }),
+  listBundles: (task_key?: string) =>
+    http.get<unknown, { items: BundleInfo[]; total: number; backup_dir: string }>('/ops/bundles', { params: { task_key } }),
+  verifyBundle: (name: string) =>
+    http.get<unknown, BundleInfo>('/ops/bundles/verify', { params: { name } }),
+  restoreBundle: (name: string, dest_dir: string) =>
+    http.post<unknown, { success: boolean; dest: string }>('/ops/bundles/restore', { name, dest_dir }),
+  diagnoseRun: (run_id: number) =>
+    http.get<unknown, Record<string, unknown>>('/ops/diagnose', { params: { run_id } }),
   auditReport: (params?: { format?: 'json' | 'csv'; limit?: number; action?: string }) =>
     http.get<unknown, { items: unknown[]; total: number }>('/ops/audit-report', { params }),
 }

@@ -238,3 +238,36 @@ func TestSafeWorkDir(t *testing.T) {
 		require.Error(t, err, "expected reject for %q", bad)
 	}
 }
+
+func TestDiagnose_MissingRunID(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/diagnose", DiagnoseRun)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/diagnose", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDiagnoseRun_RuleOutput(t *testing.T) {
+	run := &corebridge.SyncRun{Status: "failed", ErrorType: "auth", ErrorMessage: "401 token"}
+	d := diagnoseRun(run)
+	assert.Equal(t, "critical", d["severity"])
+	assert.NotEmpty(t, d["likely_cause"])
+	assert.NotEmpty(t, d["suggestions"])
+}
+
+func TestBundles_ListEmpty(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/bundles", ListBundles)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/bundles", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "items")
+}
+
+func TestBundles_VerifyMissing(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/bundles/verify", VerifyBundle)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/bundles/verify?name=../../etc/passwd", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}

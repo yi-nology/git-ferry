@@ -51,6 +51,10 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.POST("/rebuild", git_sync.RebuildRepo)
 	ops.POST("/migration", git_sync.ExportGitHubMigration)
 	ops.POST("/sync-platform", git_sync.SyncPlatformFiltered)
+	ops.GET("/bundles", git_sync.ListBundles)
+	ops.GET("/bundles/verify", git_sync.VerifyBundle)
+	ops.POST("/bundles/restore", git_sync.RestoreBundle)
+	ops.GET("/diagnose", git_sync.DiagnoseRun)
 
 	// Swagger API 文档(公开,无需鉴权)
 	r.GET("/swagger/", swagger.SwaggerUI)

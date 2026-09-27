@@ -358,6 +358,8 @@ github.com/yargevad/filepathx v1.0.0 h1:SYcT+N3tYGi+NvazubCNlvgIPbzAk7i7y2dwg3I5
 github.com/yargevad/filepathx v1.0.0/go.mod h1:BprfX/gpYNJHJfc35GjRRpVcwWXS89gGulUIU5tK3tA=
 github.com/yi-nology/git-ferry-core v0.5.0 h1:QswwcO0xiHigNzUtJFD62Hv2URvqBWt4zDbDFuKfeVw=
 github.com/yi-nology/git-ferry-core v0.5.0/go.mod h1:pBYfw1a0Hv2YvmYE7WHQj/+dhQW42/0q5a10KHcLRCY=
+github.com/yi-nology/git-ferry-core v0.5.1 h1:c2qADa7uOs4z88INmrNZELbL/OlsvfK60L65TwOePI8=
+github.com/yi-nology/git-ferry-core v0.5.1/go.mod h1:pBYfw1a0Hv2YvmYE7WHQj/+dhQW42/0q5a10KHcLRCY=
 github.com/yi-nology/go-git-platform v0.64.0 h1:P2xMYTM3mI0v0UeNWxevktX5AqLLBVOYFVtr4cX/LX8=
 github.com/yi-nology/go-git-platform v0.64.0/go.mod h1:3Uj68XtdBuiRHR+qZx8cyUn9iN10gAIeTWeRGdaOcjU=
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
