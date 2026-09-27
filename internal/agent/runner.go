@@ -23,11 +23,11 @@ import (
 // Runner AI 助手编排器:eino ChatModelAgent + 工具装饰器 + 会话存储。
 type Runner struct {
 	memManifest string
-	runner    *adk.Runner
-	reg       *tools.Registry
-	sessions  *SessionStore
-	sem       chan struct{}
-	modelName string
+	runner      *adk.Runner
+	reg         *tools.Registry
+	sessions    *SessionStore
+	sem         chan struct{}
+	modelName   string
 }
 
 // NewRunner 生产构造:OpenAI 兼容模型(BaseURL 可指内网 vLLM/Ollama)。

@@ -206,9 +206,9 @@ func (r *Registry) planMode(_ context.Context, in planModeInput) (string, error)
 		return errJSON("goal 必填", nil), nil
 	}
 	type step struct {
-		Action string `json:"action"`
-		NeedConfirm bool `json:"need_confirm"`
-		Tool   string `json:"tool,omitempty"`
+		Action      string `json:"action"`
+		NeedConfirm bool   `json:"need_confirm"`
+		Tool        string `json:"tool,omitempty"`
 	}
 	steps := []step{
 		{Action: "收集现状:任务健康、最近执行、错误分类", Tool: "get_sync_health / diagnose_run"},
@@ -217,9 +217,9 @@ func (r *Registry) planMode(_ context.Context, in planModeInput) (string, error)
 		{Action: "如需执行动作,向用户申请确认后调用危险工具", NeedConfirm: true},
 	}
 	return marshalJSON(map[string]any{
-		"goal":         goal,
-		"plan":         steps,
-		"context":      in.Context,
-		"note":         "按步骤执行;dangerous 工具必须等用户确认后再调用",
+		"goal":    goal,
+		"plan":    steps,
+		"context": in.Context,
+		"note":    "按步骤执行;dangerous 工具必须等用户确认后再调用",
 	}), nil
 }

@@ -19,7 +19,6 @@ const Prompt = `你是 git-ferry 的同步运维助手,通过工具查询和操�
 - 同步失败的常见类型:网络超时、认证失败(401/403)、目标仓库分支保护拒绝推送、
   浅克隆历史缺失。可结合 get_run_detail 的执行日志分析。`
 
-
 // BuildPrompt 生成 system prompt,可附加记忆摘要等上下文。
 func BuildPrompt(extra string) string {
 	if extra == "" {
