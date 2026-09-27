@@ -13,7 +13,7 @@ import (
 	"github.com/yi-nology/git-ferry/internal/tpl"
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
-	_ "github.com/yi-nology/git-platform-sdk/backends/all"
+	_ "github.com/yi-nology/go-git-platform/backends/all"
 )
 
 func main() {

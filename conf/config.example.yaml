@@ -25,6 +25,15 @@ sync:
   retry_count: 3
   backup_dir: data/bundles   # git bundle 冷备目录(任务开启 git_bundle 时)
   backup_keep: 5             # 每任务保留最近 N 份,0=不轮转
+  partial_clone: ""          # blob:none / tree:0 部分克隆,空=全量
+  backup_s3:                 # bundle 异地冷备(S3 兼容);空=只存本地
+    endpoint: ""
+    region: ""
+    bucket: ""
+    prefix: ""
+    access_key: ""
+    secret_key: ""
+    path_style: false
 
 webhook:
   rate_limit: 100

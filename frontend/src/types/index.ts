@@ -30,6 +30,7 @@ export interface SyncTask {
   git_lfs?: boolean
   sync_wiki?: boolean
   git_bundle?: boolean
+  submodules?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
   last_run_at: string
@@ -108,6 +109,7 @@ export interface CreateTaskRequest {
   git_lfs?: boolean
   sync_wiki?: boolean
   git_bundle?: boolean
+  submodules?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
 }
@@ -126,6 +128,7 @@ export interface UpdateTaskRequest {
   git_lfs?: boolean
   sync_wiki?: boolean
   git_bundle?: boolean
+  submodules?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
 }

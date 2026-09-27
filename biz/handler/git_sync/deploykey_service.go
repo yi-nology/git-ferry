@@ -5,7 +5,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-platform-sdk/pkg/credential"
+	"github.com/yi-nology/go-git-platform/pkg/credential"
 )
 
 // GenerateDeployKeyReq 生成镜像/备份部署密钥。

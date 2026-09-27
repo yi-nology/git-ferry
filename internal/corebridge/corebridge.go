@@ -62,6 +62,7 @@ func GetAPIURL(platformType, instanceURL string) string {
 
 type (
 	RepoFilter         = dao.RepoFilter
+	RepoImportFilter   = coreservice.RepoImportFilter
 	OperationLogFilter = dao.OperationLogFilter
 )
 

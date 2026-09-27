@@ -22,7 +22,7 @@ func ToTaskInfo(t *model.SyncTask) *taskmodel.SyncTaskInfo {
 		// 避免每次列表把 secret 形态的 token 拖给所有调用方
 		Enabled: t.Enabled, GitTags: t.GitTags, GitForce: t.GitForce,
 		GitPrune: t.GitPrune,
-		GitLfs: t.GitLFS, SyncWiki: t.SyncWiki, GitBundle: t.GitBundle, GitPushPrune: t.GitPushPrune, KeepDivergent: t.KeepDivergent,
+		GitLfs: t.GitLFS, SyncWiki: t.SyncWiki, GitBundle: t.GitBundle, Submodules: t.Submodules, GitPushPrune: t.GitPushPrune, KeepDivergent: t.KeepDivergent,
 		LastRunAt: lastRunAt, LastStatus: t.LastStatus,
 		CreatedAt: t.CreatedAt.Format("2006-01-02 15:04:05"),
 	}

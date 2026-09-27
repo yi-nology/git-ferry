@@ -186,6 +186,9 @@
                   <a-checkbox v-model:checked="form.git_bundle">生成冷备 Bundle</a-checkbox>
                 </a-form-item>
                 <a-form-item>
+                  <a-checkbox v-model:checked="form.submodules">递归子模块</a-checkbox>
+                </a-form-item>
+                <a-form-item>
                   <a-checkbox v-model:checked="form.git_push_prune">删除目标多余分支</a-checkbox>
                 </a-form-item>
                 <a-form-item>
@@ -268,6 +271,7 @@ const form = reactive({
   git_lfs: false,
   sync_wiki: false,
   git_bundle: false,
+  submodules: false,
   git_push_prune: false,
   keep_divergent: true,
 })

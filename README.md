@@ -41,6 +41,10 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 | 通用回调 | `notify.webhook` 成功/失败分路 + HMAC 签名 |
 | 冷备 Bundle | 任务开启 `git_bundle`,`sync.backup_dir` + `backup_keep` 轮转 |
 | 一键重建 | `POST /api/v1/ops/rebuild` 清 workdir 全量重拉 |
+| 过滤导入 | `POST /api/v1/ops/sync-platform` 排除 archived/fork、按 star/语言/glob |
+| GitHub 全量归档 | `POST /api/v1/ops/migration` Migration API tar.gz |
+| 部分克隆/子模块 | `sync.partial_clone`、任务 `submodules` |
+| S3 冷备 | `sync.backup_s3` bundle 异地上传 |
 
 前端入口:**侧栏 → 运维中心**。配置见 `conf/config.example.yaml` 的 `runwatch` / `notify` 段。
 
