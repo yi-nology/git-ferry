@@ -1,7 +1,9 @@
 package notify
 
 import (
+	"context"
 	"encoding/json"
+	"strings"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -84,4 +86,30 @@ func TestHeartbeat_FailThenSuccess(t *testing.T) {
 	before := atomic.LoadInt32(&ok)
 	h.MarkResult(false)
 	assert.Equal(t, before, atomic.LoadInt32(&ok))
+}
+
+func TestSendWebhook_Signed(t *testing.T) {
+	var gotBody []byte
+	var gotSig string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotSig = r.Header.Get("X-GitFerry-Signature")
+		buf := make([]byte, r.ContentLength)
+		_, _ = r.Body.Read(buf)
+		gotBody = buf
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	n := New(&Config{Webhook: &WebhookConfig{
+		FailURL:      srv.URL,
+		SharedSecret: "s3cret",
+	}})
+	n.pushAll(context.Background(), &RunEvent{
+		TaskKey: "t1", Status: "failed", Error: "boom",
+		EndAt: time.Now(),
+	})
+	require.NotEmpty(t, gotSig)
+	assert.True(t, strings.HasPrefix(gotSig, "sha256="))
+	// 签名可复验
+	assert.Equal(t, signBody("s3cret", gotBody), gotSig)
 }

@@ -2,6 +2,9 @@ package notify
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -75,6 +78,11 @@ func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
 		}
 		if err := n.sendGotify(ctx, cfg, ev); err != nil {
 			slog.Warn("notify gotify failed", "error", err, "url", cfg.URL)
+		}
+	}
+	if n.cfg.Webhook != nil {
+		if err := n.sendWebhook(ctx, n.cfg.Webhook, ev); err != nil {
+			slog.Warn("notify webhook failed", "error", err, "url", n.cfg.Webhook.FailURL)
 		}
 	}
 }
@@ -176,4 +184,50 @@ func gotifyPriority(status string) int {
 		return 8
 	}
 	return 5
+}
+
+// sendWebhook 通用回调:成功/失败分路 POST JSON,可选 HMAC 签名。
+func (n *Notifier) sendWebhook(ctx context.Context, cfg *WebhookConfig, ev *RunEvent) error {
+	if cfg == nil {
+		return nil
+	}
+	url := cfg.FailURL
+	if ev.Status != "failed" && cfg.SuccessURL != "" {
+		url = cfg.SuccessURL
+	}
+	if url == "" {
+		return nil
+	}
+	payload, err := json.Marshal(map[string]any{
+		"event":      "sync_run",
+		"status":     ev.Status,
+		"task_key":   ev.TaskKey,
+		"task_name":  ev.TaskName,
+		"run_id":     ev.RunID,
+		"trigger":    ev.Trigger,
+		"error":      ev.Error,
+		"error_type": ev.ErrorType,
+		"duration_ms": ev.Duration.Milliseconds(),
+		"end_at":     ev.EndAt.Format(time.RFC3339),
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitFerry-Event", "sync_run")
+	if cfg.SharedSecret != "" {
+		req.Header.Set("X-GitFerry-Signature", signBody(cfg.SharedSecret, payload))
+	}
+	return n.do(req)
+}
+
+// signBody HMAC-SHA256,返回 "sha256=<hex>"。
+func signBody(secret string, body []byte) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(body)
+	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
 }

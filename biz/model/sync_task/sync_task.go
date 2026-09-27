@@ -24,6 +24,7 @@ type SyncTaskInfo struct {
 	GitPrune      bool   `thrift:"gitPrune,14" form:"git_prune" json:"git_prune" query:"git_prune"`
 	GitLfs        bool   `thrift:"gitLfs,20" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	SyncWiki      bool   `thrift:"syncWiki,23" form:"sync_wiki" json:"sync_wiki" query:"sync_wiki"`
+	GitBundle     bool   `thrift:"gitBundle,24" form:"git_bundle" json:"git_bundle" query:"git_bundle"`
 	GitPushPrune  bool   `thrift:"gitPushPrune,21" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
 	KeepDivergent bool   `thrift:"keepDivergent,22" form:"keep_divergent" json:"keep_divergent" query:"keep_divergent"`
 	LastRunAt     string `thrift:"lastRunAt,16" form:"last_run_at" json:"last_run_at" query:"last_run_at"`
@@ -1624,6 +1625,7 @@ type CreateTaskReq struct {
 	GitPrune      bool   `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
 	GitLfs        bool   `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	SyncWiki      bool   `thrift:"syncWiki,18" form:"sync_wiki" json:"sync_wiki" query:"sync_wiki"`
+	GitBundle     bool   `thrift:"gitBundle,19" form:"git_bundle" json:"git_bundle" query:"git_bundle"`
 	GitPushPrune  bool   `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
 	KeepDivergent *bool  `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 }
@@ -2328,6 +2330,7 @@ type UpdateTaskReq struct {
 	GitPrune     bool   `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
 	GitLfs        bool  `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	SyncWiki      bool  `thrift:"syncWiki,18" form:"sync_wiki" json:"sync_wiki" query:"sync_wiki"`
+	GitBundle     bool  `thrift:"gitBundle,19" form:"git_bundle" json:"git_bundle" query:"git_bundle"`
 	GitPushPrune  bool  `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
 	KeepDivergent *bool `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 }
