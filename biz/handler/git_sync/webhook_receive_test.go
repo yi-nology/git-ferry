@@ -1,6 +1,8 @@
 package git_sync
 
 import (
+	"fmt"
+	"path/filepath"
 	"os"
 	"strings"
 	"testing"
@@ -18,7 +20,7 @@ func TestMain(m *testing.M) {
 
 	cfg := &corebridge.Config{}
 	cfg.Database.Driver = "sqlite"
-	cfg.Database.DSN = ":memory:"
+	cfg.Database.DSN = "file:" + filepath.Join(os.TempDir(), fmt.Sprintf("git_sync_test_%d.db", os.Getpid()))
 	cfg.Git.TempDir = "/tmp/git-sync-test"
 
 	svc, err := corebridge.NewService(cfg)

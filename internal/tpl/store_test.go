@@ -36,3 +36,18 @@ func TestStore_UpsertGetDelete(t *testing.T) {
 	_, err = st.Get(tpl.ID)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
+
+
+func TestStore_ListByTag(t *testing.T) {
+	st, err := Open(filepath.Join(t.TempDir(), "t.json"))
+	require.NoError(t, err)
+	_, err = st.Upsert(&Template{Name: "a", Tags: []string{"nightly", "backup"}})
+	require.NoError(t, err)
+	_, err = st.Upsert(&Template{Name: "b", Tags: []string{"hotfix"}})
+	require.NoError(t, err)
+
+	got := st.ListByTag("nightly")
+	require.Len(t, got, 1)
+	assert.Equal(t, "a", got[0].Name)
+	assert.Empty(t, st.ListByTag("missing"))
+}

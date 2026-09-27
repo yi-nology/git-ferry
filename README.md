@@ -21,6 +21,23 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 - SQLite and MySQL database support
 - AI 运维助手(eino):自然语言查询仓库/任务/历史/平台,危险操作需界面确认
 
+## 运维中心(P0-P2)
+
+借鉴 gickup / ghorg / Renovate / Port Scorecards 的成熟做法,壳层内建:
+
+| 能力 | 入口 |
+|------|------|
+| Prometheus 指标 | `GET /metrics` |
+| 失败补偿 | `runwatch` 轮询 + 自动重跑;`POST /api/v1/ops/retry` / `retry-batch` |
+| 通知矩阵 | ntfy / gotify 推送 + success/fail 分路 heartbeat(healthchecks.io) |
+| 健康评分 | `GET /api/v1/ops/health-score`(gold/silver/bronze/basic) |
+| 资产盘点 | `GET /api/v1/ops/inventory`(孤儿仓库) |
+| 策略模板 | `GET/POST /api/v1/ops/templates` + preview/apply(dry-run) |
+| 审计导出 | `GET /api/v1/ops/audit-report?format=csv` |
+| 密钥注入 | `GIT_SYNC_TOKEN_<NAME>` 环境变量,令牌不进请求体 |
+
+前端入口:**侧栏 → 运维中心**。配置见 `conf/config.example.yaml` 的 `runwatch` / `notify` 段。
+
 ## AI 助手(eino)
 
 基于 [CloudWeGo eino](https://github.com/cloudwego/eino) 的对话式运维助手,默认**关闭**,

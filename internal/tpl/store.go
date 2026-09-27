@@ -76,6 +76,22 @@ func (s *Store) List() []Template {
 	return out
 }
 
+// ListByTag 返回带指定标签的模板。
+func (s *Store) ListByTag(tag string) []Template {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []Template
+	for i := range s.list {
+		for _, x := range s.list[i].Tags {
+			if x == tag {
+				out = append(out, s.list[i])
+				break
+			}
+		}
+	}
+	return out
+}
+
 // Get 按 ID 取模板。
 func (s *Store) Get(id string) (*Template, error) {
 	s.mu.RLock()

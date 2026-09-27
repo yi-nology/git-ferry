@@ -32,6 +32,10 @@ func ListTemplates(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
+	if tag := c.Query("tag"); tag != "" {
+		response.Success(c, map[string]any{"items": st.ListByTag(tag), "tag": tag})
+		return
+	}
 	response.Success(c, map[string]any{"items": st.List()})
 }
 

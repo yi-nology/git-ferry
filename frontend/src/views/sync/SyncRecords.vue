@@ -301,6 +301,7 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'SyncRecords' })
+import { makeTaskFilter } from '@/utils/taskFilter'
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Empty } from 'ant-design-vue'
 import {
@@ -402,11 +403,7 @@ function formatDuration(ms?: number) {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
-function filterTaskOption(input: string, option: { value?: string }) {
-  if (!option.value) return true
-  const task = taskMap.value[option.value]
-  return task?.name?.toLowerCase().includes(input.toLowerCase()) || false
-}
+const filterTaskOption = makeTaskFilter(() => taskStore.tasks)
 
 // 过滤后的记录
 const filteredRecords = computed(() => {
