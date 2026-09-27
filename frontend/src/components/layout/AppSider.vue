@@ -29,6 +29,11 @@
         <span>仪表盘</span>
       </a-menu-item>
 
+      <a-menu-item key="/ops">
+        <template #icon><ToolOutlined /></template>
+        <span>运维中心</span>
+      </a-menu-item>
+
       <a-sub-menu key="sync">
         <template #icon><SyncOutlined /></template>
         <template #title>同步管理</template>
@@ -71,6 +76,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   DashboardOutlined,
+  ToolOutlined,
   SyncOutlined,
   ApiOutlined,
   FolderOutlined,

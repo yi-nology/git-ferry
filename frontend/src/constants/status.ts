@@ -46,3 +46,33 @@ export function statusKind(status?: string): StatusKind {
   if (!status) return 'idle'
   return STATUS_KIND[status] || 'idle'
 }
+
+
+/** 展示用颜色(Ant Design tag color),与 STATUS_KIND 对齐 */
+export const STATUS_COLOR: Record<string, string> = {
+  success: 'green',
+  running: 'blue',
+  failed: 'red',
+  received: 'blue',
+  processed: 'green',
+  active: 'green',
+  idle: 'default',
+  stopped: 'default',
+  disabled: 'default',
+  error: 'red',
+  warning: 'orange',
+  pending: 'blue',
+}
+
+export function statusColor(status?: string): string {
+  if (!status) return 'default'
+  return STATUS_COLOR[status] || 'default'
+}
+
+/** 常用状态字面量,避免魔法字符串散落 */
+export const STATUS = {
+  Success: 'success',
+  Running: 'running',
+  Failed: 'failed',
+  Idle: 'idle',
+} as const

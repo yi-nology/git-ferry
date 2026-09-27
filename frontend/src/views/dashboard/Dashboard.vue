@@ -150,12 +150,12 @@
         <div class="status-items">
           <div class="status-item">
             <div class="status-item-label">
-              <CheckCircleOutlined v-if="systemStatus?.status === 'running'" style="color: #52c41a; margin-right: 6px;" />
+              <CheckCircleOutlined v-if="systemStatus?.status === STATUS.Running" style="color: #52c41a; margin-right: 6px;" />
               <CloseCircleOutlined v-else style="color: #ff4d4f; margin-right: 6px;" />
               服务状态
             </div>
-            <a-tag :color="systemStatus?.status === 'running' ? 'success' : 'error'">
-              {{ systemStatus?.status === 'running' ? '运行中' : '已停止' }}
+            <a-tag :color="systemStatus?.status === STATUS.Running ? 'success' : 'error'">
+              {{ systemStatus?.status === STATUS.Running ? '运行中' : '已停止' }}
             </a-tag>
           </div>
           <a-divider type="vertical" style="height: 40px;" />
@@ -198,6 +198,7 @@ import { syncTaskApi, systemApi, repoApi } from '@/api'
 import type { SystemStatusData } from '@/types/api'
 import type { Repo, SyncTask } from '@/types'
 import { notifyError } from '@/utils/notify'
+import { STATUS, statusColor } from '@/constants/status'
 import { platformLabel, platformColor } from '@/utils/platform'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import {
@@ -232,8 +233,8 @@ const dashRepoTotal = ref(0)
 const dashTasks = ref<SyncTask[]>([])
 const dashTaskTotal = ref(0)
 
-const runningCount = computed(() => dashTasks.value.filter((t) => t.last_status === 'running').length)
-const failedCount = computed(() => dashTasks.value.filter((t) => t.last_status === 'failed').length)
+const runningCount = computed(() => dashTasks.value.filter((t) => t.last_status === STATUS.Running).length)
+const failedCount = computed(() => dashTasks.value.filter((t) => t.last_status === STATUS.Failed).length)
 const recentTasks = computed(() => dashTasks.value.slice(0, 5))
 const recentRepos = computed(() => dashRepos.value.slice(0, 5))
 

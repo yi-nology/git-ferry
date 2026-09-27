@@ -17,6 +17,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/Dashboard.vue'), meta: { title: '仪表盘' } },
+      { path: 'ops', name: 'OpsCenter', component: () => import('@/views/ops/OpsCenter.vue'), meta: { title: '运维中心' } },
       { path: 'sync', name: 'SyncTasks', component: () => import('@/views/sync/SyncTaskList.vue'), meta: { title: '同步任务' } },
       { path: 'sync/records', name: 'SyncRecords', component: () => import('@/views/sync/SyncRecords.vue'), meta: { title: '执行记录' } },
       { path: 'sync/new', name: 'SyncNew', component: () => import('@/views/sync/NewSyncTask.vue'), meta: { title: '新建同步任务' } },

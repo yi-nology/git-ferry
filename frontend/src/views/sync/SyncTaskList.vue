@@ -309,6 +309,7 @@ import type { TablePaginationConfig } from 'ant-design-vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 import { makeRepoFilter } from '@/utils/repoFilter'
+import { STATUS } from '@/constants/status'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -345,9 +346,9 @@ function clearSelection() {
 const taskStats = computed(() => {
   let success = 0, running = 0, failed = 0
   for (const t of taskStore.tasks) {
-    if (t.last_status === 'success') success++
-    else if (t.last_status === 'running') running++
-    else if (t.last_status === 'failed') failed++
+    if (t.last_status === STATUS.Success) success++
+    else if (t.last_status === STATUS.Running) running++
+    else if (t.last_status === STATUS.Failed) failed++
   }
   return { success, running, failed }
 })

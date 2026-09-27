@@ -93,7 +93,7 @@
             <a-timeline-item
               v-for="run in history"
               :key="run.id"
-              :color="run.status === 'success' ? 'green' : run.status === 'failed' ? 'red' : 'blue'"
+              :color="statusColor(run.status)"
             >
               <div class="timeline-item">
                 <div class="timeline-header">
@@ -167,6 +167,7 @@ import { copyToClipboard } from '@/utils'
 import { buildWebhookReceiveUrl } from '@/constants/webhook'
 import { triggerColor, triggerLabel } from '@/utils/dictionaries'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
+import { statusColor } from '@/constants/status'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { Repo, SyncTask, SyncRun } from '@/types'
 

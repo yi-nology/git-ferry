@@ -69,3 +69,7 @@ runwatch:
 #       - "https://hc-ping.com/your-uuid"
 #     fail_urls:
 #       - "https://hc-ping.com/your-uuid"
+
+# 平台令牌可用环境变量注入(不进配置/请求体):
+#   GIT_SYNC_TOKEN_<PLATFORM_NAME 大写,非字母数字换 _>
+#   例:platform name=my-github → GIT_SYNC_TOKEN_MY_GITHUB=ghp_xxx

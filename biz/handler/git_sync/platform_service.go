@@ -42,7 +42,7 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		Type:          req.Type,
 		InstanceURL:   req.InstanceUrl,
 		APIURL:        apiURL,
-		AccessToken:   req.AccessToken,
+		AccessToken:   resolveCreateToken(req.Name, req.AccessToken),
 		SkipTLSVerify: req.SkipTlsVerify,
 		CACertPath:    req.CaCertPath,
 		ProxyURL:      req.ProxyUrl,
@@ -126,6 +126,10 @@ func UpdatePlatform(ctx context.Context, c *app.RequestContext) {
 
 	// 更新字段（空值表示不更新）
 	converter.ApplyPlatformUpdate(p, &req)
+	// env 覆盖:未在请求体给 token 时允许用 GIT_SYNC_TOKEN_<KEY> 注入
+	if p.AccessToken == "" {
+		p.AccessToken = corebridge.ResolveTokenFromEnv(p.Key, "")
+	}
 
 	if err := GetSyncService().UpdatePlatform(ctx, p); err != nil {
 		response.InternalError(c, err.Error())
@@ -297,4 +301,13 @@ func SyncPlatformRepos(ctx context.Context, c *app.RequestContext) {
 		Message:     "同步成功",
 		SyncedCount: converter.SafeIntToInt32(count),
 	})
+}
+
+
+// resolveCreateToken 创建平台时解析访问令牌:env 优先(密钥不进请求体/DB 明文)。
+func resolveCreateToken(name, bodyToken string) string {
+	if v := corebridge.ResolveTokenFromEnv(name, ""); v != "" {
+		return v
+	}
+	return bodyToken
 }

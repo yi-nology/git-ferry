@@ -44,6 +44,7 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.POST("/templates", git_sync.CreateTemplate)
 	ops.POST("/templates/delete", git_sync.DeleteTemplate)
 	ops.POST("/templates/preview", git_sync.PreviewTemplate)
+	ops.POST("/templates/apply", git_sync.ApplyTemplate)
 	ops.GET("/inventory", git_sync.RepoInventory)
 
 	// Swagger API 文档(公开,无需鉴权)
