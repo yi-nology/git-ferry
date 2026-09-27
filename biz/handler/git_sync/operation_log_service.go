@@ -2,8 +2,6 @@ package git_sync
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -11,6 +9,7 @@ import (
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/pkg/safe"
 )
 
 // ListOperationLogs GET /api/v1/logs/operations
@@ -63,17 +62,12 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	statsCh := make(chan statsResult, 1)
 	statsCtx, statsCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer statsCancel()
-	go func() {
+	safe.Go("OperationStats", func() {
 		var r statsResult
-		defer func() {
-			if v := recover(); v != nil {
-				r.err = fmt.Errorf("OperationStats panic: %v", v)
-				slog.Error("goroutine panic recovered", "goroutine", "OperationStats", "panic", v)
-			}
-			statsCh <- r
-		}()
+		defer func() { statsCh <- r }()
+		defer safe.RecoverToErr("OperationStats", &r.err)
 		r.today, r.week, r.total, r.err = svc.OperationStats(statsCtx)
-	}()
+	})
 
 	list, total, err := svc.ListOperations(ctx, offset, limit, &filter)
 	if err != nil {

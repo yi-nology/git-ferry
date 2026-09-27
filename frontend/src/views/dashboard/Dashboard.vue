@@ -194,10 +194,9 @@ defineOptions({ name: 'Dashboard' })
 import { computed, onMounted, onActivated, ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRepoStore } from '@/stores/repo'
-import { useSyncTaskStore } from '@/stores/syncTask'
-import { systemApi, repoApi } from '@/api'
+import { syncTaskApi, systemApi, repoApi } from '@/api'
 import type { SystemStatusData } from '@/types/api'
-import type { Repo } from '@/types'
+import type { Repo, SyncTask } from '@/types'
 import { notifyError } from '@/utils/notify'
 import { platformLabel, platformColor } from '@/utils/platform'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -221,7 +220,6 @@ import {
 
 const router = useRouter()
 const repoStore = useRepoStore()
-const taskStore = useSyncTaskStore()
 
 const systemStatus = ref<SystemStatusData | null>(null)
 
@@ -230,14 +228,18 @@ const systemStatus = ref<SystemStatusData | null>(null)
 const dashRepos = ref<Repo[]>([])
 const dashRepoTotal = ref(0)
 
-const runningCount = computed(() => taskStore.tasks.filter((t) => t.last_status === 'running').length)
-const failedCount = computed(() => taskStore.tasks.filter((t) => t.last_status === 'failed').length)
-const recentTasks = computed(() => taskStore.tasks.slice(0, 5))
+// 任务数据同样进本地 ref:taskStore.fetchTasks 会覆盖列表页共享缓存
+const dashTasks = ref<SyncTask[]>([])
+const dashTaskTotal = ref(0)
+
+const runningCount = computed(() => dashTasks.value.filter((t) => t.last_status === 'running').length)
+const failedCount = computed(() => dashTasks.value.filter((t) => t.last_status === 'failed').length)
+const recentTasks = computed(() => dashTasks.value.slice(0, 5))
 const recentRepos = computed(() => dashRepos.value.slice(0, 5))
 
 const statCards = computed(() => [
   { label: '仓库总数', value: dashRepoTotal.value, icon: markRaw(FolderOutlined), color: 'blue', path: '/repos' },
-  { label: '同步任务', value: taskStore.total, icon: markRaw(SyncOutlined), color: 'green', path: '/sync' },
+  { label: '同步任务', value: dashTaskTotal.value, icon: markRaw(SyncOutlined), color: 'green', path: '/sync' },
   { label: '运行中', value: runningCount.value, icon: markRaw(PlayCircleOutlined), color: 'orange', path: '/sync' },
   { label: '失败任务', value: failedCount.value, icon: markRaw(CloseCircleOutlined), color: 'red', path: '/sync' },
 ])
@@ -284,13 +286,15 @@ async function loadDashboard() {
   try {
     // Dashboard 只需总量 + 最近几条 + 状态统计;仓库数据进本地 ref,
     // 不写共享 store(避免污染仓库列表页的 keep-alive 缓存)
-    const [repoData] = await Promise.all([
+    const [repoData, taskData] = await Promise.all([
       repoApi.list({ page: 1, page_size: 5 }),
-      taskStore.fetchTasks({ page: 1, page_size: 50 }),
+      syncTaskApi.list({ page: 1, page_size: 50 }),
       fetchSystemStatus(),
     ])
     dashRepos.value = repoData.list
     dashRepoTotal.value = repoData.pagination?.total ?? 0
+    dashTasks.value = taskData.tasks || []
+    dashTaskTotal.value = taskData.total ?? dashTasks.value.length
   } catch (e) {
     notifyError(e, '加载仪表盘数据失败')
   }

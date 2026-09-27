@@ -264,6 +264,7 @@ import { useSyncTaskStore } from '@/stores/syncTask'
 import type { WebhookRule } from '@/types'
 import { eventTypeColor } from '@/utils/dictionaries'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
+import { makeRepoFilter } from '@/utils/repoFilter'
 import { buildWebhookReceiveUrl } from '@/constants/webhook'
 import { webhookApi } from '@/api'
 
@@ -300,10 +301,7 @@ const formData = reactive({
   enabled: true,
 })
 
-function filterRepoOption(input: string, option: any) {
-  const repo = repoStore.repos.find(r => r.key === option.value)
-  return repo?.name.toLowerCase().includes(input.toLowerCase()) || false
-}
+const filterRepoOption = makeRepoFilter(() => repoStore.repos)
 
 function loadRules() {
   if (repoKey.value) {

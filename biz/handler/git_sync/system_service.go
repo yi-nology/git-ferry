@@ -4,8 +4,6 @@ package git_sync
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"runtime"
 	"time"
 
@@ -13,6 +11,7 @@ import (
 	system "github.com/yi-nology/git-ferry/biz/model/system"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/pkg/safe"
 	"github.com/yi-nology/git-ferry/internal/version"
 )
 
@@ -36,28 +35,19 @@ func SystemStatus(ctx context.Context, c *app.RequestContext) {
 	}
 	repoCh := make(chan repoCountResult, 1)
 	taskCh := make(chan taskCountResult, 1)
-	go func() {
+	safe.Go("CountRepos", func() {
 		var r repoCountResult
-		defer func() {
-			if v := recover(); v != nil {
-				r.err = fmt.Errorf("CountRepos panic: %v", v)
-				slog.Error("goroutine panic recovered", "goroutine", "CountRepos", "panic", v)
-			}
-			repoCh <- r
-		}()
+		// defer LIFO:先注册发送、后注册 recover,panic 时 recover 先写 err 再发送
+		defer func() { repoCh <- r }()
+		defer safe.RecoverToErr("CountRepos", &r.err)
 		r.count, r.err = svc.CountRepos()
-	}()
-	go func() {
+	})
+	safe.Go("CountTasksByStatus", func() {
 		var r taskCountResult
-		defer func() {
-			if v := recover(); v != nil {
-				r.err = fmt.Errorf("CountTasksByStatus panic: %v", v)
-				slog.Error("goroutine panic recovered", "goroutine", "CountTasksByStatus", "panic", v)
-			}
-			taskCh <- r
-		}()
+		defer func() { taskCh <- r }()
+		defer safe.RecoverToErr("CountTasksByStatus", &r.err)
 		r.counts, r.err = svc.CountTasksByStatus()
-	}()
+	})
 
 	rr := <-repoCh
 	if rr.err != nil {

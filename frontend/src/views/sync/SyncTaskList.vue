@@ -308,6 +308,7 @@ import type { SyncTask } from '@/types'
 import type { TablePaginationConfig } from 'ant-design-vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
+import { makeRepoFilter } from '@/utils/repoFilter'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -375,12 +376,7 @@ const paginationConfig = computed(() => ({
 }))
 
 // -- Filter / search helpers --
-function filterRepoOption(input: string, option: any) {
-  const repo = repoStore.repos.find(r => r.key === option.value)
-  if (!repo) return false
-  const search = input.toLowerCase()
-  return repo.name.toLowerCase().includes(search) || repo.key.toLowerCase().includes(search)
-}
+const filterRepoOption = makeRepoFilter(() => repoStore.repos)
 
 // 预计算 repoKey → repoName 的 Map,避免模板循环中 O(n×m) 逐次 find
 const repoNameMap = computed(() => {

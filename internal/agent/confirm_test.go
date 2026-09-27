@@ -79,3 +79,28 @@ func TestLastConfirm_TakeOnce(t *testing.T) {
 	name, _, _ = s.LastConfirm()
 	assert.Empty(t, name)
 }
+
+func TestConfirmToken_UniqueAndOpaque(t *testing.T) {
+	seen := make(map[string]bool, 64)
+	for i := 0; i < 64; i++ {
+		tok := confirmToken()
+		require.Len(t, tok, 32) // 16 bytes hex
+		require.False(t, seen[tok], "token must not repeat (crypto/rand)")
+		seen[tok] = true
+	}
+}
+
+func TestConsumeConsumed_OneShot(t *testing.T) {
+	st := NewSessionStore(30*time.Minute, 20)
+	s := st.Create()
+	args := `{"task_key":"t1"}`
+
+	s.MarkConsumed("run_task", args)
+	require.True(t, s.ConsumeConsumed("run_task", args), "first consume should pass")
+	require.False(t, s.ConsumeConsumed("run_task", args), "second consume must fail (one-shot)")
+
+	// 其它参数不受影响
+	s.MarkConsumed("run_task", `{"task_key":"t2"}`)
+	require.True(t, s.ConsumeConsumed("run_task", `{"task_key":"t2"}`))
+	require.False(t, s.ConsumeConsumed("run_task", args))
+}

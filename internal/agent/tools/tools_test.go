@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"context"
 	"testing"
 
@@ -150,3 +151,24 @@ func TestRunTask_WithoutScope_Refused(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out, "会话上下文缺失")
 }
+
+func TestErrJSON_EscapesSpecialChars(t *testing.T) {
+	// err 内含引号/换行时不得破坏 JSON 结构
+	out := errJSON("查询失败", assertErr(`boom "quoted" \n`))
+	require.True(t, json.Valid([]byte(out)), "errJSON must produce valid JSON, got: %s", out)
+	assert.Contains(t, out, "查询失败")
+	assert.Contains(t, out, `quoted`)
+}
+
+func TestMarshalJSON_FallbackOnFailure(t *testing.T) {
+	// channel 不可序列化,应回退到错误负载而非 panic/空串
+	out := make(chan int)
+	got := marshalJSON(out)
+	require.True(t, json.Valid([]byte(got)), "marshalJSON fallback must be valid JSON")
+	assert.Contains(t, got, "error")
+}
+
+// assertErr 构造带特殊字符的 error。
+type assertErr string
+
+func (e assertErr) Error() string { return string(e) }

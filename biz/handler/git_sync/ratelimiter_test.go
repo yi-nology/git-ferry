@@ -14,44 +14,44 @@ import (
 )
 
 func TestRateLimiter_Allow(t *testing.T) {
-	rl := newRateLimiter(5) // 5 requests per second
+	rl := newIPRateLimiter(5) // 5 requests per second per IP
 
 	// Should allow first 5 requests immediately
 	for i := 0; i < 5; i++ {
-		require.True(t, rl.Allow(), "expected request %d to be allowed", i+1)
+		require.True(t, rl.Allow("1.2.3.4"), "expected request %d to be allowed", i+1)
 	}
 
 	// 6th request should be denied (tokens exhausted)
-	require.False(t, rl.Allow(), "expected 6th request to be denied")
+	require.False(t, rl.Allow("1.2.3.4"), "expected 6th request to be denied")
 }
 
 func TestRateLimiter_Refill(t *testing.T) {
-	rl := newRateLimiter(10) // 10 requests per second
+	rl := newIPRateLimiter(10)
 
 	// Exhaust all tokens
 	for i := 0; i < 10; i++ {
-		rl.Allow()
+		rl.Allow("1.2.3.4")
 	}
 
 	// Should be denied now
-	require.False(t, rl.Allow(), "expected request to be denied after exhausting tokens")
+	require.False(t, rl.Allow("1.2.3.4"), "expected request to be denied after exhausting tokens")
 
 	// 模拟时间流逝 1 秒:x/time/rate 以未来时间点判定,等价于等待 1s 后令牌回填
-	require.True(t, rl.AllowN(time.Now().Add(time.Second), 1), "expected request to be allowed after refill")
+	require.True(t, rl.allowAt("1.2.3.4", time.Now().Add(time.Second), 1), "expected request to be allowed after refill")
 }
 
 func TestRateLimiter_DefaultRate(t *testing.T) {
-	rl := newRateLimiter(1) // 1 request per second
+	rl := newIPRateLimiter(1)
 
 	// First request should be allowed
-	require.True(t, rl.Allow(), "expected first request to be allowed")
+	require.True(t, rl.Allow("1.2.3.4"), "expected first request to be allowed")
 
 	// Second immediate request should be denied
-	require.False(t, rl.Allow(), "expected second immediate request to be denied")
+	require.False(t, rl.Allow("1.2.3.4"), "expected second immediate request to be denied")
 }
 
 func TestRateLimiter_ConcurrentAccess(t *testing.T) {
-	rl := newRateLimiter(100) // 100 requests per second, burst 100
+	rl := newIPRateLimiter(100)
 
 	var wg sync.WaitGroup
 	allowed := make(chan bool, 200)
@@ -61,7 +61,7 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			allowed <- rl.Allow()
+			allowed <- rl.Allow("1.2.3.4")
 		}()
 	}
 
@@ -84,7 +84,7 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 
 func TestRateLimitMiddleware_AllowsWithinLimit(t *testing.T) {
 	// Set up a rate limiter with a high limit for testing
-	setWebhookRateLimiter(newRateLimiter(10))
+	setWebhookRateLimiter(newIPRateLimiter(10))
 	defer resetWebhookRateLimiter()
 
 	// Create a test context
@@ -112,7 +112,7 @@ func TestRateLimitMiddleware_AllowsWithinLimit(t *testing.T) {
 
 func TestRateLimitMiddleware_DeniesOverLimit(t *testing.T) {
 	// Set up a rate limiter with limit of 1
-	setWebhookRateLimiter(newRateLimiter(1))
+	setWebhookRateLimiter(newIPRateLimiter(1))
 	defer resetWebhookRateLimiter()
 
 	middleware := RateLimitMiddleware()
@@ -136,13 +136,14 @@ func TestRateLimitMiddleware_DeniesOverLimit(t *testing.T) {
 }
 
 func TestRateLimitMiddleware_AbortPreventsNext(t *testing.T) {
-	// Set up a rate limiter with limit of 1 and exhaust it
-	rl := newRateLimiter(1)
-	rl.Allow() // exhaust the token
-	setWebhookRateLimiter(rl)
+	// 同一 ClientIP 先耗尽令牌,再验证第二发被拦截
+	setWebhookRateLimiter(newIPRateLimiter(1))
 	defer resetWebhookRateLimiter()
 
 	middleware := RateLimitMiddleware()
+
+	// 第一发耗尽令牌
+	middleware(context.Background(), app.NewContext(0))
 
 	ctx := app.NewContext(0)
 	nextCalled := false
@@ -152,7 +153,6 @@ func TestRateLimitMiddleware_AbortPreventsNext(t *testing.T) {
 
 	middleware(context.Background(), ctx)
 
-	// Call next handler if not aborted
 	if !ctx.IsAborted() {
 		nextHandler(context.Background(), ctx)
 	}
@@ -162,33 +162,32 @@ func TestRateLimitMiddleware_AbortPreventsNext(t *testing.T) {
 }
 
 func TestRateLimitMiddleware_ReturnsCorrectStatusCode(t *testing.T) {
-	// Set up a rate limiter with limit of 1 and exhaust it
-	rl := newRateLimiter(1)
-	rl.Allow() // exhaust the token
-	setWebhookRateLimiter(rl)
+	setWebhookRateLimiter(newIPRateLimiter(1))
 	defer resetWebhookRateLimiter()
 
 	middleware := RateLimitMiddleware()
+	// 第一发耗尽
+	middleware(context.Background(), app.NewContext(0))
+
 	ctx := app.NewContext(0)
 	middleware(context.Background(), ctx)
 
 	assert.Equal(t, http.StatusTooManyRequests, ctx.Response.StatusCode(), "expected status code %d (TooManyRequests)", http.StatusTooManyRequests)
 }
 
-func TestRateLimiter_ZeroRate(t *testing.T) {
-	// A rate limiter with 0 rate should never allow
-	rl := newRateLimiter(0)
-
-	require.False(t, rl.Allow(), "expected request to be denied with zero rate")
+func TestRateLimiter_ZeroRateNormalized(t *testing.T) {
+	// 配置 0/负数不再表示"全拒",而是回落到默认速率(与文档一致)
+	rl := newIPRateLimiter(0)
+	require.True(t, rl.Allow("1.2.3.4"), "zero config should fall back to default rate")
 }
 
 func TestRateLimiter_LargeBurst(t *testing.T) {
-	rl := newRateLimiter(1000) // 1000 requests per second
+	rl := newIPRateLimiter(1000)
 
 	// Should allow 1000 requests
 	allowed := 0
 	for i := 0; i < 1000; i++ {
-		if rl.Allow() {
+		if rl.Allow("1.2.3.4") {
 			allowed++
 		}
 	}
@@ -201,7 +200,7 @@ func TestRateLimiter_LargeBurst(t *testing.T) {
 }
 
 func TestRateLimiter_ConcurrentSafety(t *testing.T) {
-	rl := newRateLimiter(50)
+	rl := newIPRateLimiter(50)
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -211,7 +210,7 @@ func TestRateLimiter_ConcurrentSafety(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			result := rl.Allow()
+			result := rl.Allow("1.2.3.4")
 			mu.Lock()
 			results[idx] = result
 			mu.Unlock()
@@ -230,4 +229,13 @@ func TestRateLimiter_ConcurrentSafety(t *testing.T) {
 	// burst=50;同上,并发调度期间的回填使精确断言偶发失败,这里只验并发安全与量级
 	require.GreaterOrEqual(t, allowedCount, 50, "at least the burst should be allowed")
 	require.LessOrEqual(t, allowedCount, 100, "must never exceed total requests")
+}
+
+func TestRateLimitMiddleware_PerIPIsolation(t *testing.T) {
+	rl := newIPRateLimiter(1)
+	// IP A 耗尽
+	require.True(t, rl.Allow("10.0.0.1"))
+	require.False(t, rl.Allow("10.0.0.1"))
+	// IP B 仍有独立配额
+	require.True(t, rl.Allow("10.0.0.2"), "different IP must not share bucket with A")
 }

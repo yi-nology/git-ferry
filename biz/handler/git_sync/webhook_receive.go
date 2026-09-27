@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
@@ -15,35 +16,90 @@ import (
 
 const maxWebhookBodySize = 10 << 20
 
-// newRateLimiter 创建限流器(令牌桶,容量与速率均为 ratePerSecond/秒;0 表示全拒)。
-// 基于 golang.org/x/time/rate,替代此前手写的令牌桶实现。
-func newRateLimiter(ratePerSecond int) *rate.Limiter {
-	return rate.NewLimiter(rate.Limit(ratePerSecond), ratePerSecond)
+// webhookDefaultRate 默认每 IP 每秒请求数(配置为 0 或负数时)。
+const webhookDefaultRate = 10
+
+// ipRateLimiter 按客户端 IP 分桶的令牌桶限流。
+// 单桶全进程共享会被单一来源打满,合法来源跟着遭殃;按 IP 分桶后互不影响。
+type ipRateLimiter struct {
+	mu       sync.Mutex
+	limiters map[string]*rate.Limiter
+	rate     rate.Limit
+	burst    int
+	// lastSeen 用于惰性清理,防止 map 随来源 IP 无限增长
+	lastSeen map[string]time.Time
+}
+
+func newIPRateLimiter(perSecond int) *ipRateLimiter {
+	if perSecond <= 0 {
+		perSecond = webhookDefaultRate
+	}
+	return &ipRateLimiter{
+		limiters: make(map[string]*rate.Limiter),
+		lastSeen: make(map[string]time.Time),
+		rate:     rate.Limit(perSecond),
+		burst:    perSecond,
+	}
+}
+
+// Allow 对 key(通常为 ClientIP)做限流判断;超限返回 false。
+func (l *ipRateLimiter) Allow(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	lim, ok := l.limiters[key]
+	if !ok {
+		lim = rate.NewLimiter(l.rate, l.burst)
+		l.limiters[key] = lim
+	}
+	l.lastSeen[key] = time.Now()
+	// 超过 256 个 key 时清理 10 分钟未活动的桶,控制内存
+	if len(l.limiters) > 256 {
+		cutoff := time.Now().Add(-10 * time.Minute)
+		for k, t := range l.lastSeen {
+			if t.Before(cutoff) {
+				delete(l.limiters, k)
+				delete(l.lastSeen, k)
+			}
+		}
+	}
+	return lim.Allow()
+}
+
+// allowAt 在指定时间点判定(测试用:模拟令牌回填,无需真实等待)。
+func (l *ipRateLimiter) allowAt(key string, at time.Time, n int) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	lim, ok := l.limiters[key]
+	if !ok {
+		lim = rate.NewLimiter(l.rate, l.burst)
+		l.limiters[key] = lim
+	}
+	return lim.AllowN(at, n)
 }
 
 var (
-	webhookRateLimiter   *rate.Limiter
+	webhookRateLimiter   *ipRateLimiter
 	webhookRateLimiterMu sync.Mutex
 )
 
-// getWebhookRateLimiter returns the singleton rate limiter, initializing it from config on first call.
-func getWebhookRateLimiter() *rate.Limiter {
+// getWebhookRateLimiter returns the per-IP rate limiter, initializing it from config on first call.
+func getWebhookRateLimiter() *ipRateLimiter {
 	webhookRateLimiterMu.Lock()
 	defer webhookRateLimiterMu.Unlock()
 	if webhookRateLimiter == nil {
-		rateLimit := 10 // default: 10 requests per second
+		rateLimit := webhookDefaultRate
 		if svc := GetSyncService(); svc != nil {
 			if cfg := svc.GetConfig(); cfg != nil && cfg.Webhook.RateLimit > 0 {
 				rateLimit = cfg.Webhook.RateLimit
 			}
 		}
-		webhookRateLimiter = newRateLimiter(rateLimit)
+		webhookRateLimiter = newIPRateLimiter(rateLimit)
 	}
 	return webhookRateLimiter
 }
 
 // setWebhookRateLimiter overrides the rate limiter. Used for testing.
-func setWebhookRateLimiter(rl *rate.Limiter) {
+func setWebhookRateLimiter(rl *ipRateLimiter) {
 	webhookRateLimiterMu.Lock()
 	defer webhookRateLimiterMu.Unlock()
 	webhookRateLimiter = rl
@@ -56,11 +112,10 @@ func resetWebhookRateLimiter() {
 	webhookRateLimiter = nil
 }
 
-// RateLimitMiddleware returns a middleware that enforces webhook rate limiting.
-// When the rate limit is exceeded, it responds with HTTP 429 Too Many Requests.
+// RateLimitMiddleware 按客户端 IP 限流;超限返回 429。
 func RateLimitMiddleware() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		if !getWebhookRateLimiter().Allow() {
+		if !getWebhookRateLimiter().Allow(c.ClientIP()) {
 			response.Error(c, consts.StatusTooManyRequests, "rate limit exceeded, please try again later")
 			c.Abort()
 			return

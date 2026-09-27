@@ -157,6 +157,7 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { WebhookEvent } from '@/types'
 import { eventTypeColor } from '@/utils/dictionaries'
 import { notifySuccess, notifyError } from '@/utils/notify'
+import { makeRepoFilter } from '@/utils/repoFilter'
 
 const webhookStore = useWebhookStore()
 const repoStore = useRepoStore()
@@ -193,10 +194,7 @@ const filteredEvents = computed(() => {
   return webhookStore.events.filter(e => e.status === activeTab.value)
 })
 
-function filterRepoOption(input: string, option: any) {
-  const repo = repoStore.repos.find(r => r.key === option.value)
-  return repo?.name.toLowerCase().includes(input.toLowerCase()) || false
-}
+const filterRepoOption = makeRepoFilter(() => repoStore.repos)
 
 function loadEvents() {
   if (repoKey.value) {
