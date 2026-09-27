@@ -31,9 +31,11 @@ func getWebhookRateLimiter() *rate.Limiter {
 	webhookRateLimiterMu.Lock()
 	defer webhookRateLimiterMu.Unlock()
 	if webhookRateLimiter == nil {
-		rateLimit := GetSyncService().GetConfig().Webhook.RateLimit
-		if rateLimit <= 0 {
-			rateLimit = 10 // default: 10 requests per second
+		rateLimit := 10 // default: 10 requests per second
+		if svc := GetSyncService(); svc != nil {
+			if cfg := svc.GetConfig(); cfg != nil && cfg.Webhook.RateLimit > 0 {
+				rateLimit = cfg.Webhook.RateLimit
+			}
 		}
 		webhookRateLimiter = newRateLimiter(rateLimit)
 	}
@@ -76,8 +78,10 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 
 	// Use configured max body size, fallback to default 10MB
 	bodySizeLimit := maxWebhookBodySize
-	if cfg := GetSyncService().GetConfig(); cfg != nil && cfg.Webhook.MaxBodySize > 0 {
-		bodySizeLimit = cfg.Webhook.MaxBodySize
+	if svc := GetSyncService(); svc != nil {
+		if cfg := svc.GetConfig(); cfg != nil && cfg.Webhook.MaxBodySize > 0 {
+			bodySizeLimit = cfg.Webhook.MaxBodySize
+		}
 	}
 
 	// 先检查 Content-Length 头,快速拒绝过大的请求(避免读入内存)
@@ -102,7 +106,11 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 		header[string(k)] = append(header[string(k)], string(v))
 	})
 
-	err := GetSyncService().ReceiveWebhook(ctx, repoKey, &corebridge.WebhookPayload{
+	svc, ok := requireSyncService(c)
+	if !ok {
+		return
+	}
+	err := svc.ReceiveWebhook(ctx, repoKey, &corebridge.WebhookPayload{
 		Method:     string(c.Method()),
 		Path:       string(c.Path()),
 		Header:     header,

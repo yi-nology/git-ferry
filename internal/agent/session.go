@@ -142,7 +142,7 @@ func (s *Session) ConsumePending(toolName, token string) (string, error) {
 	return s.store.consumePending(s, toolName, token)
 }
 
-// HasConsumed 判断"确认后执行"放行标记(实现 tools.SessionScope)。
-func (s *Session) HasConsumed(toolName, argsJSON string) bool {
-	return s.HasConsumedPending(toolName, argsJSON)
+// ConsumeConsumed 一次性取走"确认后执行"放行标记(实现 tools.SessionScope)。
+func (s *Session) ConsumeConsumed(toolName, argsJSON string) bool {
+	return s.ConsumeConsumedPending(toolName, argsJSON)
 }

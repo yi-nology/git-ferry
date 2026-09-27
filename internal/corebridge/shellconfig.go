@@ -28,8 +28,9 @@ func LoadShellConfig(path string) (*ShellConfig, error) {
 			return nil, err
 		}
 	}
-	// 拒绝已知测试默认值，防止裸部署
-	if apiKey == "test-api-key-123" {
+	// 拒绝已知弱默认值，防止裸部署(示例/测试密钥不得用于生产)
+	switch apiKey {
+	case "test-api-key-123", "dev-local-key", "change-me-to-a-strong-random-key", "change-me":
 		apiKey = ""
 	}
 	return &ShellConfig{Config: cfg, APIKey: apiKey}, nil

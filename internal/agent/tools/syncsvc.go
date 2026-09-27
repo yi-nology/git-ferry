@@ -56,6 +56,24 @@ func pageBounds(page int) int {
 }
 
 func marshalJSON(v any) string {
-	b, _ := json.Marshal(v)
+	b, err := json.Marshal(v)
+	if err != nil {
+		return `{"error":"内部错误: 结果序列化失败"}`
+	}
 	return string(b)
+}
+
+// errJSON 构造工具错误负载。用 json.Marshal 而非 Sprintf 拼字符串,
+// 避免 err 内含引号/换行时破坏 JSON 结构(工具输出会被模型当 JSON 解析)。
+func errJSON(prefix string, err error) string {
+	msg := prefix
+	if err != nil {
+		msg = prefix + ": " + err.Error()
+	}
+	return marshalJSON(map[string]any{"error": msg})
+}
+
+// msgJSON 构造 {found:false,...} 一类的说明性负载。
+func msgJSON(kv map[string]any) string {
+	return marshalJSON(kv)
 }

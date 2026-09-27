@@ -67,6 +67,10 @@ func RepoGet(ctx context.Context, c *app.RequestContext) {
 
 	r, err := GetSyncService().GetRepo(ctx, req.Key)
 	if err != nil {
+		if errors.Is(err, corebridge.ErrRepoNotFound) {
+			response.NotFound(c, "repo not found")
+			return
+		}
 		response.InternalError(c, err.Error())
 		return
 	}

@@ -39,7 +39,7 @@ func toRunSummary(run *coremodel.SyncRun) runSummary {
 func (r *Registry) listHistory(ctx context.Context, in listHistoryInput) (string, error) {
 	list, total, err := r.svc.ListHistory(ctx, in.TaskKey, pageBounds(in.Page), pageLimit)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"查询历史失败: %s"}`, err), nil
+		return errJSON("查询历史失败", err), nil
 	}
 	runs := []runSummary{}
 	for _, run := range list {
@@ -61,7 +61,7 @@ func (r *Registry) getRunDetail(ctx context.Context, in runDetailInput) (string,
 	for page := 1; page <= maxScanPages; page++ {
 		list, _, err := r.svc.ListHistory(ctx, in.TaskKey, pageBounds(page), pageLimit)
 		if err != nil {
-			return fmt.Sprintf(`{"error":"查询历史失败: %s"}`, err), nil
+			return errJSON("查询历史失败", err), nil
 		}
 		for _, run := range list {
 			if run.ID != in.RunID {
@@ -80,5 +80,5 @@ func (r *Registry) getRunDetail(ctx context.Context, in runDetailInput) (string,
 			break
 		}
 	}
-	return fmt.Sprintf(`{"found":false,"message":"最近 %d 条历史中未找到 run_id=%d"}`, maxScanPages*pageLimit, in.RunID), nil
+	return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("最近 %d 条历史中未找到 run_id=%d", maxScanPages*pageLimit, in.RunID)}), nil
 }

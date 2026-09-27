@@ -1,8 +1,8 @@
 package agent
 
 import (
+	"encoding/json"
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/cloudwego/eino/components/tool"
@@ -49,7 +49,7 @@ func (d *decoratedTool) InvokableRun(ctx context.Context, argsJSON string, opts 
 	out, err := d.inner.InvokableRun(ctx, argsJSON, opts...)
 	if err != nil {
 		// 工具失败转 JSON 给模型,不中断 agent,由模型向用户解释
-		out = fmt.Sprintf(`{"error":%q}`, err.Error())
+		out = toolErrorJSON(err)
 		sink(Event{Type: "tool_end", Tool: d.name, Result: truncate(out, resultCap)})
 		return out, nil
 	}
@@ -65,4 +65,10 @@ func (d *decoratedTool) InvokableRun(ctx context.Context, argsJSON string, opts 
 	}
 	sink(Event{Type: "tool_end", Tool: d.name, Result: truncate(out, resultCap)})
 	return out, nil
+}
+
+// toolErrorJSON 把工具错误编码为 JSON 对象(不手拼字符串,防转义问题)。
+func toolErrorJSON(err error) string {
+	b, _ := json.Marshal(map[string]any{"error": err.Error()})
+	return string(b)
 }

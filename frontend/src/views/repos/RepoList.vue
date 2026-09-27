@@ -387,8 +387,9 @@ async function loadConfiguredPlatforms() {
       isDefault: !!(p.is_default ?? p.isDefault),
       status: ((p.status === 'error') ? 'error' : 'active'),
     }))
-  } catch (e: any) {
+  } catch (e) {
     configuredPlatforms.value = []
+    notifyError(e, '加载平台列表失败')
   }
 
   // 如果有默认平台，自动选中

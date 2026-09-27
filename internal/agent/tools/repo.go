@@ -105,7 +105,7 @@ type keyInput struct {
 func (r *Registry) getRepo(ctx context.Context, in keyInput) (string, error) {
 	rp, err := r.svc.GetRepo(ctx, in.Key)
 	if err != nil || rp == nil {
-		return fmt.Sprintf(`{"found":false,"message":"未找到仓库 %q"}`, in.Key), nil
+		return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到仓库 %q", in.Key)}), nil
 	}
 	return marshalJSON(repoSummary{
 		Key: rp.Key, Name: rp.Name, Platform: rp.Platform,
@@ -121,7 +121,7 @@ type branchInput struct {
 func (r *Registry) listBranches(ctx context.Context, in branchInput) (string, error) {
 	branches, err := r.svc.ListBranches(ctx, in.Key)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"查询分支失败: %s"}`, err), nil
+		return errJSON("查询分支失败", err), nil
 	}
 	if len(branches) > pageLimit {
 		branches = branches[:pageLimit]

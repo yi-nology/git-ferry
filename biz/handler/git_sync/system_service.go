@@ -18,7 +18,10 @@ import (
 
 // SystemStatus 返回系统状态信息（管理面板用）。
 func SystemStatus(ctx context.Context, c *app.RequestContext) {
-	svc := GetSyncService()
+	svc, ok := requireSyncService(c)
+	if !ok {
+		return
+	}
 
 	// CountRepos 与 CountTasksByStatus 互不依赖,并行执行。
 	// 注:CountRepos/CountTasksByStatus 不接受 ctx(core API 限制),

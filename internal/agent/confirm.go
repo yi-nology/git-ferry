@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"crypto/sha256"
+	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
@@ -36,7 +36,7 @@ func (st *SessionStore) setPending(s *Session, toolName, argsJSON string) (strin
 	s.pending = &PendingConfirm{
 		ToolName:  toolName,
 		ArgsJSON:  argsJSON,
-		Token:     confirmToken(s.ID, toolName, argsJSON),
+		Token:     confirmToken(),
 		ExpiresAt: time.Now().Add(pendingTTL),
 	}
 	s.LastAt = time.Now()
@@ -94,12 +94,17 @@ func (s *Session) LastConfirm() (toolName, token, argsJSON string) {
 	return pc.ToolName, pc.Token, pc.ArgsJSON
 }
 
-// HasConsumedPending 判断"确认后执行":handler 已 consume 成功并调用
-// MarkConsumed 后,危险工具第二次收到同参数请求时放行真实执行。
-func (s *Session) HasConsumedPending(toolName, argsJSON string) bool {
+// ConsumeConsumedPending 一次性读取并清除"确认后执行"放行标记。
+// 确认直达执行会再走一次 dangerGuard:本次放行真实执行;之后同参数再调
+// 必须重新确认,避免会话内免确认重放。
+func (s *Session) ConsumeConsumedPending(toolName, argsJSON string) bool {
 	s.muConfirm.Lock()
 	defer s.muConfirm.Unlock()
-	return s.consumedTool == toolName && s.consumedArgs == argsJSON
+	if s.consumedTool == toolName && s.consumedArgs == argsJSON {
+		s.consumedTool, s.consumedArgs = "", ""
+		return true
+	}
+	return false
 }
 
 // MarkConsumed 由 handler 在 ConsumePending 成功后调用。
@@ -109,7 +114,13 @@ func (s *Session) MarkConsumed(toolName, argsJSON string) {
 	s.consumedTool, s.consumedArgs = toolName, argsJSON
 }
 
-func confirmToken(sessionID, toolName, argsJSON string) string {
-	sum := sha256.Sum256([]byte(sessionID + "\x00" + toolName + "\x00" + argsJSON))
-	return hex.EncodeToString(sum[:])[:16]
+// confirmToken 生成不可预测的一次性确认令牌(128 bit 随机)。
+// 确定性哈希会被同会话内已知参数推算,不可用作确认凭证。
+func confirmToken() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		// crypto/rand 在目标平台失败属致命错误,宁可 panic 也不降级为弱令牌
+		panic("crypto/rand unavailable: " + err.Error())
+	}
+	return hex.EncodeToString(b[:])
 }

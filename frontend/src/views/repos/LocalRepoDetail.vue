@@ -218,23 +218,33 @@ function handleTabChange(tab: string) {
 }
 
 async function loadHistory() {
-  // 确保 tasks 已经加载
-  if (tasks.value.length === 0) {
-    await taskStore.fetchTasks({ repo_key: repoKey.value })
-    tasks.value = taskStore.tasks
-  }
-
-  // 并行请求所有任务的执行记录,使用返回值而非共享 store ref
-  const results = await Promise.allSettled(
-    tasks.value.map((task) => taskStore.fetchHistory(task.key, 20)),
-  )
-  const allRuns: SyncRun[] = []
-  for (const r of results) {
-    if (r.status === 'fulfilled') {
-      allRuns.push(...r.value)
+  try {
+    // 确保 tasks 已经加载
+    if (tasks.value.length === 0) {
+      await taskStore.fetchTasks({ repo_key: repoKey.value })
+      tasks.value = taskStore.tasks
     }
+
+    // 并行请求所有任务的执行记录,使用返回值而非共享 store ref
+    const results = await Promise.allSettled(
+      tasks.value.map((task) => taskStore.fetchHistory(task.key, 20)),
+    )
+    const allRuns: SyncRun[] = []
+    let failed = 0
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        allRuns.push(...r.value)
+      } else {
+        failed++
+      }
+    }
+    if (failed > 0) {
+      notifyError(`部分任务执行历史加载失败(${failed}/${results.length})`)
+    }
+    history.value = allRuns.sort((a, b) => new Date(b.start_time || 0).getTime() - new Date(a.start_time || 0).getTime())
+  } catch (e) {
+    notifyError(e, '加载执行历史失败')
   }
-  history.value = allRuns.sort((a, b) => new Date(b.start_time || 0).getTime() - new Date(a.start_time || 0).getTime())
 }
 
 async function refresh() {

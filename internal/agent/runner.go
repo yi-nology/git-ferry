@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"context"
 	"errors"
 	"fmt"
@@ -212,7 +213,7 @@ func (r *Runner) ExecuteConfirmed(ctx context.Context, sess *Session, toolName, 
 
 	out, err := tl.InvokableRun(tools.WithScope(ctx, sess), args)
 	if err != nil {
-		out = fmt.Sprintf(`{"status":"failed","error":%q}`, err.Error())
+		out = failJSON(err)
 	}
 	r.sessions.Append(sess, "assistant", fmt.Sprintf("(已执行 %s)%s", toolName, out))
 	return out, nil
@@ -243,4 +244,10 @@ func errText(err error) string {
 		return "已取消"
 	}
 	return fmt.Sprintf("模型调用失败: %v", err)
+}
+
+// failJSON 把确认执行失败编码为 JSON 对象。
+func failJSON(err error) string {
+	b, _ := json.Marshal(map[string]any{"status": "failed", "error": err.Error()})
+	return string(b)
 }

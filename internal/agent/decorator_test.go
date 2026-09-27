@@ -40,8 +40,12 @@ type fakeScope struct {
 }
 
 func (f *fakeScope) SetPending(string, string) (string, error) { return "tok123", nil }
-func (f *fakeScope) HasConsumed(toolName, argsJSON string) bool {
-	return f.consumedTool == toolName && f.consumedArgs == argsJSON
+func (f *fakeScope) ConsumeConsumed(toolName, argsJSON string) bool {
+	if f.consumedTool == toolName && f.consumedArgs == argsJSON {
+		f.consumedTool, f.consumedArgs = "", ""
+		return true
+	}
+	return false
 }
 func (f *fakeScope) MarkConsumed(toolName, argsJSON string) {
 	f.consumedTool, f.consumedArgs = toolName, argsJSON

@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 )
 
 // ===== 平台 / Webhook / 系统概览 =====
@@ -21,7 +20,7 @@ type platformSummary struct {
 func (r *Registry) listPlatforms(ctx context.Context, _ emptyInput) (string, error) {
 	list, err := r.svc.ListPlatforms(ctx)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"查询平台失败: %s"}`, err), nil
+		return errJSON("查询平台失败", err), nil
 	}
 	platforms := []platformSummary{}
 	for _, p := range list {
@@ -42,7 +41,7 @@ type listRulesInput struct {
 func (r *Registry) listRules(ctx context.Context, in listRulesInput) (string, error) {
 	list, err := r.svc.ListRules(ctx, in.RepoKey)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"查询 Webhook 规则失败: %s"}`, err), nil
+		return errJSON("查询 Webhook 规则失败", err), nil
 	}
 	rules := []map[string]any{}
 	for _, w := range list {
@@ -61,11 +60,11 @@ type emptyInput struct{}
 func (r *Registry) getSystemOverview(ctx context.Context, _ emptyInput) (string, error) {
 	repoCount, err := r.svc.CountRepos()
 	if err != nil {
-		return fmt.Sprintf(`{"error":"统计仓库失败: %s"}`, err), nil
+		return errJSON("统计仓库失败", err), nil
 	}
 	taskStatus, err := r.svc.CountTasksByStatus()
 	if err != nil {
-		return fmt.Sprintf(`{"error":"统计任务失败: %s"}`, err), nil
+		return errJSON("统计任务失败", err), nil
 	}
 	return marshalJSON(map[string]any{
 		"repo_count":      repoCount,

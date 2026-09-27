@@ -6,7 +6,8 @@ import "context"
 // 定义在 tools 侧保持依赖方向 tools ← agent 单向。
 type SessionScope interface {
 	SetPending(toolName, argsJSON string) (token string, err error)
-	HasConsumed(toolName, argsJSON string) bool
+	// ConsumeConsumed 一次性读取并清除放行标记:确认后仅放行一次执行。
+	ConsumeConsumed(toolName, argsJSON string) bool
 	MarkConsumed(toolName, argsJSON string)
 	SetLastConfirm(toolName, token, argsJSON string)
 	LastConfirm() (toolName, token, argsJSON string)

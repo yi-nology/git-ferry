@@ -27,7 +27,7 @@ type taskSummary struct {
 func (r *Registry) listTasks(ctx context.Context, in listTasksInput) (string, error) {
 	list, total, err := r.svc.ListTasks(ctx, in.RepoKey, pageBounds(in.Page), pageLimit)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"查询任务列表失败: %s"}`, err), nil
+		return errJSON("查询任务列表失败", err), nil
 	}
 	tasks := []taskSummary{}
 	for _, tk := range list {
@@ -44,7 +44,7 @@ func (r *Registry) listTasks(ctx context.Context, in listTasksInput) (string, er
 func (r *Registry) getTask(ctx context.Context, in keyInput) (string, error) {
 	tk, err := r.svc.GetTask(ctx, in.Key)
 	if err != nil || tk == nil {
-		return fmt.Sprintf(`{"found":false,"message":"未找到任务 %q"}`, in.Key), nil
+		return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到任务 %q", in.Key)}), nil
 	}
 	return marshalJSON(taskSummary{
 		Key: tk.Key, Name: tk.Name,

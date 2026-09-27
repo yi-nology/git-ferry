@@ -33,7 +33,11 @@ func recordAudit(ctx context.Context, c *app.RequestContext, action, resourceTyp
 		IP:           c.ClientIP(),
 		Status:       corebridge.StatusSuccess,
 	}
-	if err := GetSyncService().RecordOperation(ctx, entry); err != nil {
-		slog.Warn("record audit log failed", "error", err, "action", action, "resource", resource)
+	if svc := GetSyncService(); svc != nil {
+		if err := svc.RecordOperation(ctx, entry); err != nil {
+			slog.Warn("record audit log failed", "error", err, "action", action, "resource", resource)
+		}
+	} else {
+		slog.Warn("record audit log skipped: service unavailable", "action", action)
 	}
 }

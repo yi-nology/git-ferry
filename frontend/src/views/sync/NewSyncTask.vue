@@ -284,10 +284,15 @@ function mergeSelected(options: Repo[], selectedKey: string): Repo[] {
 const sourceRepoOptions = computed(() => mergeSelected(repoOptions.value, form.source_repo_key))
 const targetRepoOptions = computed(() => mergeSelected(repoOptions.value, form.target_repo_key))
 
+// 请求序号:慢响应不得覆盖新搜索结果
+let repoRequestSeq = 0
+
 async function loadRepoPage(page: number, search: string) {
+  const seq = ++repoRequestSeq
   repoLoading.value = true
   try {
     const data = await repoApi.list({ page, page_size: REPO_PAGE_SIZE, search: search || undefined })
+    if (seq !== repoRequestSeq) return // 过期响应,丢弃
     repoTotal.value = data.pagination?.total ?? data.list.length
     if (page === 1) {
       repoLoadedKeys.clear()
@@ -303,9 +308,10 @@ async function loadRepoPage(page: number, search: string) {
     repoPage.value = page
     repoSearch.value = search
   } catch (e) {
+    if (seq !== repoRequestSeq) return
     notifyError(e, '加载仓库失败')
   } finally {
-    repoLoading.value = false
+    if (seq === repoRequestSeq) repoLoading.value = false
   }
 }
 
