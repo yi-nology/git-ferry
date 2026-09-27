@@ -653,8 +653,8 @@ async function handleSubmit() {
     handleClose()
     message.success('保存成功')
     await loadPlatforms()
-  } catch (e: any) {
-    message.error(e?.message || '保存失败')
+  } catch (e) {
+    message.error((e as Error)?.message || '保存失败')
   } finally {
     submitting.value = false
   }
@@ -666,8 +666,8 @@ async function handleDelete(key: string) {
     await platformApi.delete(key)
     message.success('删除成功')
     await loadPlatforms()
-  } catch (e: any) {
-    message.error(e?.message || '删除失败')
+  } catch (e) {
+    message.error((e as Error)?.message || '删除失败')
   }
 }
 
@@ -677,8 +677,8 @@ async function setDefault(platform: Platform) {
     await platformApi.setDefault(platform.key)
     message.success('已设为默认平台')
     await loadPlatforms()
-  } catch (e: any) {
-    message.error(e?.message || '设置失败')
+  } catch (e) {
+    message.error((e as Error)?.message || '设置失败')
   }
 }
 
@@ -687,14 +687,14 @@ async function testConnection(platform: Platform) {
   message.loading({ content: '正在测试连接...', key: 'test' })
   try {
     const result = await platformApi.test(platform.key)
-    if (result.result?.connected) {
+    if (result.result?.connected ?? result.result?.success) {
       message.success({ content: '连接成功', key: 'test' })
     } else {
       message.error({ content: result.result?.message || '连接失败', key: 'test' })
     }
     await loadPlatforms()
-  } catch (e: any) {
-    message.error({ content: e?.message || '测试失败', key: 'test' })
+  } catch (e) {
+    message.error({ content: (e as Error)?.message || '测试失败', key: 'test' })
   }
 }
 
@@ -705,8 +705,8 @@ async function syncRepos(platform: Platform) {
     const result = await platformApi.syncRepos(platform.key)
     message.success({ content: `同步成功，共 ${result.synced_count || 0} 个仓库`, key: 'sync' })
     await loadPlatforms()
-  } catch (e: any) {
-    message.error({ content: e?.message || '同步失败', key: 'sync' })
+  } catch (e) {
+    message.error({ content: (e as Error)?.message || '同步失败', key: 'sync' })
   }
 }
 

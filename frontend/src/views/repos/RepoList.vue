@@ -329,6 +329,7 @@ import { useRepoStore } from '@/stores/repo'
 import { useSyncTaskStore } from '@/stores/syncTask'
 import { platformApi } from '@/api/platform'
 import type { Repo } from '@/types'
+import type { Platform } from '@/api/platform'
 import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '@/utils/notify'
 
 interface PlatformConfig {
@@ -415,7 +416,7 @@ const formData = reactive({
 const platformDisplayConfig: Record<string, {
   name: string
   color: string
-  icon: any
+  icon: unknown
 }> = {
   github: { name: 'GitHub', color: '#24292E', icon: markRaw(GithubOutlined) },
   gitlab: { name: 'GitLab', color: '#FC6D26', icon: markRaw(GitlabOutlined) },
@@ -565,7 +566,7 @@ async function handleSyncPlatform() {
     notifyInfo(`正在同步 ${platforms.length} 个平台的仓库...`)
     // 并行同步所有平台,而非逐个串行等待
     const results = await Promise.allSettled(
-      platforms.map(async (p: any) => {
+      platforms.map(async (p: Platform) => {
         const result = await platformApi.syncRepos(p.key)
         return { name: p.name, count: result.synced_count || 0 }
       }),
@@ -586,7 +587,7 @@ async function handleSyncPlatform() {
     } else {
       notifySuccess(`同步完成，共导入 ${total} 个仓库`)
     }
-  } catch (e: any) {
+  } catch (e) {
     notifyError(e, '同步平台仓库失败')
   }
 }
