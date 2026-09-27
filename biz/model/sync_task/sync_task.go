@@ -22,6 +22,9 @@ type SyncTaskInfo struct {
 	GitTags       bool   `thrift:"gitTags,12" form:"git_tags" json:"git_tags" query:"git_tags"`
 	GitForce      bool   `thrift:"gitForce,13" form:"git_force" json:"git_force" query:"git_force"`
 	GitPrune      bool   `thrift:"gitPrune,14" form:"git_prune" json:"git_prune" query:"git_prune"`
+	GitLfs        bool   `thrift:"gitLfs,20" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
+	GitPushPrune  bool   `thrift:"gitPushPrune,21" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
+	KeepDivergent bool   `thrift:"keepDivergent,22" form:"keep_divergent" json:"keep_divergent" query:"keep_divergent"`
 	LastRunAt     string `thrift:"lastRunAt,16" form:"last_run_at" json:"last_run_at" query:"last_run_at"`
 	LastStatus    string `thrift:"lastStatus,17" form:"last_status" json:"last_status" query:"last_status"`
 	CreatedAt     string `thrift:"createdAt,18" form:"created_at" json:"created_at" query:"created_at"`
@@ -1618,6 +1621,9 @@ type CreateTaskReq struct {
 	GitTags       bool   `thrift:"gitTags,8" form:"git_tags" json:"git_tags" query:"git_tags"`
 	GitForce      bool   `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
 	GitPrune      bool   `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
+	GitLfs        bool   `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
+	GitPushPrune  bool   `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
+	KeepDivergent *bool  `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 }
 
 func NewCreateTaskReq() *CreateTaskReq {
@@ -2318,6 +2324,9 @@ type UpdateTaskReq struct {
 	GitTags      bool   `thrift:"gitTags,8" form:"git_tags" json:"git_tags" query:"git_tags"`
 	GitForce     bool   `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
 	GitPrune     bool   `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
+	GitLfs        bool  `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
+	GitPushPrune  bool  `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
+	KeepDivergent *bool `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 }
 
 func NewUpdateTaskReq() *UpdateTaskReq {

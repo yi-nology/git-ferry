@@ -72,6 +72,8 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		TargetRepoKey: req.TargetRepoKey, TargetBranch: req.TargetBranch,
 		SyncMode: req.SyncMode, Cron: req.Cron, GitTags: req.GitTags,
 		GitForce: req.GitForce, GitPrune: req.GitPrune,
+		GitLFS: req.GitLfs, GitPushPrune: req.GitPushPrune,
+		KeepDivergent: req.KeepDivergent,
 	})
 	if err != nil {
 		response.InternalError(c, fmt.Sprintf("create task failed: %v", err))
@@ -99,6 +101,8 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
 		Enabled: &req.Enabled, GitTags: &req.GitTags, GitForce: &req.GitForce,
 		GitPrune: &req.GitPrune,
+		GitLFS: &req.GitLfs, GitPushPrune: &req.GitPushPrune,
+		KeepDivergent: req.KeepDivergent,
 	})
 	if err != nil {
 		if errors.Is(err, corebridge.ErrTaskNotFound) {

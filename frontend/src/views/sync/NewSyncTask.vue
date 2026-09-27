@@ -174,7 +174,18 @@
                   <div class="option-desc">使用 --force 推送，会覆盖目标分支的历史（谨慎使用）</div>
                 </div>
                 <div class="option-item">
-                  <a-checkbox v-model:checked="form.git_prune">Prune 远程分支</a-checkbox>
+                  <a-checkbox v-model:checked="form.git_prune">Prune 本地跟踪</a-checkbox>
+                </a-form-item>
+                <a-form-item>
+                  <a-checkbox v-model:checked="form.git_lfs">同步 LFS 对象</a-checkbox>
+                </a-form-item>
+                <a-form-item>
+                  <a-checkbox v-model:checked="form.git_push_prune">删除目标多余分支</a-checkbox>
+                </a-form-item>
+                <a-form-item>
+                  <a-tooltip title="关闭后允许 force 覆盖目标独有提交(危险)">
+                    <a-checkbox v-model:checked="form.keep_divergent">分歧保护</a-checkbox>
+                  </a-tooltip>
                   <div class="option-desc">清理目标仓库中已被源仓库删除的远程分支</div>
                 </div>
               </a-space>
@@ -248,6 +259,9 @@ const form = reactive({
   git_tags: false,
   git_force: false,
   git_prune: false,
+  git_lfs: false,
+  git_push_prune: false,
+  keep_divergent: true,
 })
 
 const cronPresets = [

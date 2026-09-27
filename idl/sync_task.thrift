@@ -15,6 +15,9 @@ struct SyncTaskInfo {
     12: bool gitTags (api.json="git_tags")
     13: bool gitForce (api.json="git_force")
     14: bool gitPrune (api.json="git_prune")
+    20: bool gitLfs (api.json="git_lfs")
+    21: bool gitPushPrune (api.json="git_push_prune")
+    22: bool keepDivergent (api.json="keep_divergent")
     16: string lastRunAt (api.json="last_run_at")
     17: string lastStatus (api.json="last_status")
     18: string createdAt (api.json="created_at")
@@ -50,6 +53,9 @@ struct CreateTaskReq {
     8: bool gitTags (api.json="git_tags")
     9: bool gitForce (api.json="git_force")
     10: bool gitPrune (api.json="git_prune")
+    15: bool gitLfs (api.json="git_lfs")
+    16: bool gitPushPrune (api.json="git_push_prune")
+    17: optional bool keepDivergent (api.json="keep_divergent")
 }
 
 struct CreateTaskResp {
@@ -67,6 +73,9 @@ struct UpdateTaskReq {
     8: bool gitTags (api.json="git_tags")
     9: bool gitForce (api.json="git_force")
     10: bool gitPrune (api.json="git_prune")
+    15: bool gitLfs (api.json="git_lfs")
+    16: bool gitPushPrune (api.json="git_push_prune")
+    17: optional bool keepDivergent (api.json="keep_divergent")
 }
 
 struct UpdateTaskResp {
