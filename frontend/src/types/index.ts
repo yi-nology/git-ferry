@@ -28,6 +28,7 @@ export interface SyncTask {
   git_force: boolean
   git_prune: boolean
   git_lfs?: boolean
+  sync_wiki?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
   last_run_at: string
@@ -104,6 +105,7 @@ export interface CreateTaskRequest {
   git_force?: boolean
   git_prune?: boolean
   git_lfs?: boolean
+  sync_wiki?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
 }
@@ -120,6 +122,7 @@ export interface UpdateTaskRequest {
   git_force?: boolean
   git_prune?: boolean
   git_lfs?: boolean
+  sync_wiki?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
 }

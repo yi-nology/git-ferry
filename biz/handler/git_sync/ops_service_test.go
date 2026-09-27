@@ -1,8 +1,12 @@
 package git_sync
 
 import (
+	"net/http"
+	"strings"
 	"testing"
 
+	hertzserver "github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/ut"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -38,4 +42,18 @@ func TestMatchToFilter(t *testing.T) {
 	require.NotNil(t, f)
 	assert.True(t, f.Allow("team-a", "A"))
 	assert.False(t, f.Allow("team-x", "X"))
+}
+
+func TestGenerateDeployKey(t *testing.T) {
+	h := hertzserver.Default()
+	h.POST("/api/v1/ops/deploy-key", GenerateDeployKey)
+	body := `{"comment":"mirror-a"}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/deploy-key",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusOK, w.Code)
+	resp := w.Body.String()
+	assert.Contains(t, resp, "private_key_pem")
+	assert.Contains(t, resp, "public_key")
+	assert.Contains(t, resp, "SHA256:")
 }
