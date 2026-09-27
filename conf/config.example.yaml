@@ -43,3 +43,29 @@ log:
 #     max_tokens: 2048        # 可选,默认 2048
 #     timeout_seconds: 60     # 可选,默认 60
 #     max_concurrent_chats: 4 # 可选,默认 4
+
+# 运行观察与失败补偿(壳层):轮询执行历史,派发通知/指标,失败自动重跑
+runwatch:
+  interval_seconds: 30
+  history_limit: 10
+  retry:
+    max_auto_retries: 2      # 0=不自动重跑
+    cooldown_minutes: 5
+
+# 通知矩阵(壳层):运行完成推送 + 成功/失败分路心跳(healthchecks.io)
+# notify:
+#   only_fail: true          # 只通知失败,降低噪声
+#   ntfy:
+#     - url: "https://ntfy.sh"
+#       topic: "gitferry-alerts"
+#       # token: "..."       # 或 user/password
+#       events: ["failed"]   # 空=success+failed
+#   gotify:
+#     - url: "https://gotify.example.com"
+#       token: "..."
+#   heartbeat:
+#     interval_seconds: 60
+#     success_urls:
+#       - "https://hc-ping.com/your-uuid"
+#     fail_urls:
+#       - "https://hc-ping.com/your-uuid"
