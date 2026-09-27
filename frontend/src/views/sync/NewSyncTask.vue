@@ -175,27 +175,33 @@
                 </div>
                 <div class="option-item">
                   <a-checkbox v-model:checked="form.git_prune">Prune 本地跟踪</a-checkbox>
-                </a-form-item>
-                <a-form-item>
-                  <a-checkbox v-model:checked="form.git_lfs">同步 LFS 对象</a-checkbox>
-                </a-form-item>
-                <a-form-item>
-                  <a-checkbox v-model:checked="form.sync_wiki">同步 Wiki</a-checkbox>
-                </a-form-item>
-                <a-form-item>
-                  <a-checkbox v-model:checked="form.git_bundle">生成冷备 Bundle</a-checkbox>
-                </a-form-item>
-                <a-form-item>
-                  <a-checkbox v-model:checked="form.submodules">递归子模块</a-checkbox>
-                </a-form-item>
-                <a-form-item>
+                  <div class="option-desc">删除本地已不在源端的跟踪分支</div>
+                </div>
+                <div class="option-item">
                   <a-checkbox v-model:checked="form.git_push_prune">删除目标多余分支</a-checkbox>
-                </a-form-item>
-                <a-form-item>
+                  <div class="option-desc">清理目标仓库中已被源仓库删除的远程分支</div>
+                </div>
+                <div class="option-item">
+                  <a-checkbox v-model:checked="form.git_lfs">同步 LFS 对象</a-checkbox>
+                  <div class="option-desc">需要运行环境安装 git-lfs</div>
+                </div>
+                <div class="option-item">
+                  <a-checkbox v-model:checked="form.sync_wiki">同步 Wiki</a-checkbox>
+                  <div class="option-desc">自动推导 .wiki.git,未启用则跳过</div>
+                </div>
+                <div class="option-item">
+                  <a-checkbox v-model:checked="form.git_bundle">生成冷备 Bundle</a-checkbox>
+                  <div class="option-desc">需配置 sync.backup_dir,可选 S3 异地</div>
+                </div>
+                <div class="option-item">
+                  <a-checkbox v-model:checked="form.submodules">递归子模块</a-checkbox>
+                  <div class="option-desc">clone/fetch 时同步 git submodule</div>
+                </div>
+                <div class="option-item">
                   <a-tooltip title="关闭后允许 force 覆盖目标独有提交(危险)">
                     <a-checkbox v-model:checked="form.keep_divergent">分歧保护</a-checkbox>
                   </a-tooltip>
-                  <div class="option-desc">清理目标仓库中已被源仓库删除的远程分支</div>
+                  <div class="option-desc">目标分支有源没有的提交时拒绝覆盖</div>
                 </div>
               </a-space>
             </a-form-item>
