@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/stretchr/testify/require"
 	handler "github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
@@ -162,4 +163,13 @@ func TestAuthMiddleware_CaseSensitiveKey(t *testing.T) {
 	if ctx.Response.StatusCode() != http.StatusUnauthorized {
 		t.Errorf("expected status code %d, got %d", http.StatusUnauthorized, ctx.Response.StatusCode())
 	}
+}
+
+func TestKeyFingerprint_NotReversible(t *testing.T) {
+	a := keyFingerprint("secret-key-1")
+	b := keyFingerprint("secret-key-2")
+	require.NotEqual(t, a, b)
+	require.Len(t, a, 8)
+	require.NotContains(t, a, "secret")
+	require.Equal(t, "empty", keyFingerprint(""))
 }

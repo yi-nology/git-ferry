@@ -40,6 +40,11 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.GET("/health-score", git_sync.HealthScore)
 	ops.GET("/overview", git_sync.SyncOverview)
 	ops.GET("/audit-report", git_sync.AuditReport)
+	ops.GET("/templates", git_sync.ListTemplates)
+	ops.POST("/templates", git_sync.CreateTemplate)
+	ops.POST("/templates/delete", git_sync.DeleteTemplate)
+	ops.POST("/templates/preview", git_sync.PreviewTemplate)
+	ops.GET("/inventory", git_sync.RepoInventory)
 
 	// Swagger API 文档(公开,无需鉴权)
 	r.GET("/swagger/", swagger.SwaggerUI)

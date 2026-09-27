@@ -10,6 +10,7 @@ import (
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/notify"
 	"github.com/yi-nology/git-ferry/internal/runwatch"
+	"github.com/yi-nology/git-ferry/internal/tpl"
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
 	_ "github.com/yi-nology/git-platform-sdk/backends/all"
@@ -54,6 +55,13 @@ func main() {
 		slog.Info("ai assistant enabled", "model", aiCfg.Model, "base_url", aiCfg.BaseURL)
 	}
 	git_sync.SetAgentRunner(func() *agent.Runner { return aiRunner })
+
+	// 同步策略模板库(文件型,零 DB 迁移)
+	tplStore, err := tpl.Open("data/templates.json")
+	if err != nil {
+		serve.ExitOnFail("open template store failed", err)
+	}
+	git_sync.SetTplStore(tplStore)
 
 	// 通知矩阵 + 运行观察(失败补偿)
 	notifier := notify.New(shellCfg.Notify)

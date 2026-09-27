@@ -10,6 +10,7 @@ var DangerTools = map[string]bool{
 	"run_task":                 true,
 	"test_repo_connection":     true,
 	"test_platform_connection": true,
+	"retry_sync_run":           true,
 }
 
 // confirmRequiredPayload 返回给模型的"需要确认"标记。

@@ -2,7 +2,9 @@ package git_sync
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"net/http"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -47,6 +49,19 @@ func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {
 			c.Abort()
 			return
 		}
+		// 写入不可伪造的审计身份:共享 API Key 场景下客户端 X-User 可信度为零,
+		// 若不在此覆盖,任何持 key 的调用方都能冒充任意操作人。
+		handler.SetAuthUser(c, "api-key:"+keyFingerprint(serverKey))
 		c.Next(ctx)
 	}
+}
+
+// keyFingerprint 取 API Key 指纹(非密钥本体),作审计 actor 标识。
+// 不写入完整 key,避免日志泄密;同 key 在不同环境可区分。
+func keyFingerprint(key string) string {
+	if key == "" {
+		return "empty"
+	}
+	h := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])[:8]
 }

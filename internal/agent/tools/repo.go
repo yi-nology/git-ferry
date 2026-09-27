@@ -34,10 +34,13 @@ func NewRegistry(svc SyncService) *Registry {
 	r.add(must(utils.InferTool("list_platforms", "查询平台列表及状态", r.listPlatforms)))
 	r.add(must(utils.InferTool("list_webhook_rules", "查询 Webhook 同步规则", r.listRules)))
 	r.add(must(utils.InferTool("get_system_overview", "系统概览(仓库数/任务状态/健康检查)", r.getSystemOverview)))
+	r.add(must(utils.InferTool("get_sync_health", "同步任务健康评分(等级/问题列表,便于诊断)", r.getSyncHealth)))
+	r.add(must(utils.InferTool("get_repo_inventory", "仓库资产盘点:哪些仓库没有同步任务覆盖(孤儿仓库)", r.getRepoInventory)))
 	// 危险工具(需用户确认)
 	r.add(must(utils.InferTool("run_task", "立即执行一次同步任务(危险操作,需用户确认)", r.runTask)))
 	r.add(must(utils.InferTool("test_repo_connection", "测试仓库连通性(危险操作,需用户确认)", r.testRepoConnection)))
 	r.add(must(utils.InferTool("test_platform_connection", "测试平台连通性(危险操作,需用户确认)", r.testPlatformConnection)))
+	r.add(must(utils.InferTool("retry_sync_run", "重试指定同步任务(危险操作,需用户确认)", r.retrySyncRun)))
 	return r
 }
 
