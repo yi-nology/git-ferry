@@ -15,6 +15,9 @@
       <a-tab-pane key="templates" tab="策略模板">
         <TemplatesPanel />
       </a-tab-pane>
+      <a-tab-pane key="deploykey" tab="部署密钥">
+        <DeployKeyPanel />
+      </a-tab-pane>
     </a-tabs>
   </div>
 </template>
@@ -26,6 +29,7 @@ import OverviewPanel from './OverviewPanel.vue'
 import HealthScorePanel from './HealthScorePanel.vue'
 import InventoryPanel from './InventoryPanel.vue'
 import TemplatesPanel from './TemplatesPanel.vue'
+import DeployKeyPanel from './DeployKeyPanel.vue'
 
 defineOptions({ name: 'OpsCenter' })
 

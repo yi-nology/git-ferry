@@ -145,3 +145,11 @@ func TestBatchRetry_Empty(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "retried")
 }
+
+func TestExportIssues_MissingRepo(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/issues-export", ExportIssues)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/issues-export", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}

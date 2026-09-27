@@ -79,6 +79,14 @@ export interface OverviewData {
   generated_at: string
 }
 
+export interface DeployKeyResult {
+  private_key_pem: string
+  public_key: string
+  fingerprint: string
+  comment: string
+  note?: string
+}
+
 export const opsApi = {
   overview: () => http.get<unknown, OverviewData>('/ops/overview'),
   healthScore: (limit?: number) =>
@@ -101,6 +109,8 @@ export const opsApi = {
     http.post<unknown, { retried: Array<{ run_id: number; task_key: string }>; skipped: number; candidate: number }>(
       '/ops/retry-batch', { limit, task_key },
     ),
+  generateDeployKey: (comment: string) =>
+    http.post<unknown, DeployKeyResult>('/ops/deploy-key', { comment }),
   auditReport: (params?: { format?: 'json' | 'csv'; limit?: number; action?: string }) =>
     http.get<unknown, { items: unknown[]; total: number }>('/ops/audit-report', { params }),
 }
