@@ -146,3 +146,38 @@ func (s *Session) ConsumePending(toolName, token string) (string, error) {
 func (s *Session) ConsumeConsumed(toolName, argsJSON string) bool {
 	return s.ConsumeConsumedPending(toolName, argsJSON)
 }
+
+// Compact 会话历史压缩:超过 max 条时保留 system+最近 N 条,
+// 中间插入压缩摘要占位,防止上下文无限膨胀。
+// 借鉴 zcode compact:远古细节丢弃,近期事实保留。
+func (st *SessionStore) Compact(s *Session, max int) int {
+	if max <= 0 {
+		max = 40
+	}
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(s.Messages) <= max {
+		return 0
+	}
+	keep := max - 2
+	dropped := len(s.Messages) - keep
+	summary := Message{
+		Role:    "system",
+		Content: "[上下文已压缩] 更早 " + itoa(dropped) + " 条对话已省略,仅保留关键结论。",
+	}
+	tail := append([]Message{summary}, s.Messages[len(s.Messages)-keep:]...)
+	s.Messages = tail
+	return dropped
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var b []byte
+	for n > 0 {
+		b = append([]byte{byte('0' + n%10)}, b...)
+		n /= 10
+	}
+	return string(b)
+}

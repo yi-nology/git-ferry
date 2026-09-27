@@ -44,3 +44,17 @@ func TestSessionStore_AppendRoundCap(t *testing.T) {
 	assert.Equal(t, "q", s.Messages[0].Content)
 	assert.Equal(t, "a", s.Messages[5].Content)
 }
+
+func TestSessionCompact(t *testing.T) {
+	st := NewSessionStore(time.Hour, 100)
+	s := st.Create()
+	for i := 0; i < 30; i++ {
+		st.Append(s, "user", "msg")
+	}
+	dropped := st.Compact(s, 10)
+	assert.Equal(t, 22, dropped) // 30 - 8 keep + 1 summary => dropped 22
+	assert.LessOrEqual(t, len(s.Messages), 10)
+	assert.Contains(t, s.Messages[0].Content, "上下文已压缩")
+	// 再压不动
+	assert.Equal(t, 0, st.Compact(s, 10))
+}

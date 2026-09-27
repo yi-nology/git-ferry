@@ -45,8 +45,8 @@ func (f *fakeScope) LastConfirm() (string, string, string) {
 
 func TestRegistry_AllToolsRegistered(t *testing.T) {
 	reg := NewRegistry(toolstest.NewMock())
-	// 16 个工具:7 只读 + 5 概览/治理 + 4 危险
-	assert.Len(t, reg.Names(), 16)
+	// 21 个工具:7 只读 + 8 概览/治理/记忆 + 4 危险 + plan/diagnose
+	assert.Len(t, reg.Names(), 21)
 	for _, name := range []string{
 		"list_repos", "get_repo", "list_branches", "list_tasks", "get_task",
 		"list_sync_history", "get_run_detail", "list_platforms", "list_webhook_rules",

@@ -22,6 +22,7 @@ import (
 
 // Runner AI 助手编排器:eino ChatModelAgent + 工具装饰器 + 会话存储。
 type Runner struct {
+	memManifest string
 	runner    *adk.Runner
 	reg       *tools.Registry
 	sessions  *SessionStore
@@ -52,7 +53,7 @@ func NewRunnerWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *t
 	agent, err := adk.NewChatModelAgent(context.Background(), &adk.ChatModelAgentConfig{
 		Name:          "git-sync-assistant",
 		Description:   "仓库同步服务运维助手",
-		Instruction:   Prompt,
+		Instruction:   BuildPrompt(cfg.MemoryManifest),
 		Model:         cm,
 		MaxIterations: 10,
 		ToolsConfig: adk.ToolsConfig{
@@ -96,6 +97,14 @@ func (r *Runner) Sessions() *SessionStore { return r.sessions }
 // ModelName 返回模型名(状态接口展示)。
 func (r *Runner) ModelName() string { return r.modelName }
 
+// SetMemory 注入记忆库与 prompt 摘要(可选)。
+func (r *Runner) SetMemory(mem tools.MemStore, manifest string) {
+	if r.reg != nil {
+		r.reg.SetMemoryStore(mem)
+	}
+	r.memManifest = manifest
+}
+
 // Run 执行一轮对话:写入用户消息 → 跑 agent → 事件推入返回的 chan。
 // chan 关闭即本轮结束;error 事件后 chan 也会关闭。
 // 返回的 cancel 供消费方提前终止(如客户端断开):取消后所有事件发送与
@@ -123,6 +132,10 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 	ctx = tools.WithScope(ctx, sess)
 
 	r.sessions.Append(sess, "user", userMsg)
+	// 上下文压缩:超过阈值丢弃远古细节
+	if histMax := 40; histMax > 0 {
+		r.sessions.Compact(sess, histMax)
+	}
 	msgs := historyMessages(r.sessions.Snapshot(sess))
 
 	go func() {

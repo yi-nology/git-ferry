@@ -14,6 +14,7 @@ import (
 type Registry struct {
 	svc    SyncService
 	byName map[string]tool.InvokableTool
+	mem    MemStore
 }
 
 func NewRegistry(svc SyncService) *Registry {
@@ -41,6 +42,11 @@ func NewRegistry(svc SyncService) *Registry {
 	r.add(must(utils.InferTool("test_repo_connection", "测试仓库连通性(危险操作,需用户确认)", r.testRepoConnection)))
 	r.add(must(utils.InferTool("test_platform_connection", "测试平台连通性(危险操作,需用户确认)", r.testPlatformConnection)))
 	r.add(must(utils.InferTool("retry_sync_run", "重试指定同步任务(危险操作,需用户确认)", r.retrySyncRun)))
+	r.add(must(utils.InferTool("diagnose_run", "诊断一次失败执行:错误分类→原因→建议动作", r.diagnoseRunIn)))
+	r.add(must(utils.InferTool("remember", "把用户偏好/故障模式/事实写入长期记忆", r.rememberIn)))
+	r.add(must(utils.InferTool("recall_memory", "按关键字检索已记住的偏好与经验", r.recallIn)))
+	r.add(must(utils.InferTool("forget_memory", "删除一条记忆", r.forgetIn)))
+	r.add(must(utils.InferTool("plan_mode", "为复杂运维目标制定分步执行计划(先计划后执行)", r.planMode)))
 	return r
 }
 

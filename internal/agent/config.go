@@ -23,6 +23,12 @@ type Config struct {
 	MaxTokens          int     `yaml:"max_tokens"`
 	TimeoutSeconds     int     `yaml:"timeout_seconds"`
 	MaxConcurrentChats int     `yaml:"max_concurrent_chats"`
+	// MemoryPath AI 长期记忆文件(空=data/ai-memory.json)
+	MemoryPath string `yaml:"memory_path"`
+	// HistoryMax 会话保留的最大消息轮数,超出后压缩(0=默认 40)
+	HistoryMax int `yaml:"history_max"`
+	// MemoryManifest 运行时注入的记忆摘要(不进 yaml)
+	MemoryManifest string `yaml:"-"`
 }
 
 // ErrBusy 并发会话已达上限。

@@ -69,3 +69,18 @@ func TestRetrySyncRun_RequiresConfirmFirst(t *testing.T) {
 	assert.Contains(t, out, `"status":"ok"`)
 	assert.Equal(t, "t1", m.RunTaskKey())
 }
+
+func TestPlanMode_ReturnsSteps(t *testing.T) {
+	reg := NewRegistry(toolstest.NewMock())
+	out, err := reg.ByName("plan_mode").InvokableRun(context.Background(), `{"goal":"修复 t1 反复失败"}`)
+	require.NoError(t, err)
+	assert.Contains(t, out, "plan")
+	assert.Contains(t, out, "need_confirm")
+}
+
+func TestRememberWithoutStore(t *testing.T) {
+	reg := NewRegistry(toolstest.NewMock())
+	out, err := reg.ByName("remember").InvokableRun(context.Background(), `{"kind":"fact","content":"x"}`)
+	require.NoError(t, err)
+	assert.Contains(t, out, "记忆库未启用")
+}

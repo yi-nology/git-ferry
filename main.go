@@ -7,6 +7,7 @@ import (
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	"github.com/yi-nology/git-ferry/biz/serve"
 	"github.com/yi-nology/git-ferry/internal/agent"
+	"github.com/yi-nology/git-ferry/internal/agent/memory"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/notify"
 	"github.com/yi-nology/git-ferry/internal/runwatch"
@@ -48,11 +49,21 @@ func main() {
 		if err := aiCfg.Validate(agent.APIKeyFromEnv()); err != nil {
 			serve.ExitOnFail("ai config invalid", err)
 		}
+		memPath := aiCfg.MemoryPath
+		if memPath == "" {
+			memPath = "data/ai-memory.json"
+		}
+		memStore, err := memory.Open(memPath)
+		if err != nil {
+			serve.ExitOnFail("open ai memory failed", err)
+		}
+		aiCfg.MemoryManifest = agent.MemoryManifest(memStore, 10)
 		aiRunner, err = agent.NewRunner(aiCfg, agent.APIKeyFromEnv(), syncSvc)
 		if err != nil {
 			serve.ExitOnFail("init ai runner failed", err)
 		}
-		slog.Info("ai assistant enabled", "model", aiCfg.Model, "base_url", aiCfg.BaseURL)
+		aiRunner.SetMemory(agent.NewMemBridge(memStore), agent.MemoryManifest(memStore, 10))
+		slog.Info("ai assistant enabled", "model", aiCfg.Model, "base_url", aiCfg.BaseURL, "memory", memPath)
 	}
 	git_sync.SetAgentRunner(func() *agent.Runner { return aiRunner })
 
