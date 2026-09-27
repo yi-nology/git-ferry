@@ -328,9 +328,10 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useRepoStore } from '@/stores/repo'
 import { useSyncTaskStore } from '@/stores/syncTask'
 import { platformApi } from '@/api/platform'
+import { usePlatformSync } from '@/composables/usePlatformSync'
 import type { Repo } from '@/types'
 import type { Platform } from '@/api/platform'
-import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '@/utils/notify'
+import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 
 interface PlatformConfig {
   id: string
@@ -555,42 +556,7 @@ function handlePageChange() {
   loadRepos()
 }
 
-async function handleSyncPlatform() {
-  try {
-    const data = await platformApi.list()
-    const platforms = data.platforms || []
-    if (!platforms.length) {
-      notifyWarning('请先在系统-平台管理中配置平台')
-      return
-    }
-    notifyInfo(`正在同步 ${platforms.length} 个平台的仓库...`)
-    // 并行同步所有平台,而非逐个串行等待
-    const results = await Promise.allSettled(
-      platforms.map(async (p: Platform) => {
-        const result = await platformApi.syncRepos(p.key)
-        return { name: p.name, count: result.synced_count || 0 }
-      }),
-    )
-    let total = 0
-    const failed: string[] = []
-    for (const r of results) {
-      if (r.status === 'fulfilled') {
-        total += r.value.count
-      } else {
-        const idx = results.indexOf(r)
-        failed.push(platforms[idx]?.name || '未知')
-      }
-    }
-    await loadRepos()
-    if (failed.length) {
-      notifyError(`部分平台同步失败: ${failed.join('、')}`)
-    } else {
-      notifySuccess(`同步完成，共导入 ${total} 个仓库`)
-    }
-  } catch (e) {
-    notifyError(e, '同步平台仓库失败')
-  }
-}
+const { syncAllPlatforms: handleSyncPlatform } = usePlatformSync(loadRepos)
 
 onMounted(() => {
   loadRepos()
