@@ -26,6 +26,8 @@ func ToPlatformInfo(p *model.Platform) *platformmodel.PlatformInfo {
 		ApiUrl:         p.APIURL,
 		SkipTlsVerify:  p.SkipTLSVerify,
 		CaCertPath:     p.CACertPath,
+		SSHHostKeyFingerprint: p.SSHHostKeyFingerprint,
+		SSHKnownHostsPath:     p.SSHKnownHostsPath,
 		ProxyUrl:       p.ProxyURL,
 		IsDefault:      p.IsDefault,
 		Status:         p.Status,
@@ -69,6 +71,12 @@ func ApplyPlatformUpdate(p *model.Platform, req *platformmodel.UpdatePlatformReq
 	}
 	if req.CaCertPath != "" {
 		p.CACertPath = req.CaCertPath
+	}
+	if req.SSHHostKeyFingerprint != "" {
+		p.SSHHostKeyFingerprint = req.SSHHostKeyFingerprint
+	}
+	if req.SSHKnownHostsPath != "" {
+		p.SSHKnownHostsPath = req.SSHKnownHostsPath
 	}
 	if req.ProxyUrl != "" {
 		p.ProxyURL = req.ProxyUrl

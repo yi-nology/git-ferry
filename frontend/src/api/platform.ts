@@ -1,6 +1,8 @@
 import api from './index'
 
 export interface Platform {
+  ssh_host_key_fingerprint?: string
+  ssh_known_hosts_path?: string
   id: number
   key: string
   name: string
@@ -40,6 +42,8 @@ export interface CreatePlatformRequest {
   // 可选:编辑已有平台时通常不重传令牌(表单层对"新建"强制校验必填)
   access_token?: string
   skip_tls_verify?: boolean
+  ssh_host_key_fingerprint?: string
+  ssh_known_hosts_path?: string
   ca_cert_path?: string
   proxy_url?: string
   is_default?: boolean
@@ -52,6 +56,8 @@ export interface UpdatePlatformRequest {
   api_url?: string
   access_token?: string
   skip_tls_verify?: boolean
+  ssh_host_key_fingerprint?: string
+  ssh_known_hosts_path?: string
   ca_cert_path?: string
   proxy_url?: string
   is_default?: boolean

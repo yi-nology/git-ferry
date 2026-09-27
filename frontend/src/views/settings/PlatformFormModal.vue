@@ -82,6 +82,20 @@
           <a-form-item label="HTTP 代理">
             <a-input v-model:value="formData.proxy_url" placeholder="http://proxy:8080" allow-clear />
           </a-form-item>
+          <a-form-item label="SSH 主机指纹">
+            <a-input
+              v-model:value="formData.ssh_host_key_fingerprint"
+              placeholder="SHA256:xxx (SSH 仓库必填可防 MITM)"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="SSH known_hosts 路径">
+            <a-input
+              v-model:value="formData.ssh_known_hosts_path"
+              placeholder="/etc/gitferry/known_hosts (可选)"
+              allow-clear
+            />
+          </a-form-item>
           <a-form-item>
             <a-checkbox v-model:checked="formData.is_default">设为默认平台</a-checkbox>
           </a-form-item>
@@ -139,6 +153,8 @@ const formData = reactive({
   ca_cert_path: '',
   proxy_url: '',
   is_default: false,
+  ssh_host_key_fingerprint: '',
+  ssh_known_hosts_path: '',
 })
 
 const urlPlaceholder = ref('')
@@ -206,6 +222,8 @@ watch(
       formData.ca_cert_path = p.ca_cert_path || ''
       formData.proxy_url = p.proxy_url || ''
       formData.is_default = getIsDefault(p)
+      formData.ssh_host_key_fingerprint = p.ssh_host_key_fingerprint || ''
+      formData.ssh_known_hosts_path = p.ssh_known_hosts_path || ''
       const preset = PLATFORM_PRESETS[p.type]
       if (preset) {
         urlPlaceholder.value = `https://${preset.defaultInstance}${preset.apiPath}`
@@ -225,6 +243,8 @@ watch(
       formData.ca_cert_path = ''
       formData.proxy_url = ''
       formData.is_default = false
+      formData.ssh_host_key_fingerprint = ''
+      formData.ssh_known_hosts_path = ''
       applyPreset('github')
     }
   },
@@ -255,6 +275,8 @@ async function handleSubmit() {
       ca_cert_path: formData.ca_cert_path,
       proxy_url: formData.proxy_url,
       is_default: formData.is_default,
+      ssh_host_key_fingerprint: formData.ssh_host_key_fingerprint,
+      ssh_known_hosts_path: formData.ssh_known_hosts_path,
     }
     if (formData.token) base.access_token = formData.token
 

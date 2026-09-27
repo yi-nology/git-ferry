@@ -46,6 +46,8 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		SkipTLSVerify: req.SkipTlsVerify,
 		CACertPath:    req.CaCertPath,
 		ProxyURL:      req.ProxyUrl,
+		SSHHostKeyFingerprint: req.SSHHostKeyFingerprint,
+		SSHKnownHostsPath:     req.SSHKnownHostsPath,
 		IsDefault:     req.IsDefault,
 		Status:        corebridge.PlatformStatusActive,
 	}

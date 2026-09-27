@@ -19,6 +19,8 @@ type PlatformInfo struct {
 	ApiUrl         string `thrift:"apiUrl,6" form:"api_url" json:"api_url" query:"api_url"`
 	SkipTlsVerify  bool   `thrift:"skipTlsVerify,7" form:"skip_tls_verify" json:"skip_tls_verify" query:"skip_tls_verify"`
 	CaCertPath     string `thrift:"caCertPath,8" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
+	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
+	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
 	ProxyUrl       string `thrift:"proxyUrl,9" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
 	IsDefault      bool   `thrift:"isDefault,10" form:"is_default" json:"is_default" query:"is_default"`
 	Status         string `thrift:"status,11" form:"status" json:"status" query:"status"`
@@ -1470,6 +1472,8 @@ type CreatePlatformReq struct {
 	AccessToken   string `thrift:"accessToken,5" form:"access_token" json:"access_token" query:"access_token"`
 	SkipTlsVerify bool   `thrift:"skipTlsVerify,6" form:"skip_tls_verify" json:"skip_tls_verify" query:"skip_tls_verify"`
 	CaCertPath    string `thrift:"caCertPath,7" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
+	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
+	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
 	ProxyUrl      string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
 	IsDefault     bool   `thrift:"isDefault,9" form:"is_default" json:"is_default" query:"is_default"`
 }
@@ -2126,6 +2130,8 @@ type UpdatePlatformReq struct {
 	CaCertPath    string `thrift:"caCertPath,7" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
 	ProxyUrl      string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
 	IsDefault     *bool  `thrift:"isDefault,9,optional" form:"is_default" json:"is_default,omitempty" query:"is_default"`
+	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
+	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
 }
 
 func NewUpdatePlatformReq() *UpdatePlatformReq {
