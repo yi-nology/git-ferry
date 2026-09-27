@@ -2,13 +2,10 @@ package git_sync
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -68,16 +65,4 @@ func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 		"message":  "workdir cleared, full resync started",
 		"task_key": req.TaskKey,
 	})
-}
-
-// isNotFoundErr 判定"记录不存在"类错误。
-func isNotFoundErr(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, corebridge.ErrTaskNotFound) {
-		return true
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "not found") || strings.Contains(msg, "record not found")
 }
