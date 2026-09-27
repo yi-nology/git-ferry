@@ -15,9 +15,9 @@ import (
 
 // Template 同步策略模板。
 type Template struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
 	// Match 任务/仓库匹配条件(与 health.Filter 同语义)
 	Match map[string][]string `json:"match,omitempty"`
 	// Spec 套用到任务的默认值(cron/分支/启用)

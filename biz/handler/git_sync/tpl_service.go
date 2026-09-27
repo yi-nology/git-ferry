@@ -142,15 +142,15 @@ func matchToFilter(m map[string][]string) *health.Filter {
 
 // InventoryItem 仓库资产盘点项:有没有任务覆盖、最近执行。
 type InventoryItem struct {
-	RepoKey       string `json:"repo_key"`
-	RepoName      string `json:"repo_name"`
-	Platform      string `json:"platform,omitempty"`
-	Status        string `json:"status,omitempty"`
-	HasTask       bool   `json:"has_task"`
+	RepoKey       string   `json:"repo_key"`
+	RepoName      string   `json:"repo_name"`
+	Platform      string   `json:"platform,omitempty"`
+	Status        string   `json:"status,omitempty"`
+	HasTask       bool     `json:"has_task"`
 	TaskKeys      []string `json:"task_keys,omitempty"`
-	LastRunStatus string `json:"last_run_status,omitempty"`
-	LastRunAt     string `json:"last_run_at,omitempty"`
-	Coverage      string `json:"coverage"` // covered | no_task | stale | failing
+	LastRunStatus string   `json:"last_run_status,omitempty"`
+	LastRunAt     string   `json:"last_run_at,omitempty"`
+	Coverage      string   `json:"coverage"` // covered | no_task | stale | failing
 }
 
 // RepoInventory GET /api/v1/ops/inventory
@@ -229,7 +229,6 @@ func RepoInventory(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-
 // ApplyTemplateReq 套用模板:对命中任务批量写入 Spec 默认值。
 type ApplyTemplateReq struct {
 	TemplateID string `json:"template_id" form:"template_id" query:"template_id"`
@@ -265,10 +264,10 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 	}
 	filter := matchToFilter(t.Match)
 	type change struct {
-		Key     string `json:"key"`
-		Name    string `json:"name"`
-		Before  map[string]any `json:"before"`
-		After   map[string]any `json:"after"`
+		Key    string         `json:"key"`
+		Name   string         `json:"name"`
+		Before map[string]any `json:"before"`
+		After  map[string]any `json:"after"`
 	}
 	changed := []change{}
 	for _, task := range tasks {

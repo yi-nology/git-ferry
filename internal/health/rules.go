@@ -12,8 +12,8 @@ import (
 // Rule 一条加权规则。
 // Attr 支持: has_name, has_cron, recent_success, recent_failed, has_history, error_free
 type Rule struct {
-	ID       string `yaml:"id" json:"id"`
-	Attr     string `yaml:"attr" json:"attr"`
+	ID   string `yaml:"id" json:"id"`
+	Attr string `yaml:"attr" json:"attr"`
 	// Op: eq / ne / gt / lt / truthy / falsy
 	Op    string `yaml:"op" json:"op"`
 	Value string `yaml:"value,omitempty" json:"value,omitempty"`
@@ -25,8 +25,8 @@ type Rule struct {
 
 // Level 等级门槛。
 type Level struct {
-	Name  string `yaml:"name" json:"name"`
-	MinScore int `yaml:"min_score" json:"min_score"`
+	Name     string `yaml:"name" json:"name"`
+	MinScore int    `yaml:"min_score" json:"min_score"`
 }
 
 // Config 规则集。

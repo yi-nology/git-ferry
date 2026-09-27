@@ -269,7 +269,7 @@ func thriftToOpenAPIType(thriftType string, structs map[string]*thriftStruct) ma
 		parts := strings.SplitN(inner, ",", 2)
 		if len(parts) == 2 {
 			return map[string]any{
-				"type": "object",
+				"type":                 "object",
 				"additionalProperties": thriftToOpenAPIType(strings.TrimSpace(parts[1]), structs),
 			}
 		}
@@ -518,7 +518,7 @@ func addCustomPaths(paths map[string]any) {
 	// Health
 	paths["/health"] = map[string]any{
 		"get": map[string]any{
-			"tags":   []string{"Health"},
+			"tags":    []string{"Health"},
 			"summary": "健康检查(DB/Redis/Service)",
 			"responses": map[string]any{
 				"200": map[string]any{"description": "所有依赖正常"},
@@ -535,7 +535,7 @@ func addCustomPaths(paths map[string]any) {
 	// Webhook receive
 	paths["/api/webhook/receive/{repoKey}"] = map[string]any{
 		"post": map[string]any{
-			"tags":   []string{"Webhook"}, "summary": "接收平台 Webhook",
+			"tags": []string{"Webhook"}, "summary": "接收平台 Webhook",
 			"parameters": []map[string]any{
 				{"name": "repoKey", "in": "path", "required": true, "schema": map[string]any{"type": "string"}},
 			},
@@ -561,8 +561,8 @@ func addCustomPaths(paths map[string]any) {
 	}
 	paths["/api/v1/ai/chat"] = map[string]any{
 		"post": map[string]any{
-			"tags":       []string{"AI"},
-			"summary":    "AI 对话(SSE 流式)",
+			"tags":        []string{"AI"},
+			"summary":     "AI 对话(SSE 流式)",
 			"description": "POST SSE 流式响应。事件: start → delta*/tool_start/tool_end/tool_confirm → done|error。危险操作需前端确认卡。",
 			"requestBody": map[string]any{
 				"content": map[string]any{"application/json": map[string]any{

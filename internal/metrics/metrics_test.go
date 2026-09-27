@@ -35,5 +35,5 @@ func TestWritePrometheus_LabelEscaping(t *testing.T) {
 	r := New(nil)
 	r.AddLabeled("x_total", "h", map[string]string{"status": "success"}, 1)
 	out := r.WritePrometheus()
-	assert.True(t, strings.Contains(out, "x_total") )
+	assert.True(t, strings.Contains(out, "x_total"))
 }

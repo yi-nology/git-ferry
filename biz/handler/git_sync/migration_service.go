@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -95,8 +93,8 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	}
 
 	var parsed struct {
-		ID        int64  `json:"id"`
-		State     string `json:"state"`
+		ID         int64  `json:"id"`
+		State      string `json:"state"`
 		ArchiveURL string `json:"archive_url"`
 	}
 	_ = json.Unmarshal(raw, &parsed)
@@ -156,6 +154,3 @@ func pollMigration(ctx context.Context, apiBase, token, org string, id int64) *m
 	}
 	return nil
 }
-
-var _ = corebridge.PlatformStatusActive
-var _ = consts.StatusOK

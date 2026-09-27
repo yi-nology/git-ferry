@@ -7,11 +7,11 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	sdkprov "github.com/yi-nology/go-git-platform/provider"
 	"github.com/yi-nology/git-ferry/biz/model/repo"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 func RepoList(ctx context.Context, c *app.RequestContext) {

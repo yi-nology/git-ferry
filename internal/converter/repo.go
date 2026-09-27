@@ -3,8 +3,8 @@ package converter
 import (
 	"time"
 
-	repomodel "github.com/yi-nology/git-ferry/biz/model/repo"
 	"github.com/yi-nology/git-ferry-core/model"
+	repomodel "github.com/yi-nology/git-ferry/biz/model/repo"
 )
 
 func ToRepoInfo(r *model.Repo) *repomodel.RepoInfo {

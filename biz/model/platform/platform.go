@@ -11,25 +11,25 @@ import (
 // structs (platform_service.go). Method names match the existing handler
 // functions so hz preserves their business logic on regenerate.
 type PlatformInfo struct {
-	ID             int64  `thrift:"id,1" form:"id" json:"id" query:"id"`
-	Key            string `thrift:"key,2" form:"key" json:"key" query:"key"`
-	Name           string `thrift:"name,3" form:"name" json:"name" query:"name"`
-	Type           string `thrift:"type,4" form:"type" json:"type" query:"type"`
-	InstanceUrl    string `thrift:"instanceUrl,5" form:"instance_url" json:"instance_url" query:"instance_url"`
-	ApiUrl         string `thrift:"apiUrl,6" form:"api_url" json:"api_url" query:"api_url"`
-	SkipTlsVerify  bool   `thrift:"skipTlsVerify,7" form:"skip_tls_verify" json:"skip_tls_verify" query:"skip_tls_verify"`
-	CaCertPath     string `thrift:"caCertPath,8" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
+	ID                    int64  `thrift:"id,1" form:"id" json:"id" query:"id"`
+	Key                   string `thrift:"key,2" form:"key" json:"key" query:"key"`
+	Name                  string `thrift:"name,3" form:"name" json:"name" query:"name"`
+	Type                  string `thrift:"type,4" form:"type" json:"type" query:"type"`
+	InstanceUrl           string `thrift:"instanceUrl,5" form:"instance_url" json:"instance_url" query:"instance_url"`
+	ApiUrl                string `thrift:"apiUrl,6" form:"api_url" json:"api_url" query:"api_url"`
+	SkipTlsVerify         bool   `thrift:"skipTlsVerify,7" form:"skip_tls_verify" json:"skip_tls_verify" query:"skip_tls_verify"`
+	CaCertPath            string `thrift:"caCertPath,8" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
 	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
 	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
-	ProxyUrl       string `thrift:"proxyUrl,9" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
-	IsDefault      bool   `thrift:"isDefault,10" form:"is_default" json:"is_default" query:"is_default"`
-	Status         string `thrift:"status,11" form:"status" json:"status" query:"status"`
-	LastTestResult string `thrift:"lastTestResult,12" form:"last_test_result" json:"last_test_result" query:"last_test_result"`
-	RepoCount      int32  `thrift:"repoCount,13" form:"repo_count" json:"repo_count" query:"repo_count"`
-	CreatedAt      string `thrift:"createdAt,14" form:"created_at" json:"created_at" query:"created_at"`
-	LastTestAt     string `thrift:"lastTestAt,15" form:"last_test_at" json:"last_test_at" query:"last_test_at"`
-	UpdatedAt      string `thrift:"updatedAt,16" form:"updated_at" json:"updated_at" query:"updated_at"`
-	HasToken       bool   `thrift:"hasToken,17" form:"has_token" json:"has_token" query:"has_token"`
+	ProxyUrl              string `thrift:"proxyUrl,9" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
+	IsDefault             bool   `thrift:"isDefault,10" form:"is_default" json:"is_default" query:"is_default"`
+	Status                string `thrift:"status,11" form:"status" json:"status" query:"status"`
+	LastTestResult        string `thrift:"lastTestResult,12" form:"last_test_result" json:"last_test_result" query:"last_test_result"`
+	RepoCount             int32  `thrift:"repoCount,13" form:"repo_count" json:"repo_count" query:"repo_count"`
+	CreatedAt             string `thrift:"createdAt,14" form:"created_at" json:"created_at" query:"created_at"`
+	LastTestAt            string `thrift:"lastTestAt,15" form:"last_test_at" json:"last_test_at" query:"last_test_at"`
+	UpdatedAt             string `thrift:"updatedAt,16" form:"updated_at" json:"updated_at" query:"updated_at"`
+	HasToken              bool   `thrift:"hasToken,17" form:"has_token" json:"has_token" query:"has_token"`
 }
 
 func NewPlatformInfo() *PlatformInfo {
@@ -1465,17 +1465,17 @@ func (p *GetPlatformResp) String() string {
 }
 
 type CreatePlatformReq struct {
-	Name          string `thrift:"name,1" form:"name" json:"name" query:"name"`
-	Type          string `thrift:"type,2" form:"type" json:"type" query:"type"`
-	InstanceUrl   string `thrift:"instanceUrl,3" form:"instance_url" json:"instance_url" query:"instance_url"`
-	ApiUrl        string `thrift:"apiUrl,4" form:"api_url" json:"api_url" query:"api_url"`
-	AccessToken   string `thrift:"accessToken,5" form:"access_token" json:"access_token" query:"access_token"`
-	SkipTlsVerify bool   `thrift:"skipTlsVerify,6" form:"skip_tls_verify" json:"skip_tls_verify" query:"skip_tls_verify"`
-	CaCertPath    string `thrift:"caCertPath,7" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
+	Name                  string `thrift:"name,1" form:"name" json:"name" query:"name"`
+	Type                  string `thrift:"type,2" form:"type" json:"type" query:"type"`
+	InstanceUrl           string `thrift:"instanceUrl,3" form:"instance_url" json:"instance_url" query:"instance_url"`
+	ApiUrl                string `thrift:"apiUrl,4" form:"api_url" json:"api_url" query:"api_url"`
+	AccessToken           string `thrift:"accessToken,5" form:"access_token" json:"access_token" query:"access_token"`
+	SkipTlsVerify         bool   `thrift:"skipTlsVerify,6" form:"skip_tls_verify" json:"skip_tls_verify" query:"skip_tls_verify"`
+	CaCertPath            string `thrift:"caCertPath,7" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
 	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
 	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
-	ProxyUrl      string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
-	IsDefault     bool   `thrift:"isDefault,9" form:"is_default" json:"is_default" query:"is_default"`
+	ProxyUrl              string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
+	IsDefault             bool   `thrift:"isDefault,9" form:"is_default" json:"is_default" query:"is_default"`
 }
 
 func NewCreatePlatformReq() *CreatePlatformReq {
@@ -2121,15 +2121,15 @@ func (p *CreatePlatformResp) String() string {
 }
 
 type UpdatePlatformReq struct {
-	Key           string `thrift:"key,1" form:"key" json:"key" query:"key"`
-	Name          string `thrift:"name,2" form:"name" json:"name" query:"name"`
-	InstanceUrl   string `thrift:"instanceUrl,3" form:"instance_url" json:"instance_url" query:"instance_url"`
-	ApiUrl        string `thrift:"apiUrl,4" form:"api_url" json:"api_url" query:"api_url"`
-	AccessToken   string `thrift:"accessToken,5" form:"access_token" json:"access_token" query:"access_token"`
-	SkipTlsVerify *bool  `thrift:"skipTlsVerify,6,optional" form:"skip_tls_verify" json:"skip_tls_verify,omitempty" query:"skip_tls_verify"`
-	CaCertPath    string `thrift:"caCertPath,7" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
-	ProxyUrl      string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
-	IsDefault     *bool  `thrift:"isDefault,9,optional" form:"is_default" json:"is_default,omitempty" query:"is_default"`
+	Key                   string `thrift:"key,1" form:"key" json:"key" query:"key"`
+	Name                  string `thrift:"name,2" form:"name" json:"name" query:"name"`
+	InstanceUrl           string `thrift:"instanceUrl,3" form:"instance_url" json:"instance_url" query:"instance_url"`
+	ApiUrl                string `thrift:"apiUrl,4" form:"api_url" json:"api_url" query:"api_url"`
+	AccessToken           string `thrift:"accessToken,5" form:"access_token" json:"access_token" query:"access_token"`
+	SkipTlsVerify         *bool  `thrift:"skipTlsVerify,6,optional" form:"skip_tls_verify" json:"skip_tls_verify,omitempty" query:"skip_tls_verify"`
+	CaCertPath            string `thrift:"caCertPath,7" form:"ca_cert_path" json:"ca_cert_path" query:"ca_cert_path"`
+	ProxyUrl              string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
+	IsDefault             *bool  `thrift:"isDefault,9,optional" form:"is_default" json:"is_default,omitempty" query:"is_default"`
 	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
 	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
 }

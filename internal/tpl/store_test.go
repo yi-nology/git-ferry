@@ -37,7 +37,6 @@ func TestStore_UpsertGetDelete(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
-
 func TestStore_ListByTag(t *testing.T) {
 	st, err := Open(filepath.Join(t.TempDir(), "t.json"))
 	require.NoError(t, err)

@@ -4,9 +4,9 @@ package metrics
 
 import (
 	"fmt"
-	"strconv"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"

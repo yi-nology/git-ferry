@@ -3,8 +3,8 @@ package converter
 import (
 	"strings"
 
-	webhookmodel "github.com/yi-nology/git-ferry/biz/model/webhook"
 	"github.com/yi-nology/git-ferry-core/model"
+	webhookmodel "github.com/yi-nology/git-ferry/biz/model/webhook"
 )
 
 func ToRuleInfo(r *model.WebhookRule) *webhookmodel.WebhookRuleInfo {

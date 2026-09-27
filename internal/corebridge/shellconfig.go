@@ -35,7 +35,7 @@ type shellOverlay struct {
 	Server struct {
 		APIKey string `yaml:"api_key"`
 	} `yaml:"server"`
-	Notify   *notify.Config   `yaml:"notify"`
+	Notify   *notify.Config    `yaml:"notify"`
 	RunWatch *RunWatchSettings `yaml:"runwatch"`
 }
 

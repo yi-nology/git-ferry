@@ -2,8 +2,8 @@ package git_sync
 
 import (
 	"fmt"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 

@@ -7,9 +7,9 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	sdkprov "github.com/yi-nology/go-git-platform/provider"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // ExportIssuesReq 导出仓库 issues(备份/迁移用)。
@@ -88,25 +88,25 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	response.Success(c, map[string]any{
-		"repo_key": req.RepoKey,
-		"count":    len(issues),
+		"repo_key":    req.RepoKey,
+		"count":       len(issues),
 		"exported_at": time.Now().Format(time.RFC3339),
-		"items":    issues,
+		"items":       issues,
 	})
 }
 
 // issueRow 导出用 issue 视图。
 type issueRow struct {
-	Number    string         `json:"number"`
-	Title     string         `json:"title"`
-	State     string         `json:"state"`
-	Author    string         `json:"author,omitempty"`
-	Labels    []string       `json:"labels,omitempty"`
-	Assignees []string       `json:"assignees,omitempty"`
-	Body      string         `json:"body,omitempty"`
-	WebURL    string         `json:"web_url,omitempty"`
-	CreatedAt string         `json:"created_at"`
-	UpdatedAt string         `json:"updated_at"`
+	Number      string                  `json:"number"`
+	Title       string                  `json:"title"`
+	State       string                  `json:"state"`
+	Author      string                  `json:"author,omitempty"`
+	Labels      []string                `json:"labels,omitempty"`
+	Assignees   []string                `json:"assignees,omitempty"`
+	Body        string                  `json:"body,omitempty"`
+	WebURL      string                  `json:"web_url,omitempty"`
+	CreatedAt   string                  `json:"created_at"`
+	UpdatedAt   string                  `json:"updated_at"`
 	CommentList []*sdkprov.IssueComment `json:"comments,omitempty"`
 }
 

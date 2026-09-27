@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,22 +10,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
-	"github.com/cloudwego/eino-ext/components/model/openai"
 
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
 
 // Runner AI 助手编排器:eino ChatModelAgent + 工具装饰器 + 会话存储。
 type Runner struct {
-	runner   *adk.Runner
-	reg      *tools.Registry
-	sessions *SessionStore
-	sem      chan struct{}
+	runner    *adk.Runner
+	reg       *tools.Registry
+	sessions  *SessionStore
+	sem       chan struct{}
 	modelName string
 }
 

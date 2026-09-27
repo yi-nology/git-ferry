@@ -1,8 +1,8 @@
 package tools
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

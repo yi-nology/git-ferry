@@ -7,9 +7,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/yi-nology/go-git-platform/provider"
 	coremodel "github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/go-git-platform/provider"
 )
 
 // pageLimit 工具返回列表的单页上限。

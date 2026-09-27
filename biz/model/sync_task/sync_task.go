@@ -2320,22 +2320,22 @@ func (p *CreateTaskResp) String() string {
 }
 
 type UpdateTaskReq struct {
-	Key          string `thrift:"key,1" form:"key" json:"key" query:"key"`
-	Name         string `thrift:"name,2" form:"name" json:"name" query:"name"`
-	SourceBranch string `thrift:"sourceBranch,3" form:"source_branch" json:"source_branch" query:"source_branch"`
-	TargetBranch string `thrift:"targetBranch,4" form:"target_branch" json:"target_branch" query:"target_branch"`
-	SyncMode     string `thrift:"syncMode,5" form:"sync_mode" json:"sync_mode" query:"sync_mode"`
-	Cron         string `thrift:"cron,6" form:"cron" json:"cron" query:"cron"`
-	Enabled      bool   `thrift:"enabled,7" form:"enabled" json:"enabled" query:"enabled"`
-	GitTags      bool   `thrift:"gitTags,8" form:"git_tags" json:"git_tags" query:"git_tags"`
-	GitForce     bool   `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
-	GitPrune     bool   `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
-	GitLfs        bool  `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
-	SyncWiki      bool  `thrift:"syncWiki,18" form:"sync_wiki" json:"sync_wiki" query:"sync_wiki"`
-	GitBundle     bool  `thrift:"gitBundle,19" form:"git_bundle" json:"git_bundle" query:"git_bundle"`
-	Submodules    bool  `thrift:"submodules,20" form:"submodules" json:"submodules" query:"submodules"`
-	GitPushPrune  bool  `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
-	KeepDivergent *bool `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
+	Key           string `thrift:"key,1" form:"key" json:"key" query:"key"`
+	Name          string `thrift:"name,2" form:"name" json:"name" query:"name"`
+	SourceBranch  string `thrift:"sourceBranch,3" form:"source_branch" json:"source_branch" query:"source_branch"`
+	TargetBranch  string `thrift:"targetBranch,4" form:"target_branch" json:"target_branch" query:"target_branch"`
+	SyncMode      string `thrift:"syncMode,5" form:"sync_mode" json:"sync_mode" query:"sync_mode"`
+	Cron          string `thrift:"cron,6" form:"cron" json:"cron" query:"cron"`
+	Enabled       bool   `thrift:"enabled,7" form:"enabled" json:"enabled" query:"enabled"`
+	GitTags       bool   `thrift:"gitTags,8" form:"git_tags" json:"git_tags" query:"git_tags"`
+	GitForce      bool   `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
+	GitPrune      bool   `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
+	GitLfs        bool   `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
+	SyncWiki      bool   `thrift:"syncWiki,18" form:"sync_wiki" json:"sync_wiki" query:"sync_wiki"`
+	GitBundle     bool   `thrift:"gitBundle,19" form:"git_bundle" json:"git_bundle" query:"git_bundle"`
+	Submodules    bool   `thrift:"submodules,20" form:"submodules" json:"submodules" query:"submodules"`
+	GitPushPrune  bool   `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
+	KeepDivergent *bool  `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 }
 
 func NewUpdateTaskReq() *UpdateTaskReq {

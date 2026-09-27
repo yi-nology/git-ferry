@@ -10,23 +10,23 @@ import (
 func TestToTaskInfo(t *testing.T) {
 	now := time.Now()
 	task := &model.SyncTask{
-		ID:           1,
-		Key:          "test-key",
-		Name:         "Test Task",
+		ID:            1,
+		Key:           "test-key",
+		Name:          "Test Task",
 		SourceRepoKey: "source-repo",
-		SourceBranch: "main",
+		SourceBranch:  "main",
 		TargetRepoKey: "target-repo",
-		TargetBranch: "main",
-		SyncMode:     "mirror",
-		Cron:         "0 * * * *",
-		WebhookToken: "token123",
-		Enabled:      true,
-		GitTags:      true,
-		GitForce:     false,
-		GitPrune:     true,
-		LastRunAt:    &now,
-		LastStatus:   "success",
-		CreatedAt:    now,
+		TargetBranch:  "main",
+		SyncMode:      "mirror",
+		Cron:          "0 * * * *",
+		WebhookToken:  "token123",
+		Enabled:       true,
+		GitTags:       true,
+		GitForce:      false,
+		GitPrune:      true,
+		LastRunAt:     &now,
+		LastStatus:    "success",
+		CreatedAt:     now,
 	}
 
 	result := ToTaskInfo(task)
@@ -289,11 +289,11 @@ func TestPageToOffset(t *testing.T) {
 		{"normal", 1, 10, 0, 10},
 		{"page 2", 2, 10, 10, 10},
 		{"page 3", 3, 20, 40, 20},
-		{"zero page", 0, 10, 0, 10},       // page defaults to 1
-		{"negative page", -1, 10, 0, 10},   // page defaults to 1
-		{"zero pageSize", 1, 0, 0, 50},     // pageSize defaults to 50
+		{"zero page", 0, 10, 0, 10},         // page defaults to 1
+		{"negative page", -1, 10, 0, 10},    // page defaults to 1
+		{"zero pageSize", 1, 0, 0, 50},      // pageSize defaults to 50
 		{"negative pageSize", 1, -1, 0, 50}, // pageSize defaults to 50
-		{"large pageSize", 1, 300, 0, 200}, // pageSize capped at 200
+		{"large pageSize", 1, 300, 0, 200},  // pageSize capped at 200
 	}
 
 	for _, tt := range tests {

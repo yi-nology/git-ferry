@@ -35,10 +35,10 @@ type Session struct {
 
 	pending *PendingConfirm // 待确认的危险工具调用(同一时刻至多一个)
 
-	muConfirm      sync.Mutex
-	lastConfirm    *PendingConfirm // 最近一次发给前端的确认请求(取即清空)
-	consumedTool   string          // 确认后直达执行的放行标记
-	consumedArgs   string
+	muConfirm    sync.Mutex
+	lastConfirm  *PendingConfirm // 最近一次发给前端的确认请求(取即清空)
+	consumedTool string          // 确认后直达执行的放行标记
+	consumedArgs string
 }
 
 // SessionStore 内存会话存储。服务重启即失效(前端收到 404 后重开会话)。

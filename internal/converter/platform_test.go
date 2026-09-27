@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
 	"github.com/yi-nology/git-ferry-core/model"
+	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
 )
 
 func TestToPlatformInfo(t *testing.T) {

@@ -3,9 +3,9 @@ package notify
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"

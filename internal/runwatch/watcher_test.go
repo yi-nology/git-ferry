@@ -103,3 +103,20 @@ func TestWatcher_RetryCooldown(t *testing.T) {
 	assert.Empty(t, svc.called)
 	svc.mu.Unlock()
 }
+
+func TestWatcher_PruneMaps(t *testing.T) {
+	svc := &fakeSvc{tasks: nil, runs: map[string][]*corebridge.SyncRun{}}
+	w := New(svc, nil, nil, Config{})
+	// 塞 1200 条
+	for i := uint(1); i <= 1200; i++ {
+		w.seen[i] = true
+		w.retries[i] = 1
+	}
+	current := []*corebridge.SyncRun{{ID: 1200, TaskKey: "t", Status: "success"}}
+	w.pruneMaps(current)
+	w.mu.Lock()
+	n := len(w.seen)
+	w.mu.Unlock()
+	assert.LessOrEqual(t, n, 1000)
+	assert.True(t, w.seen[1200])
+}

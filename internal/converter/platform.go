@@ -3,8 +3,8 @@ package converter
 import (
 	"time"
 
-	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
 	"github.com/yi-nology/git-ferry-core/model"
+	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
 )
 
 // ToPlatformInfo 将平台模型转为 IDL 生成的对外结构 platformmodel.PlatformInfo。
@@ -18,25 +18,25 @@ func ToPlatformInfo(p *model.Platform) *platformmodel.PlatformInfo {
 		lastTestAt = p.LastTestAt.Format(time.RFC3339)
 	}
 	return &platformmodel.PlatformInfo{
-		ID:             SafeUintToInt64(p.ID),
-		Key:            p.Key,
-		Name:           p.Name,
-		Type:           p.Type,
-		InstanceUrl:    p.InstanceURL,
-		ApiUrl:         p.APIURL,
-		SkipTlsVerify:  p.SkipTLSVerify,
-		CaCertPath:     p.CACertPath,
+		ID:                    SafeUintToInt64(p.ID),
+		Key:                   p.Key,
+		Name:                  p.Name,
+		Type:                  p.Type,
+		InstanceUrl:           p.InstanceURL,
+		ApiUrl:                p.APIURL,
+		SkipTlsVerify:         p.SkipTLSVerify,
+		CaCertPath:            p.CACertPath,
 		SSHHostKeyFingerprint: p.SSHHostKeyFingerprint,
 		SSHKnownHostsPath:     p.SSHKnownHostsPath,
-		ProxyUrl:       p.ProxyURL,
-		IsDefault:      p.IsDefault,
-		Status:         p.Status,
-		LastTestResult: p.LastTestResult,
-		RepoCount:      SafeIntToInt32(p.RepoCount),
-		CreatedAt:      p.CreatedAt.Format(time.RFC3339),
-		LastTestAt:     lastTestAt,
-		UpdatedAt:      p.UpdatedAt.Format(time.RFC3339),
-		HasToken:       p.AccessToken != "",
+		ProxyUrl:              p.ProxyURL,
+		IsDefault:             p.IsDefault,
+		Status:                p.Status,
+		LastTestResult:        p.LastTestResult,
+		RepoCount:             SafeIntToInt32(p.RepoCount),
+		CreatedAt:             p.CreatedAt.Format(time.RFC3339),
+		LastTestAt:            lastTestAt,
+		UpdatedAt:             p.UpdatedAt.Format(time.RFC3339),
+		HasToken:              p.AccessToken != "",
 	}
 }
 

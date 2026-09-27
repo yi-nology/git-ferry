@@ -2,10 +2,10 @@ package notify
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -199,16 +199,16 @@ func (n *Notifier) sendWebhook(ctx context.Context, cfg *WebhookConfig, ev *RunE
 		return nil
 	}
 	payload, err := json.Marshal(map[string]any{
-		"event":      "sync_run",
-		"status":     ev.Status,
-		"task_key":   ev.TaskKey,
-		"task_name":  ev.TaskName,
-		"run_id":     ev.RunID,
-		"trigger":    ev.Trigger,
-		"error":      ev.Error,
-		"error_type": ev.ErrorType,
+		"event":       "sync_run",
+		"status":      ev.Status,
+		"task_key":    ev.TaskKey,
+		"task_name":   ev.TaskName,
+		"run_id":      ev.RunID,
+		"trigger":     ev.Trigger,
+		"error":       ev.Error,
+		"error_type":  ev.ErrorType,
 		"duration_ms": ev.Duration.Milliseconds(),
-		"end_at":     ev.EndAt.Format(time.RFC3339),
+		"end_at":      ev.EndAt.Format(time.RFC3339),
 	})
 	if err != nil {
 		return err

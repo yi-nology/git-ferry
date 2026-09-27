@@ -2,8 +2,10 @@ package git_sync
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -48,7 +50,11 @@ func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 		tempDir = cfg.Git.TempDir
 	}
 	if tempDir != "" {
-		workDir := filepath.Join(tempDir, req.TaskKey)
+		workDir, err := safeWorkDir(tempDir, req.TaskKey)
+		if err != nil {
+			response.BadRequest(c, err.Error())
+			return
+		}
 		if err := os.RemoveAll(workDir); err != nil {
 			response.InternalError(c, err.Error())
 			return
@@ -65,4 +71,28 @@ func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 		"message":  "workdir cleared, full resync started",
 		"task_key": req.TaskKey,
 	})
+}
+
+// safeWorkDir 拼 workdir 并拒绝路径穿越(task_key 含 / \ .. 一律拒绝)。
+func safeWorkDir(tempDir, taskKey string) (string, error) {
+	if taskKey == "" {
+		return "", fmt.Errorf("task_key is empty")
+	}
+	if strings.ContainsAny(taskKey, "/\\") || strings.Contains(taskKey, "..") {
+		return "", fmt.Errorf("task_key contains path separators")
+	}
+	dir := filepath.Join(tempDir, taskKey)
+	// 双保险:结果必须仍在 tempDir 之下
+	absTemp, err := filepath.Abs(tempDir)
+	if err != nil {
+		return "", err
+	}
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(absDir, absTemp+string(filepath.Separator)) {
+		return "", fmt.Errorf("task_key escapes temp dir")
+	}
+	return absDir, nil
 }

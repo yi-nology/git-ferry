@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/cloudwego/eino/components/tool"

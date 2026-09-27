@@ -37,19 +37,19 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 	}
 
 	p := &corebridge.Platform{
-		Key:           uuid.New().String(),
-		Name:          req.Name,
-		Type:          req.Type,
-		InstanceURL:   req.InstanceUrl,
-		APIURL:        apiURL,
-		AccessToken:   resolveCreateToken(req.Name, req.AccessToken),
-		SkipTLSVerify: req.SkipTlsVerify,
-		CACertPath:    req.CaCertPath,
-		ProxyURL:      req.ProxyUrl,
+		Key:                   uuid.New().String(),
+		Name:                  req.Name,
+		Type:                  req.Type,
+		InstanceURL:           req.InstanceUrl,
+		APIURL:                apiURL,
+		AccessToken:           resolveCreateToken(req.Name, req.AccessToken),
+		SkipTLSVerify:         req.SkipTlsVerify,
+		CACertPath:            req.CaCertPath,
+		ProxyURL:              req.ProxyUrl,
 		SSHHostKeyFingerprint: req.SSHHostKeyFingerprint,
 		SSHKnownHostsPath:     req.SSHKnownHostsPath,
-		IsDefault:     req.IsDefault,
-		Status:        corebridge.PlatformStatusActive,
+		IsDefault:             req.IsDefault,
+		Status:                corebridge.PlatformStatusActive,
 	}
 
 	if err := GetSyncService().CreatePlatform(ctx, p); err != nil {
@@ -304,7 +304,6 @@ func SyncPlatformRepos(ctx context.Context, c *app.RequestContext) {
 		SyncedCount: converter.SafeIntToInt32(count),
 	})
 }
-
 
 // resolveCreateToken 创建平台时解析访问令牌:env 优先(密钥不进请求体/DB 明文)。
 func resolveCreateToken(name, bodyToken string) string {

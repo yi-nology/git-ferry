@@ -1,8 +1,8 @@
 package converter
 
 import (
-	olmodel "github.com/yi-nology/git-ferry/biz/model/operation_log"
 	"github.com/yi-nology/git-ferry-core/model"
+	olmodel "github.com/yi-nology/git-ferry/biz/model/operation_log"
 )
 
 // ToOperationLogInfo 将审计日志模型转为 IDL 生成的对外结构 olmodel.OperationLogInfo。

@@ -11,13 +11,13 @@ import (
 
 // SyncPlatformFilteredReq 按过滤条件导入平台仓库。
 type SyncPlatformFilteredReq struct {
-	Key              string `json:"key" form:"key" query:"key"`
-	ExcludeArchived  bool   `json:"exclude_archived" form:"exclude_archived" query:"exclude_archived"`
-	ExcludeForks     bool   `json:"exclude_forks" form:"exclude_forks" query:"exclude_forks"`
-	MinStars         int    `json:"min_stars" form:"min_stars" query:"min_stars"`
-	IncludeLanguage  string `json:"include_language" form:"include_language" query:"include_language"`
-	IncludeGlobs     string `json:"include_globs" form:"include_globs" query:"include_globs"` // 逗号分隔
-	ExcludeGlobs     string `json:"exclude_globs" form:"exclude_globs" query:"exclude_globs"`
+	Key             string `json:"key" form:"key" query:"key"`
+	ExcludeArchived bool   `json:"exclude_archived" form:"exclude_archived" query:"exclude_archived"`
+	ExcludeForks    bool   `json:"exclude_forks" form:"exclude_forks" query:"exclude_forks"`
+	MinStars        int    `json:"min_stars" form:"min_stars" query:"min_stars"`
+	IncludeLanguage string `json:"include_language" form:"include_language" query:"include_language"`
+	IncludeGlobs    string `json:"include_globs" form:"include_globs" query:"include_globs"` // 逗号分隔
+	ExcludeGlobs    string `json:"exclude_globs" form:"exclude_globs" query:"exclude_globs"`
 }
 
 // SyncPlatformFiltered POST /api/v1/ops/sync-platform
@@ -52,7 +52,7 @@ func SyncPlatformFiltered(ctx context.Context, c *app.RequestContext) {
 	recordAudit(ctx, c, "sync_platform_filtered", "platform", req.Key,
 		"过滤导入平台仓库")
 	response.Success(c, map[string]any{
-		"success": true,
+		"success":  true,
 		"imported": count,
 		"filter":   filter,
 	})

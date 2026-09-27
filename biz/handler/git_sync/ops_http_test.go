@@ -1,6 +1,7 @@
 package git_sync
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/tpl"
 )
 
@@ -173,4 +175,66 @@ func TestRebuild_TaskNotFound(t *testing.T) {
 		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
 		ut.Header{Key: "Content-Type", Value: "application/json"})
 	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSyncPlatformFiltered_MissingKey(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/sync-platform", SyncPlatformFiltered)
+	body := `{"exclude_archived":true}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/sync-platform",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExportMigration_NotFoundPlatform(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/migration", ExportGitHubMigration)
+	body := `{"platform_key":"nope"}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/migration",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestExportMigration_NotGitHub(t *testing.T) {
+	setupOpsHTTP(t)
+	// 先建一个非 github 平台
+	svc := GetSyncService()
+	p := &corebridge.Platform{
+		Key: "gitlab-x", Name: "GL", Type: "gitlab",
+		APIURL: "https://gitlab.com/api/v4",
+	}
+	require.NoError(t, svc.CreatePlatform(context.Background(), p))
+
+	h := opsEngine()
+	h.POST("/api/v1/ops/migration", ExportGitHubMigration)
+	body := `{"platform_key":"gitlab-x"}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/migration",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "github")
+}
+
+func TestAuditReport_CSV(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/audit-report", AuditReport)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/audit-report?format=csv&limit=5", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, string(w.Header().Get("Content-Type")), "text/csv")
+}
+
+func TestSafeWorkDir(t *testing.T) {
+	ok, err := safeWorkDir("/tmp/gf", "task-1")
+	require.NoError(t, err)
+	assert.Contains(t, ok, "task-1")
+
+	for _, bad := range []string{"", "..", "a/b", `a\b`, "../etc", "a/../.."} {
+		_, err := safeWorkDir("/tmp/gf", bad)
+		require.Error(t, err, "expected reject for %q", bad)
+	}
 }

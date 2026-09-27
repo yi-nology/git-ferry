@@ -101,7 +101,7 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
 		Enabled: &req.Enabled, GitTags: &req.GitTags, GitForce: &req.GitForce,
 		GitPrune: &req.GitPrune,
-		GitLFS: &req.GitLfs, SyncWiki: &req.SyncWiki, GitBundle: &req.GitBundle, Submodules: &req.Submodules, GitPushPrune: &req.GitPushPrune,
+		GitLFS:   &req.GitLfs, SyncWiki: &req.SyncWiki, GitBundle: &req.GitBundle, Submodules: &req.Submodules, GitPushPrune: &req.GitPushPrune,
 		KeepDivergent: req.KeepDivergent,
 	})
 	if err != nil {

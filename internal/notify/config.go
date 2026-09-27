@@ -7,11 +7,11 @@ package notify
 
 // NtfyConfig ntfy.sh 推送配置。
 type NtfyConfig struct {
-	URL    string `yaml:"url"`
-	Token  string `yaml:"token"`
-	User   string `yaml:"user"`
-	Pass   string `yaml:"password"`
-	Topic  string `yaml:"topic"`
+	URL    string   `yaml:"url"`
+	Token  string   `yaml:"token"`
+	User   string   `yaml:"user"`
+	Pass   string   `yaml:"password"`
+	Topic  string   `yaml:"topic"`
 	Events []string `yaml:"events"` // 空=success+failed;可选 success/failed
 }
 
@@ -32,9 +32,9 @@ type HeartbeatConfig struct {
 
 // Config 通知总配置(壳层 overlay,不进 core)。
 type Config struct {
-	Ntfy      []NtfyConfig      `yaml:"ntfy"`
-	Gotify    []GotifyConfig    `yaml:"gotify"`
-	Heartbeat *HeartbeatConfig  `yaml:"heartbeat"`
+	Ntfy      []NtfyConfig     `yaml:"ntfy"`
+	Gotify    []GotifyConfig   `yaml:"gotify"`
+	Heartbeat *HeartbeatConfig `yaml:"heartbeat"`
 	// Webhook 通用 HTTP 回调
 	Webhook *WebhookConfig `yaml:"webhook"`
 	// OnlyFail true 时仅通知失败运行,降低噪声

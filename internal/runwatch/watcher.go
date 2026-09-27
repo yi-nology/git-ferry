@@ -7,6 +7,7 @@ package runwatch
 import (
 	"context"
 	"log/slog"
+	"sort"
 	"sync"
 	"time"
 
@@ -46,8 +47,8 @@ type Watcher struct {
 
 	mu       sync.Mutex
 	seen     map[uint]bool
-	retries  map[uint]int        // runID -> 已自动重跑次数
-	lastAuto map[uint]time.Time  // runID -> 上次自动重跑时间
+	retries  map[uint]int       // runID -> 已自动重跑次数
+	lastAuto map[uint]time.Time // runID -> 上次自动重跑时间
 	// firstPass 首轮只建水位不发通知,避免启动把历史全喷一遍
 	firstPass bool
 	// taskNames run.TaskKey -> 任务名(通知更友好)
@@ -101,6 +102,7 @@ func (w *Watcher) tick(ctx context.Context) {
 		slog.Warn("run watch collect failed", "error", err)
 		return
 	}
+	w.pruneMaps(runs)
 	sortRunsByID(runs)
 
 	w.mu.Lock()
@@ -205,6 +207,43 @@ func (w *Watcher) collectRecent(ctx context.Context) ([]*corebridge.SyncRun, err
 		}
 	}
 	return out, nil
+}
+
+// pruneMaps 防止 seen/retries/lastAuto 随 run ID 无限增长。
+// 只保留「本轮扫描到的 ID + 最近 1000 个」,旧 ID 丢弃。
+// run ID 单调递增,过期条目不会再被查询命中。
+func (w *Watcher) pruneMaps(current []*corebridge.SyncRun) {
+	const maxKeep = 1000
+	live := make(map[uint]bool, len(current))
+	for _, r := range current {
+		live[r.ID] = true
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if len(w.seen) <= maxKeep {
+		// 仍需清掉不在 live 且过老的,但小规模先只删非 live 超限的情况
+		return
+	}
+	for id := range w.seen {
+		if !live[id] {
+			delete(w.seen, id)
+			delete(w.retries, id)
+			delete(w.lastAuto, id)
+		}
+	}
+	// 超限时再砍:按 ID 升序删最老的
+	if len(w.seen) > maxKeep {
+		ids := make([]uint, 0, len(w.seen))
+		for id := range w.seen {
+			ids = append(ids, id)
+		}
+		sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+		for _, id := range ids[:len(ids)-maxKeep] {
+			delete(w.seen, id)
+			delete(w.retries, id)
+			delete(w.lastAuto, id)
+		}
+	}
 }
 
 func sortRunsByID(runs []*corebridge.SyncRun) {
