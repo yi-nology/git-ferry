@@ -48,6 +48,7 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.GET("/inventory", git_sync.RepoInventory)
 	ops.POST("/deploy-key", git_sync.GenerateDeployKey)
 	ops.GET("/issues-export", git_sync.ExportIssues)
+	ops.POST("/rebuild", git_sync.RebuildRepo)
 
 	// Swagger API 文档(公开,无需鉴权)
 	r.GET("/swagger/", swagger.SwaggerUI)

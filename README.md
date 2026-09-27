@@ -38,6 +38,9 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 | 部署密钥 | `POST /api/v1/ops/deploy-key` 生成 Ed25519 镜像部署密钥 |
 | Wiki 同步 | 任务开启 `sync_wiki`,自动推导 `.wiki.git` |
 | Issues 导出 | `GET /api/v1/ops/issues-export?repo_key=` JSON/CSV |
+| 通用回调 | `notify.webhook` 成功/失败分路 + HMAC 签名 |
+| 冷备 Bundle | 任务开启 `git_bundle`,`sync.backup_dir` + `backup_keep` 轮转 |
+| 一键重建 | `POST /api/v1/ops/rebuild` 清 workdir 全量重拉 |
 
 前端入口:**侧栏 → 运维中心**。配置见 `conf/config.example.yaml` 的 `runwatch` / `notify` 段。
 

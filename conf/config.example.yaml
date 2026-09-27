@@ -23,6 +23,8 @@ sync:
   max_concurrent: 5
   default_timeout: 300
   retry_count: 3
+  backup_dir: data/bundles   # git bundle 冷备目录(任务开启 git_bundle 时)
+  backup_keep: 5             # 每任务保留最近 N 份,0=不轮转
 
 webhook:
   rate_limit: 100

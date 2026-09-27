@@ -153,3 +153,24 @@ func TestExportIssues_MissingRepo(t *testing.T) {
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/issues-export", nil)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+func TestRebuild_MissingTaskKey(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/rebuild", RebuildRepo)
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/rebuild",
+		&ut.Body{Body: strings.NewReader(`{}`), Len: 2},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestRebuild_TaskNotFound(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/rebuild", RebuildRepo)
+	body := `{"task_key":"nope"}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/rebuild",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
