@@ -53,6 +53,8 @@ func (d *decoratedTool) InvokableRun(ctx context.Context, argsJSON string, opts 
 		sink(Event{Type: "tool_end", Tool: d.name, Result: truncate(out, resultCap)})
 		return out, nil
 	}
+	// 超大输出落盘,只回预览(控制上下文成本)
+	out = persistResult(d.name, out)
 	if tools.DangerTools[d.name] && strings.Contains(out, `"status":"confirmation_required"`) {
 		ev := Event{Type: "tool_confirm", Tool: d.name, Args: truncate(argsJSON, 300)}
 		if sc := tools.ScopeFrom(ctx); sc != nil {

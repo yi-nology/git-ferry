@@ -11,6 +11,7 @@ var DangerTools = map[string]bool{
 	"test_repo_connection":     true,
 	"test_platform_connection": true,
 	"retry_sync_run":           true,
+	"rebuild_task":             true,
 }
 
 // confirmRequiredPayload 返回给模型的"需要确认"标记。
@@ -32,6 +33,9 @@ func confirmRequiredPayload(toolName, token, argsJSON string) string {
 // dangerGuard 危险工具统一入口:未确认 → 登记待确认并返回标记;确认后
 // (handler 已 consume 并 MarkConsumed)→ 放行执行真实动作。
 func (r *Registry) dangerGuard(ctx context.Context, toolName, argsJSON string, exec func(ctx context.Context, argsJSON string) (string, error)) (string, error) {
+	if act, denied := r.guardByPolicy(toolName); act == ActionDenied {
+		return denied, nil
+	}
 	sc := ScopeFrom(ctx)
 	if sc == nil {
 		return `{"error":"内部错误: 会话上下文缺失,拒绝执行危险操作"}`, nil

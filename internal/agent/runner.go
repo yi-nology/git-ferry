@@ -98,6 +98,13 @@ func (r *Runner) Sessions() *SessionStore { return r.sessions }
 func (r *Runner) ModelName() string { return r.modelName }
 
 // SetMemory 注入记忆库与 prompt 摘要(可选)。
+// SetPolicy 注入工具权限策略。
+func (r *Runner) SetPolicy(p *tools.Policy) {
+	if r.reg != nil {
+		r.reg.SetPolicy(p)
+	}
+}
+
 func (r *Runner) SetMemory(mem tools.MemStore, manifest string) {
 	if r.reg != nil {
 		r.reg.SetMemoryStore(mem)

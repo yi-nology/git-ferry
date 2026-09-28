@@ -15,6 +15,7 @@ type Registry struct {
 	svc    SyncService
 	byName map[string]tool.InvokableTool
 	mem    MemStore
+	policy *Policy
 }
 
 func NewRegistry(svc SyncService) *Registry {
@@ -47,6 +48,9 @@ func NewRegistry(svc SyncService) *Registry {
 	r.add(must(utils.InferTool("recall_memory", "按关键字检索已记住的偏好与经验", r.recallIn)))
 	r.add(must(utils.InferTool("forget_memory", "删除一条记忆", r.forgetIn)))
 	r.add(must(utils.InferTool("plan_mode", "为复杂运维目标制定分步执行计划(先计划后执行)", r.planMode)))
+	r.add(must(utils.InferTool("set_permission_mode", "切换工具权限模式:default|readonly|audit", r.setModeIn)))
+	r.add(must(utils.InferTool("deep_analyze", "深度分析失败根因(一次完成健康/失败/playbook 汇总)", r.deepAnalyze)))
+	r.add(must(utils.InferTool("rebuild_task", "清空任务工作目录并全量重建(危险,需确认)", r.rebuildIn)))
 	return r
 }
 
