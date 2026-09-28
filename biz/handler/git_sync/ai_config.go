@@ -27,14 +27,6 @@ func SetAISettingsStore(get func() *agent.SettingsStore) {
 	aiSettingsStore.get = get
 }
 
-// setAgentRunnerRef 注入可热替换的 Runner(main 侧可变槽)。
-var setAgentRunnerRef func(r *agent.Runner)
-
-// SetAgentRunnerHotReload 注入 Runner 热替换钩子。
-func SetAgentRunnerHotReload(fn func(*agent.Runner)) {
-	setAgentRunnerRef = fn
-}
-
 func getAISettingsStore() *agent.SettingsStore {
 	if aiSettingsStore.get == nil {
 		return nil
@@ -61,7 +53,8 @@ func AIGetConfig(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, consts.StatusNotImplemented, "ai_settings_unavailable")
 		return
 	}
-	response.Success(c, agent.View(st.Get()))
+	cur := st.Get()
+	response.Success(c, agent.View(&cur))
 }
 
 // AIUpdateConfig POST /api/v1/ai/config —— 更新配置并热生效。
@@ -81,7 +74,7 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	if strings.Contains(key, "****") {
 		key = ""
 	}
-	saved, err := st.Save(agent.Settings{
+	saved, err := st.Save(&agent.Settings{
 		Enabled:            req.Enabled,
 		BaseURL:            req.BaseURL,
 		Model:              req.Model,
@@ -104,14 +97,14 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 }
 
 // rebuildAgentRunner 按设置重建 Runner;由 main 注入实际构建逻辑。
-var rebuildAgentRunnerFn func(agent.Settings) error
+var rebuildAgentRunnerFn func(*agent.Settings) error
 
 // SetAIRebuildRunner 注入 Runner 重建函数。
-func SetAIRebuildRunner(fn func(agent.Settings) error) {
+func SetAIRebuildRunner(fn func(*agent.Settings) error) {
 	rebuildAgentRunnerFn = fn
 }
 
-func rebuildAgentRunner(st agent.Settings) error {
+func rebuildAgentRunner(st *agent.Settings) error {
 	if rebuildAgentRunnerFn == nil {
 		return fmt.Errorf("runner rebuild not wired")
 	}
@@ -161,7 +154,7 @@ func AITestConfig(ctx context.Context, c *app.RequestContext) {
 
 func probeOpenAICompat(ctx context.Context, client *http.Client, base, key, model string) (int, bool, string) {
 	// 1) GET /models
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models", http.NoBody)
 	if err != nil {
 		return 0, false, err.Error()
 	}
@@ -172,7 +165,7 @@ func probeOpenAICompat(ctx context.Context, client *http.Client, base, key, mode
 	if err != nil {
 		return 0, false, "无法连接端点: " + err.Error()
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	if resp.StatusCode >= 400 {
 		return resp.StatusCode, false, fmt.Sprintf("端点返回 HTTP %d", resp.StatusCode)

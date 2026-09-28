@@ -50,13 +50,14 @@ func main() {
 	if err != nil {
 		serve.ExitOnFail("open ai settings failed", err)
 	}
-	aiSettings := agent.MergeSettings(*yamlAI, aiStore.Get())
+	cur := aiStore.Get()
+	aiSettings := agent.MergeSettings(yamlAI, &cur)
 
 	var aiRunnerMu sync.RWMutex
 	var aiRunner *agent.Runner
 
-	buildRunner := func(st agent.Settings) (*agent.Runner, error) {
-		if !st.Enabled {
+	buildRunner := func(st *agent.Settings) (*agent.Runner, error) {
+		if st == nil || !st.Enabled {
 			return nil, nil
 		}
 		cfg := st.ToConfig()
@@ -88,7 +89,7 @@ func main() {
 	}
 
 	// 启动时按合并结果构建(启用失败不退出:设置页可改后热生效)
-	if r, err := buildRunner(aiSettings); err != nil {
+	if r, err := buildRunner(&aiSettings); err != nil {
 		slog.Warn("ai disabled at boot, fix via settings page", "error", err)
 	} else {
 		aiRunnerMu.Lock()
@@ -105,7 +106,7 @@ func main() {
 		return aiRunner
 	})
 	git_sync.SetAISettingsStore(func() *agent.SettingsStore { return aiStore })
-	git_sync.SetAIRebuildRunner(func(st agent.Settings) error {
+	git_sync.SetAIRebuildRunner(func(st *agent.Settings) error {
 		r, err := buildRunner(st)
 		if err != nil {
 			return err

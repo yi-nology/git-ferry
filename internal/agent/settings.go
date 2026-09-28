@@ -23,6 +23,7 @@ type Settings struct {
 	TimeoutSeconds     int     `json:"timeout_seconds"`
 	MaxConcurrentChats int     `json:"max_concurrent_chats"`
 	// APIKey 明文仅存于本文件;读接口永远只回 has_api_key / masked。
+	//nolint:gosec // G117:字段名 APIKey 命中密钥模式,此处确为密钥存储,不回传明文
 	APIKey    string    `json:"api_key,omitempty"`
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
@@ -72,15 +73,15 @@ func (s *SettingsStore) Get() Settings {
 }
 
 // Save 校验后落盘并替换内存快照。
-func (s *SettingsStore) Save(in Settings) (Settings, error) {
+func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 	in.BaseURL = strings.TrimSpace(in.BaseURL)
 	in.Model = strings.TrimSpace(in.Model)
 	if in.Enabled {
 		if in.BaseURL == "" {
-			return Settings{}, fmt.Errorf("base_url 不能为空")
+			return nil, fmt.Errorf("base_url 不能为空")
 		}
 		if in.Model == "" {
-			return Settings{}, fmt.Errorf("model 不能为空")
+			return nil, fmt.Errorf("model 不能为空")
 		}
 		// 密钥可沿用已存值:允许只改模型/地址不重传 key
 		s.mu.RLock()
@@ -90,7 +91,7 @@ func (s *SettingsStore) Save(in Settings) (Settings, error) {
 			in.APIKey = prevKey
 		}
 		if in.APIKey == "" {
-			return Settings{}, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
+			return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
 		}
 	}
 	if in.Temperature <= 0 {
@@ -108,22 +109,23 @@ func (s *SettingsStore) Save(in Settings) (Settings, error) {
 	in.UpdatedAt = time.Now()
 
 	s.mu.Lock()
-	s.cur = in
+	s.cur = *in
 	s.mu.Unlock()
 
 	if err := s.persist(in); err != nil {
-		return Settings{}, err
+		return nil, err
 	}
 	return in, nil
 }
 
-func (s *SettingsStore) persist(st Settings) error {
+func (s *SettingsStore) persist(st *Settings) error {
 	if s.path == "" {
 		return fmt.Errorf("ai settings path empty")
 	}
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o750); err != nil {
 		return fmt.Errorf("mkdir ai settings: %w", err)
 	}
+	//nolint:gosec // G117:APIKey 仅序列化到本地 0600 设置文件,读接口不回传明文
 	data, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
 		return err
@@ -136,7 +138,7 @@ func (s *SettingsStore) persist(st Settings) error {
 }
 
 // View 生成脱敏视图。
-func View(st Settings) SettingsView {
+func View(st *Settings) SettingsView {
 	v := SettingsView{
 		Enabled:            st.Enabled,
 		BaseURL:            st.BaseURL,
@@ -166,7 +168,7 @@ func MaskKey(key string) string {
 }
 
 // ToConfig 转成运行时 agent.Config(补齐默认)。
-func (st Settings) ToConfig() *Config {
+func (st *Settings) ToConfig() *Config {
 	cfg := &Config{
 		Enabled:            st.Enabled,
 		BaseURL:            st.BaseURL,
@@ -192,8 +194,8 @@ func (st Settings) ToConfig() *Config {
 }
 
 // MergeSettings yaml 默认值 + 设置文件覆盖(设置文件为准,空则回退 yaml)。
-func MergeSettings(yamlCfg Config, st Settings) Settings {
-	out := st
+func MergeSettings(yamlCfg *Config, st *Settings) Settings {
+	out := *st
 	if out.BaseURL == "" {
 		out.BaseURL = yamlCfg.BaseURL
 	}
