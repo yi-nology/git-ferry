@@ -30,6 +30,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'local-repos/:id', name: 'LocalRepoDetail', component: () => import('@/views/repos/LocalRepoDetail.vue'), meta: { title: '本地仓库' } },
       { path: 'logs/operations', name: 'OperationLogs', component: () => import('@/views/logs/OperationLogs.vue'), meta: { title: '操作日志' } },
       { path: 'settings/platforms', name: 'PlatformSettings', component: () => import('@/views/settings/PlatformSettings.vue'), meta: { title: '平台管理' } },
+      { path: 'settings/ai', name: 'AISettings', component: () => import('@/views/settings/AISettings.vue'), meta: { title: 'AI 助手配置' } },
       { path: ':pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue'), meta: { title: '页面不存在' } },
     ],
   },

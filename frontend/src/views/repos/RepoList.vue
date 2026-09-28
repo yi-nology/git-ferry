@@ -1,12 +1,7 @@
 <template>
   <div class="page-container">
-    <!-- Page Header -->
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">仓库管理</h1>
-        <p class="page-subtitle">管理您的代码仓库，配置同步源和目标</p>
-      </div>
-      <a-space>
+    <PageHeader title="仓库管理" subtitle="管理代码仓库，配置同步源与目标">
+      <template #actions>
         <a-button @click="handleSyncPlatform">
           <template #icon><SyncOutlined /></template>
           同步平台仓库
@@ -15,8 +10,8 @@
           <template #icon><PlusOutlined /></template>
           添加仓库
         </a-button>
-      </a-space>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Filter Bar -->
     <div class="filter-bar">
@@ -325,6 +320,7 @@ import {
   BranchesOutlined,
 } from '@ant-design/icons-vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { useRepoStore } from '@/stores/repo'
 import { useSyncTaskStore } from '@/stores/syncTask'
 import { platformApi } from '@/api/platform'

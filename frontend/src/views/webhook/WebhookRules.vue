@@ -1,15 +1,11 @@
 <template>
   <div class="page-container">
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">Webhook 规则</h1>
-        <p class="page-subtitle">配置仓库的 Webhook 触发规则</p>
-      </div>
-      <a-space>
+    <PageHeader title="Webhook 规则" subtitle="配置仓库的 Webhook 触发规则">
+      <template #actions>
         <a-select
           v-model:value="repoKey"
           placeholder="选择仓库"
-          style="width: 220px"
+          style="width: 200px"
           show-search
           :filter-option="filterRepoOption"
           @change="loadRules"
@@ -26,8 +22,8 @@
           <template #icon><ApiOutlined /></template>
           平台 Webhook
         </a-button>
-      </a-space>
-    </div>
+      </template>
+    </PageHeader>
 
     <a-table
       :columns="columns"
@@ -267,6 +263,7 @@ import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 import { makeRepoFilter } from '@/utils/repoFilter'
 import { buildWebhookReceiveUrl } from '@/constants/webhook'
 import { webhookApi } from '@/api'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const webhookStore = useWebhookStore()
 const repoStore = useRepoStore()

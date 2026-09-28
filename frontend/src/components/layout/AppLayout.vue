@@ -1,7 +1,7 @@
 <template>
   <a-layout class="app-layout">
     <AppSider :collapsed="collapsed" />
-    <a-layout>
+    <a-layout class="app-main">
       <AppHeader :collapsed="collapsed" @toggle="collapsed = !collapsed" />
       <a-layout-content class="app-content">
         <router-view v-slot="{ Component }">
@@ -29,19 +29,26 @@ const cachedViews = ['Dashboard', 'RepoList', 'SyncTaskList', 'SyncRecords']
 </script>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+
 .app-layout {
   min-height: 100vh;
 }
 
+.app-main {
+  background: $bg-canvas;
+  min-width: 0;
+}
+
 .app-content {
-  padding: 24px;
+  padding: $content-padding;
   min-height: 280px;
-  background: #f5f5f5;
+  background: $bg-canvas;
 }
 
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.15s ease;
+  transition: opacity 0.12s ease;
 }
 
 .page-fade-enter-from,

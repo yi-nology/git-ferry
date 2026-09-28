@@ -1,9 +1,13 @@
 <template>
-  <div class="mirror-list">
-    <div class="page-header">
-      <h2>镜像中心</h2>
-      <p class="subtitle">开源公开发布与仓库备份:把源仓库以独立快照推送到镜像远端</p>
-    </div>
+  <div class="page-container mirror-list">
+    <PageHeader title="镜像中心" subtitle="开源公开发布与仓库备份：以独立快照推送到镜像远端">
+      <template #actions>
+        <a-button type="primary" @click="showCreate = true">
+          <template #icon><PlusOutlined /></template>
+          新建通道
+        </a-button>
+      </template>
+    </PageHeader>
 
     <div class="toolbar">
       <a-radio-group v-model:value="modeFilter" button-style="solid" size="small">
@@ -11,10 +15,6 @@
         <a-radio-button value="publish">开源发布</a-radio-button>
         <a-radio-button value="backup">仓库备份</a-radio-button>
       </a-radio-group>
-      <a-button type="primary" @click="showCreate = true">
-        <template #icon><PlusOutlined /></template>
-        新建通道
-      </a-button>
     </div>
 
     <a-spin :spinning="isLoading">
@@ -58,6 +58,7 @@ import { PlusOutlined, ArrowRightOutlined } from '@ant-design/icons-vue'
 import { useMirrorChannelsQuery } from '@/composables/useMirror'
 import type { MirrorChannel } from '@/api/mirror'
 import ChannelFormDrawer from './components/ChannelFormDrawer.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const router = useRouter()
 const modeFilter = ref('')

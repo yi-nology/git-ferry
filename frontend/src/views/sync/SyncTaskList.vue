@@ -1,48 +1,26 @@
 <template>
   <div class="page-container">
-    <!-- Page Header -->
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">同步任务</h1>
-        <p class="page-subtitle">管理代码仓库间的同步任务</p>
-      </div>
-      <a-button type="primary" @click="openCreate">
-        <template #icon><PlusOutlined /></template>
-        创建任务
-      </a-button>
-    </div>
+    <PageHeader title="同步任务" subtitle="管理仓库间的分支同步任务">
+      <template #actions>
+        <a-button @click="handleRefresh" :loading="taskStore.loading">
+          <template #icon><ReloadOutlined /></template>
+          刷新
+        </a-button>
+        <a-button type="primary" @click="openCreate">
+          <template #icon><PlusOutlined /></template>
+          创建任务
+        </a-button>
+      </template>
+    </PageHeader>
 
-    <!-- Stats Cards -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon blue"><UnorderedListOutlined /></div>
-        <div class="stat-content">
-          <div class="stat-num">{{ taskStore.total }}</div>
-          <div class="stat-name">总任务数</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green"><CheckCircleOutlined /></div>
-        <div class="stat-content">
-          <div class="stat-num">{{ successCount }}</div>
-          <div class="stat-name">成功</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon orange"><SyncOutlined /></div>
-        <div class="stat-content">
-          <div class="stat-num">{{ runningCount }}</div>
-          <div class="stat-name">运行中</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon red"><CloseCircleOutlined /></div>
-        <div class="stat-content">
-          <div class="stat-num">{{ failedCount }}</div>
-          <div class="stat-name">失败</div>
-        </div>
-      </div>
-    </div>
+    <MetricStrip
+      :items="[
+        { label: '总任务', value: taskStore.total },
+        { label: '成功', value: successCount, tone: 'success' },
+        { label: '运行中', value: runningCount, tone: 'info' },
+        { label: '失败', value: failedCount, tone: failedCount ? 'danger' : 'default' },
+      ]"
+    />
 
     <!-- Filter Bar -->
     <div class="filter-bar">
@@ -79,10 +57,6 @@
           {{ repo.name }}
         </a-select-option>
       </a-select>
-      <a-button @click="handleRefresh" :loading="taskStore.loading">
-        <template #icon><ReloadOutlined /></template>
-        刷新
-      </a-button>
     </div>
 
     <!-- Batch Actions Bar -->
@@ -105,15 +79,16 @@
     </div>
 
     <!-- Task Table -->
-    <a-table
-      :columns="columns"
-      :data-source="taskStore.tasks"
-      :loading="taskStore.loading"
-      :pagination="paginationConfig"
-      :row-selection="{ selectedRowKeys, onChange: onSelectChange }"
-      row-key="key"
-      @change="handleTableChange"
-    >
+    <div class="content-card">
+      <a-table
+        :columns="columns"
+        :data-source="taskStore.tasks"
+        :loading="taskStore.loading"
+        :pagination="paginationConfig"
+        :row-selection="{ selectedRowKeys, onChange: onSelectChange }"
+        row-key="key"
+        @change="handleTableChange"
+      >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'name'">
           <span class="task-name">{{ record.name }}</span>
@@ -179,6 +154,7 @@
         </a-empty>
       </template>
     </a-table>
+    </div>
 
     <!-- Create/Edit Modal -->
     <a-modal
@@ -295,10 +271,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   ArrowRightOutlined,
-  UnorderedListOutlined,
-  CheckCircleOutlined,
-  SyncOutlined,
-  CloseCircleOutlined,
   SearchOutlined,
   ReloadOutlined,
 } from '@ant-design/icons-vue'
@@ -307,6 +279,8 @@ import { useRepoStore } from '@/stores/repo'
 import type { SyncTask } from '@/types'
 import type { TablePaginationConfig } from 'ant-design-vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import MetricStrip from '@/components/common/MetricStrip.vue'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 import { makeRepoFilter } from '@/utils/repoFilter'
 import { STATUS } from '@/constants/status'

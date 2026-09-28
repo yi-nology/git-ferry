@@ -1,11 +1,7 @@
 <template>
   <div class="page-container">
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">操作日志</h1>
-        <p class="page-subtitle">记录用户的登录、操作、配置变更等行为</p>
-      </div>
-      <a-space>
+    <PageHeader title="操作日志" subtitle="记录登录、操作与配置变更">
+      <template #actions>
         <a-button @click="handleExport">
           <template #icon><DownloadOutlined /></template>
           导出日志
@@ -14,39 +10,16 @@
           <template #icon><ReloadOutlined /></template>
           刷新
         </a-button>
-      </a-space>
-    </div>
+      </template>
+    </PageHeader>
 
-    <!-- Stats Cards -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #e6f7ff; color: #1677ff;">
-          <CalendarOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.today }}</div>
-          <div class="stat-label">今日操作</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #f6ffed; color: #52c41a;">
-          <CalendarOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.week }}</div>
-          <div class="stat-label">本周操作</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #fff7e6; color: #faad14;">
-          <FileTextOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">总操作数</div>
-        </div>
-      </div>
-    </div>
+    <MetricStrip
+      :items="[
+        { label: '今日操作', value: stats.today },
+        { label: '本周操作', value: stats.week },
+        { label: '总操作', value: stats.total },
+      ]"
+    />
 
     <!-- Filter Bar -->
     <div class="filter-bar carded">
@@ -138,8 +111,6 @@ import {
   ReloadOutlined,
   SearchOutlined,
   DownloadOutlined,
-  CalendarOutlined,
-  FileTextOutlined,
   UndoOutlined,
 } from '@ant-design/icons-vue'
 import { logApi } from '@/api'
@@ -147,6 +118,8 @@ import type { OperationLog, OperationLogParams } from '@/types/api'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import dayjs, { type Dayjs } from 'dayjs'
 import { formatDate } from '@/utils'
+import PageHeader from '@/components/common/PageHeader.vue'
+import MetricStrip from '@/components/common/MetricStrip.vue'
 
 const loading = ref(false)
 const logs = ref<OperationLog[]>([])

@@ -20,6 +20,29 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 - RESTful API for manual operations
 - SQLite and MySQL database support
 - AI 运维助手(eino):自然语言查询仓库/任务/历史/平台,危险操作需界面确认
+- **Web 控制台**:中性运维台风格 UI,侧栏分组导航,仪表盘优先暴露失败任务
+
+## Web 控制台
+
+Vue 3 + Ant Design Vue 自托管控制台,视觉锚点为 GitHub Enterprise / Linear 式冷静运维台:
+中性色优先、语义色克制、指标条替代彩色大图标。
+
+| 入口 | 说明 |
+|------|------|
+| 仪表盘 | 指标条 + 失败任务「需要关注」+ 最近同步/仓库 |
+| 同步任务 / 执行记录 | 任务 CRUD、筛选、批量操作、执行详情 |
+| 仓库管理 / 镜像中心 | 仓库卡片、统一配置、开源发布与备份通道 |
+| Webhook 规则 / 事件 | 触发规则与接收事件流 |
+| 运维中心 | 健康评分、资产盘点、策略模板、部署密钥、冷备 |
+| AI 助手 | 浮动球/顶栏对话;系统 → AI 助手配置模型与端点 |
+| 平台管理 | Git 托管平台凭据与连接测试 |
+
+![登录](docs/screenshots/login.png)
+![仪表盘](docs/screenshots/dashboard.png)
+![同步任务](docs/screenshots/sync-tasks.png)
+![AI 助手配置](docs/screenshots/ai-settings.png)
+
+更多截图见 [`docs/screenshots/`](docs/screenshots/)。前端开发说明见 [`frontend/README.md`](frontend/README.md)。
 
 ## 运维中心(P0-P2)
 
@@ -53,12 +76,26 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 基于 [CloudWeGo eino](https://github.com/cloudwego/eino) 的对话式运维助手,默认**关闭**,
 不影响现有功能(未启用时 `/api/v1/ai/*` 返回 501,前端隐藏入口)。
 
-**启用三步:**
+### 界面配置(推荐)
+
+侧栏 **系统 → AI 助手**:
+
+1. 打开「启用 AI 助手」;
+2. 选择服务预设(OpenAI / DashScope / DeepSeek / Ollama / vLLM / 自定义),或直接填 **API Base URL**;
+3. 选择或输入 **模型**(`gpt-4o-mini`、`qwen-plus`、`qwen2.5:14b` 等);
+4. 填写 **API Key**(本地端点可留空),可先 **测试连接**;
+5. **保存并生效** —— 配置写入 `data/ai-settings.json`,Runner 热重建,无需重启进程。
+
+密钥只存服务端设置文件,接口永远只回 `has_api_key` / 脱敏值。
+
+![AI 助手配置](docs/screenshots/ai-settings.png)
+
+### 配置文件 / 环境变量
 
 1. `conf/config.yaml` 打开 `ai` 段(`base_url` 可指向任意 OpenAI 兼容端点;
    生产内网可指向 vLLM / Ollama,如 `http://127.0.0.1:11434/v1`);
-2. 设置环境变量 `GIT_SYNC_AI_API_KEY`(密钥不写入配置文件);
-3. 重启服务。
+2. 设置环境变量 `GIT_SYNC_AI_API_KEY`(密钥不写入 yaml;界面保存的密钥同样可用);
+3. 重启服务。`data/ai-settings.json` 存在时优先覆盖 yaml 默认值。
 
 **能力:** 24 个工具(deep_analyze/plan_mode/记忆/权限分级/结果持久化):查询/健康评分/资产盘点/失败诊断/记忆(plan_mode/remember/recall)/危险操作确认 —— 仓库/分支/任务/执行历史/执行详情/平台/Webhook 规则/
 系统概览等只读查询直接执行;`run_task`(立即同步)、`test_repo_connection`、
@@ -66,6 +103,16 @@ GitFerry is a self-hosted hub for Git repositories: sync across platforms, publi
 
 **安全边界:** 只读默认;git 凭据与模型 Key 永不进入 prompt/日志;工具结果仅作为数据注入
 (防 prompt 注入);不提供任何增删改与命令执行类工具。
+
+**相关 API:**
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/ai/status` | 探测是否启用(501=未启用) |
+| POST | `/api/v1/ai/chat` | SSE 流式对话 |
+| GET | `/api/v1/ai/config` | 读配置(密钥脱敏) |
+| POST | `/api/v1/ai/config` | 保存并热生效 |
+| POST | `/api/v1/ai/config/test` | 探测 OpenAI 兼容端点 |
 
 ## Related repositories
 

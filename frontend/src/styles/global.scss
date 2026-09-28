@@ -15,16 +15,36 @@ body,
 
 body {
   font-family: $font-family;
+  font-size: $fs-md;
   color: $text-primary;
-  background-color: $bg-secondary;
+  background-color: $bg-canvas;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-/* ---------- 页面容器 / 头部 ---------- */
+// 滚动条：细、灰、不抢视线
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c7cdd4;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8b0b8;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- 页面骨架 ---------- */
 .page-container {
-  background: $bg-secondary;
+  background: transparent;
   min-height: 100%;
+  max-width: $content-max;
+  margin: 0 auto;
 }
 
 .page-header-bar {
@@ -36,81 +56,126 @@ body {
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: $fs-xl;
   font-weight: 600;
   color: $text-primary;
   margin: 0;
   line-height: 1.3;
+  letter-spacing: -0.2px;
 }
 
 .page-subtitle {
-  font-size: 14px;
+  font-size: $fs-body;
   color: $text-secondary;
   margin: 4px 0 0 0;
 }
 
-/* ---------- 统计卡 ---------- */
+/* ---------- 指标条（替代彩色大图标统计卡） ---------- */
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: $spacing-md;
   margin-bottom: $spacing-lg;
 }
 
 .stat-card {
   background: $bg-primary;
-  border-radius: $radius-md;
-  padding: 18px 20px;
-  box-shadow: $shadow-card;
+  border: 1px solid $border-light;
+  border-radius: $radius-lg;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   gap: $spacing-md;
-  transition: box-shadow 0.2s ease;
+  transition: border-color $duration-fast $ease, background $duration-fast $ease;
 
   &:hover {
-    box-shadow: $shadow-card-hover;
+    border-color: $border;
+    background: #fcfcfd;
+  }
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: $primary-border;
+    }
   }
 }
 
+// 旧版彩色图标底：降噪为浅中性
 .stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: $radius-lg;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 16px;
   flex-shrink: 0;
+  background: $bg-subtle;
+  color: $text-secondary;
 
-  &.blue   { background: #e6f7ff; color: $primary; }
-  &.green  { background: #f6ffed; color: $success; }
-  &.orange { background: #fff7e6; color: $warning; }
-  &.red    { background: #fff2f0; color: $error; }
-  &.purple { background: #f9f0ff; color: #722ed1; }
-  &.cyan   { background: #e6fffb; color: #13c2c2; }
+  &.blue {
+    background: $primary-soft;
+    color: $primary;
+  }
+  &.green {
+    background: $success-soft;
+    color: $success;
+  }
+  &.orange {
+    background: $warning-soft;
+    color: $warning;
+  }
+  &.red {
+    background: $error-soft;
+    color: $error;
+  }
+  &.purple {
+    background: #f0e7ff;
+    color: #7c3aed;
+  }
+  &.cyan {
+    background: #e6fffb;
+    color: #0f766e;
+  }
 }
 
 .stat-content {
   flex: 1;
+  min-width: 0;
 }
 
-// 兼容两种命名(stat-num/stat-name 与 stat-value/stat-label)
 .stat-num,
 .stat-value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 600;
   color: $text-primary;
-  line-height: 1.2;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
 }
 
 .stat-name,
 .stat-label {
-  font-size: 13px;
+  font-size: $fs-caption;
   color: $text-secondary;
   margin-top: 2px;
+  font-weight: 500;
 }
 
-/* ---------- 过滤栏 ---------- */
+.stat-arrow {
+  color: $text-tertiary;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity $duration-fast $ease;
+
+  .stat-card:hover & {
+    opacity: 1;
+  }
+}
+
+/* ---------- 筛选栏 ---------- */
 .filter-bar {
   display: flex;
   align-items: center;
@@ -132,39 +197,64 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
-  border-radius: $radius-md;
-  padding: 8px 16px;
+  background: $primary-soft;
+  border: 1px solid $primary-border;
+  border-radius: $radius-lg;
+  padding: 8px 14px;
   margin-bottom: $spacing-md;
 }
 
 /* ---------- 内容卡 ---------- */
 .content-card {
   background: $bg-primary;
-  border-radius: $radius-md;
-  box-shadow: $shadow-card;
+  border: 1px solid $border-light;
+  border-radius: $radius-lg;
   overflow: hidden;
 
   .card-header {
-    padding: $spacing-md $spacing-lg;
-    border-bottom: 1px solid $border;
+    padding: 12px 16px;
+    border-bottom: 1px solid $border-muted;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 48px;
   }
 
   .card-body {
-    padding: $spacing-lg;
+    padding: 0;
+
+    // 表格嵌在卡里时去掉双边框感
+    .ant-table-wrapper,
+    .ant-table {
+      background: transparent;
+    }
+
+    .ant-table-thead > tr > th {
+      background: $bg-canvas;
+      border-bottom: 1px solid $border-muted;
+    }
+
+    .ant-table-tbody > tr > td {
+      border-bottom: 1px solid $border-muted;
+    }
+
+    .ant-table-tbody > tr:last-child > td {
+      border-bottom: none;
+    }
+  }
+
+  .card-body.is-padded {
+    padding: 16px;
   }
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: $fs-md;
   font-weight: 600;
   color: $text-primary;
   display: flex;
   align-items: center;
+  gap: 6px;
 }
 
 /* ---------- 通用小元素 ---------- */
@@ -172,40 +262,69 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 10px;
-  border-radius: $radius-sm;
+  padding: 1px 8px 1px 6px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
+  line-height: 18px;
+  border: 1px solid transparent;
 
-  &.success { background: #f6ffed; color: $success; }
-  &.running { background: #e6f7ff; color: $primary; }
-  &.failed  { background: #fff2f0; color: $error; }
-  &.warning { background: #fff7e6; color: $warning; }
-  &.idle    { background: #f5f5f5; color: $text-secondary; }
+  &.success {
+    background: $success-soft;
+    color: $success;
+    border-color: $success-border;
+  }
+  &.running {
+    background: $running-soft;
+    color: $running;
+    border-color: $running-border;
+  }
+  &.failed {
+    background: $error-soft;
+    color: $error;
+    border-color: $error-border;
+  }
+  &.warning {
+    background: $warning-soft;
+    color: $warning;
+    border-color: $warning-border;
+  }
+  &.idle {
+    background: $bg-subtle;
+    color: $text-secondary;
+    border-color: $border-light;
+  }
 }
 
 .branch-tag {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
-  background: #f5f5f5;
+  padding: 0 6px;
+  height: 22px;
+  background: $bg-subtle;
   border-radius: $radius-sm;
   font-size: 12px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: $font-mono;
   color: $text-primary;
-  border: 1px solid #f0f0f0;
+  border: 1px solid $border-muted;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .time-text {
   color: $text-secondary;
-  font-size: 13px;
+  font-size: $fs-body;
+  font-variant-numeric: tabular-nums;
 }
 
 .task-link {
   color: $text-primary;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color $duration-fast $ease;
 
   &:hover {
     color: $primary;
@@ -225,40 +344,82 @@ body {
 }
 
 .form-tip {
-  font-size: 12px;
-  color: $text-secondary;
+  font-size: $fs-caption;
+  color: $text-tertiary;
   margin-top: 4px;
+  line-height: 1.5;
 
   .anticon {
     margin-right: 4px;
   }
 }
 
+/* ---------- 分区标题 ---------- */
+.section-title {
+  font-size: $fs-caption;
+  font-weight: 600;
+  color: $text-secondary;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: $spacing-sm;
+}
+
 /* ---------- Ant Design 微调 ---------- */
 .ant-table {
   .ant-table-thead > tr > th {
     font-weight: 600;
-    color: $text-primary;
-    background: #fafafa;
+    color: $text-secondary;
+    background: $bg-canvas;
+    font-size: $fs-caption;
+    letter-spacing: 0.2px;
   }
 
   .ant-table-tbody > tr:hover > td {
-    background: #f9fcff;
+    background: $bg-canvas;
   }
 }
 
 .ant-modal-header {
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid $border-muted;
+  padding: 14px 20px;
+}
+
+.ant-modal-body {
+  padding: 20px;
 }
 
 .ant-modal-footer {
-  border-top: 1px solid $border;
+  border-top: 1px solid $border-muted;
+  padding: 12px 20px;
+}
+
+.ant-tabs-tab {
+  font-size: $fs-md;
+  padding: 10px 2px;
+}
+
+.ant-btn {
+  font-weight: 500;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-picker {
+  border-color: $border;
+}
+
+// 列表页表格统一从卡片边界收口
+.page-container > .ant-table-wrapper {
+  background: $bg-primary;
+  border: 1px solid $border-light;
+  border-radius: $radius-lg;
+  overflow: hidden;
 }
 
 /* ---------- 响应式 ---------- */
 @media (max-width: 1200px) {
   .stats-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

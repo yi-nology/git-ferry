@@ -1,71 +1,46 @@
 <template>
   <div class="page-container">
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">仪表盘</h1>
-        <p class="page-subtitle">系统运行概览</p>
-      </div>
-      <a-space>
-        <a-button @click="router.push('/sync/new')">
-          <template #icon><PlusOutlined /></template>
-          新建同步任务
-        </a-button>
-        <a-button type="primary" @click="router.push('/repos')">
+    <PageHeader title="仪表盘" subtitle="同步任务与仓库的运行概览">
+      <template #actions>
+        <a-button @click="router.push('/repos')">
           <template #icon><FolderAddOutlined /></template>
           添加仓库
         </a-button>
-      </a-space>
-    </div>
+        <a-button type="primary" @click="router.push('/sync/new')">
+          <template #icon><PlusOutlined /></template>
+          新建同步任务
+        </a-button>
+      </template>
+    </PageHeader>
 
-    <!-- Stats Cards -->
-    <div class="stats-row">
-      <div
-        v-for="card in statCards"
-        :key="card.path"
-        class="stat-card clickable"
-        role="button"
-        tabindex="0"
-        @click="router.push(card.path)"
-        @keydown.enter="router.push(card.path)"
-      >
-        <div class="stat-icon" :class="card.color"><component :is="card.icon" /></div>
-        <div class="stat-content">
-          <div class="stat-num">{{ card.value }}</div>
-          <div class="stat-name">{{ card.label }}</div>
-        </div>
-        <div class="stat-arrow"><RightOutlined /></div>
+    <!-- 关键指标：无彩色图标，失败一眼可见 -->
+    <MetricStrip :items="metrics" />
+
+    <!-- 待处理：失败任务优先于装饰性快捷入口 -->
+    <div v-if="failedTasks.length" class="attention-card">
+      <div class="attention-head">
+        <AlertOutlined class="attention-icon" />
+        <span>需要关注</span>
+        <a-tag color="red" class="attention-count">{{ failedTasks.length }}</a-tag>
       </div>
+      <ul class="attention-list">
+        <li v-for="t in failedTasks" :key="t.key" class="attention-item">
+          <span class="attention-name">{{ t.name }}</span>
+          <span class="branch-tag">{{ t.source_branch }}</span>
+          <ArrowRightOutlined class="attention-arrow" />
+          <span class="branch-tag">{{ t.target_branch }}</span>
+          <a-button type="link" size="small" @click="router.push('/sync')">处理</a-button>
+        </li>
+      </ul>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="quick-actions">
-      <div class="section-title">快捷操作</div>
-      <div class="action-grid">
-        <div
-          v-for="act in quickActions"
-          :key="act.path"
-          class="action-item"
-          role="button"
-          tabindex="0"
-          @click="router.push(act.path)"
-          @keydown.enter="router.push(act.path)"
-        >
-          <div class="action-icon" :class="act.color"><component :is="act.icon" /></div>
-          <span>{{ act.label }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Content Grid -->
+    <!-- 内容双栏 -->
     <div class="grid-row">
-      <div class="content-card">
+      <section class="content-card">
         <div class="card-header">
-          <span class="card-title">
-            <SyncOutlined style="margin-right: 8px; color: #1677ff;" />
-            最近同步任务
-          </span>
+          <span class="card-title">最近同步任务</span>
           <router-link to="/sync">
-            <a-button type="link" size="small">查看全部 <RightOutlined /></a-button>
+            <a-button type="link" size="small">查看全部</a-button>
           </router-link>
         </div>
         <div class="card-body">
@@ -82,7 +57,7 @@
               </template>
               <template v-if="column.dataIndex === 'branch'">
                 <span class="branch-tag">{{ record.source_branch }}</span>
-                <ArrowRightOutlined style="margin: 0 4px; color: #bfbfbf; font-size: 12px;" />
+                <ArrowRightOutlined class="cell-arrow" />
                 <span class="branch-tag">{{ record.target_branch }}</span>
               </template>
               <template v-if="column.dataIndex === 'last_status'">
@@ -93,22 +68,19 @@
               </template>
             </template>
             <template #emptyText>
-              <a-empty description="暂无同步任务" :image-style="{ height: '60px' }">
+              <a-empty description="暂无同步任务" :image-style="{ height: '56px' }">
                 <a-button type="primary" size="small" @click="router.push('/sync/new')">创建任务</a-button>
               </a-empty>
             </template>
           </a-table>
         </div>
-      </div>
+      </section>
 
-      <div class="content-card">
+      <section class="content-card">
         <div class="card-header">
-          <span class="card-title">
-            <FolderOutlined style="margin-right: 8px; color: #52c41a;" />
-            仓库列表
-          </span>
+          <span class="card-title">最近仓库</span>
           <router-link to="/repos">
-            <a-button type="link" size="small">查看全部 <RightOutlined /></a-button>
+            <a-button type="link" size="small">查看全部</a-button>
           </router-link>
         </div>
         <div class="card-body">
@@ -124,103 +96,73 @@
                 <a class="task-link" @click="router.push(`/local-repos/${record.key}`)">{{ record.name }}</a>
               </template>
               <template v-if="column.dataIndex === 'platform'">
-                <a-tag :color="platformColor(record.platform)">{{ platformLabel(record.platform) }}</a-tag>
+                <a-tag>{{ platformLabel(record.platform) }}</a-tag>
               </template>
               <template v-if="column.dataIndex === 'status'">
                 <StatusBadge :status="record.status" />
               </template>
             </template>
             <template #emptyText>
-              <a-empty description="暂无仓库" :image-style="{ height: '60px' }">
+              <a-empty description="暂无仓库" :image-style="{ height: '56px' }">
                 <a-button type="primary" size="small" @click="router.push('/repos')">添加仓库</a-button>
               </a-empty>
             </template>
           </a-table>
         </div>
-      </div>
+      </section>
     </div>
 
-    <!-- System Status -->
-    <div class="system-status-section">
-      <div class="section-title">
-        <DashboardOutlined style="margin-right: 8px;" />
-        系统状态
+    <!-- 系统状态：安静的元信息行 -->
+    <section class="content-card system-card">
+      <div class="card-header">
+        <span class="card-title">系统状态</span>
       </div>
-      <div class="system-status-card">
-        <div class="status-items">
-          <div class="status-item">
-            <div class="status-item-label">
-              <CheckCircleOutlined v-if="systemStatus?.status === STATUS.Running" style="color: #52c41a; margin-right: 6px;" />
-              <CloseCircleOutlined v-else style="color: #ff4d4f; margin-right: 6px;" />
-              服务状态
-            </div>
-            <a-tag :color="systemStatus?.status === STATUS.Running ? 'success' : 'error'">
-              {{ systemStatus?.status === STATUS.Running ? '运行中' : '已停止' }}
-            </a-tag>
+      <div class="card-body is-padded">
+        <div class="system-meta">
+          <div class="meta-item">
+            <span class="meta-label">服务</span>
+            <StatusBadge :status="systemStatus?.status === STATUS.Running ? 'success' : 'failed'" />
           </div>
-          <a-divider type="vertical" style="height: 40px;" />
-          <div class="status-item">
-            <div class="status-item-label">
-              <ClockCircleOutlined style="color: #1677ff; margin-right: 6px;" />
-              Go 版本
-            </div>
-            <span class="status-value">{{ systemStatus?.go_version || '-' }}</span>
+          <div class="meta-item">
+            <span class="meta-label">版本</span>
+            <span class="meta-value">{{ systemStatus?.version || '-' }}</span>
           </div>
-          <a-divider type="vertical" style="height: 40px;" />
-          <div class="status-item">
-            <div class="status-item-label">
-              <InfoCircleOutlined style="color: #722ed1; margin-right: 6px;" />
-              版本号
-            </div>
-            <a-tag color="blue">{{ systemStatus?.version || 'v0.0.0' }}</a-tag>
+          <div class="meta-item">
+            <span class="meta-label">Go</span>
+            <span class="meta-value mono">{{ systemStatus?.go_version || '-' }}</span>
           </div>
-          <a-divider type="vertical" style="height: 40px;" />
-          <div class="status-item">
-            <div class="status-item-label">
-              <CloudServerOutlined style="color: #faad14; margin-right: 6px;" />
-              运行时长
-            </div>
-            <span class="status-value">{{ formatUptime(systemStatus?.uptime) }}</span>
+          <div class="meta-item">
+            <span class="meta-label">运行时长</span>
+            <span class="meta-value">{{ formatUptime(systemStatus?.uptime) }}</span>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Dashboard' })
 
-import { computed, onMounted, onActivated, ref, markRaw } from 'vue'
+import { computed, onMounted, onActivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useRepoStore } from '@/stores/repo'
 import { syncTaskApi, systemApi, repoApi } from '@/api'
 import type { SystemStatusData } from '@/types/api'
 import type { Repo, SyncTask } from '@/types'
 import { notifyError } from '@/utils/notify'
-import { STATUS, statusColor } from '@/constants/status'
-import { platformLabel, platformColor } from '@/utils/platform'
+import { STATUS } from '@/constants/status'
+import { platformLabel } from '@/utils/platform'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import MetricStrip, { type MetricItem } from '@/components/common/MetricStrip.vue'
 import {
-  FolderOutlined,
-  SyncOutlined,
-  PlayCircleOutlined,
-  CloseCircleOutlined,
   PlusOutlined,
   FolderAddOutlined,
-  RightOutlined,
   ArrowRightOutlined,
-  ApiOutlined,
-  HistoryOutlined,
-  DashboardOutlined,
-  ClockCircleOutlined,
-  InfoCircleOutlined,
-  CloudServerOutlined,
-  CheckCircleOutlined,
+  AlertOutlined,
 } from '@ant-design/icons-vue'
 
 const router = useRouter()
-const repoStore = useRepoStore()
 
 const systemStatus = ref<SystemStatusData | null>(null)
 
@@ -234,23 +176,21 @@ const dashTasks = ref<SyncTask[]>([])
 const dashTaskTotal = ref(0)
 
 const runningCount = computed(() => dashTasks.value.filter((t) => t.last_status === STATUS.Running).length)
-const failedCount = computed(() => dashTasks.value.filter((t) => t.last_status === STATUS.Failed).length)
+const failedTasks = computed(() => dashTasks.value.filter((t) => t.last_status === STATUS.Failed))
 const recentTasks = computed(() => dashTasks.value.slice(0, 5))
 const recentRepos = computed(() => dashRepos.value.slice(0, 5))
 
-const statCards = computed(() => [
-  { label: '仓库总数', value: dashRepoTotal.value, icon: markRaw(FolderOutlined), color: 'blue', path: '/repos' },
-  { label: '同步任务', value: dashTaskTotal.value, icon: markRaw(SyncOutlined), color: 'green', path: '/sync' },
-  { label: '运行中', value: runningCount.value, icon: markRaw(PlayCircleOutlined), color: 'orange', path: '/sync' },
-  { label: '失败任务', value: failedCount.value, icon: markRaw(CloseCircleOutlined), color: 'red', path: '/sync' },
+const metrics = computed<MetricItem[]>(() => [
+  { label: '仓库', value: dashRepoTotal.value, path: '/repos' },
+  { label: '同步任务', value: dashTaskTotal.value, path: '/sync' },
+  { label: '运行中', value: runningCount.value, tone: 'info', path: '/sync' },
+  {
+    label: '失败',
+    value: failedTasks.value.length,
+    tone: failedTasks.value.length ? 'danger' : 'default',
+    path: '/sync',
+  },
 ])
-
-const quickActions = [
-  { label: '创建同步任务', icon: markRaw(SyncOutlined), color: 'blue', path: '/sync/new' },
-  { label: '添加仓库', icon: markRaw(FolderAddOutlined), color: 'green', path: '/repos' },
-  { label: '配置 Webhook', icon: markRaw(ApiOutlined), color: 'purple', path: '/webhook/rules' },
-  { label: '查看日志', icon: markRaw(HistoryOutlined), color: 'cyan', path: '/sync/records' },
-]
 
 const formatUptime = (seconds?: number) => {
   if (!seconds) return '--'
@@ -263,16 +203,16 @@ const formatUptime = (seconds?: number) => {
 }
 
 const taskColumns = [
-  { title: '任务名称', dataIndex: 'name', key: 'name', ellipsis: true },
-  { title: '分支', dataIndex: 'branch', key: 'branch', width: 180 },
-  { title: '状态', dataIndex: 'last_status', key: 'last_status', width: 90, align: 'center' as const },
-  { title: '最后运行', dataIndex: 'last_run_at', key: 'last_run_at', width: 140 },
+  { title: '任务', dataIndex: 'name', key: 'name', ellipsis: true },
+  { title: '分支', dataIndex: 'branch', key: 'branch', width: 200 },
+  { title: '状态', dataIndex: 'last_status', key: 'last_status', width: 96, align: 'center' as const },
+  { title: '最后运行', dataIndex: 'last_run_at', key: 'last_run_at', width: 150 },
 ]
 
 const repoColumns = [
-  { title: '仓库名称', dataIndex: 'name', key: 'name', ellipsis: true },
-  { title: '平台', dataIndex: 'platform', key: 'platform', width: 100, align: 'center' as const },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' as const },
+  { title: '仓库', dataIndex: 'name', key: 'name', ellipsis: true },
+  { title: '平台', dataIndex: 'platform', key: 'platform', width: 110, align: 'center' as const },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 96, align: 'center' as const },
 ]
 
 async function fetchSystemStatus() {
@@ -309,86 +249,74 @@ onActivated(loadDashboard)
 <style scoped lang="scss">
 @use '@/styles/variables.scss' as *;
 
-// 可点击卡片的交互态
-.stat-card.clickable {
-  cursor: pointer;
-  border: 1px solid transparent;
-
-  &:hover {
-    border-color: #e6f7ff;
-
-    .stat-arrow {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-}
-
-.stat-arrow {
+.cell-arrow {
   color: $text-tertiary;
-  font-size: 12px;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: all 0.2s ease;
+  font-size: 11px;
+  margin: 0 4px;
 }
 
-/* 快捷操作 */
-.quick-actions {
+/* 需要关注 */
+.attention-card {
+  background: $error-soft;
+  border: 1px solid $error-border;
+  border-radius: $radius-lg;
+  padding: 12px 16px;
   margin-bottom: $spacing-lg;
 }
 
-.section-title {
-  font-size: 15px;
+.attention-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: $fs-md;
   font-weight: 600;
-  color: $text-primary;
-  margin-bottom: $spacing-md;
+  color: $error;
+  margin-bottom: 8px;
 }
 
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $spacing-md;
+.attention-icon {
+  font-size: 14px;
 }
 
-.action-item {
-  background: $bg-primary;
+.attention-count {
+  margin-left: auto;
+}
+
+.attention-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.attention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.7);
   border-radius: $radius-md;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: $shadow-card;
-  border: 1px solid transparent;
-
-  &:hover {
-    border-color: #e6f7ff;
-    box-shadow: $shadow-card-hover;
-    transform: translateY(-1px);
-  }
-
-  span {
-    font-size: 14px;
-    font-weight: 500;
-    color: $text-primary;
-  }
+  padding: 6px 10px;
+  font-size: $fs-body;
 }
 
-.action-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
+.attention-name {
+  font-weight: 500;
+  color: $text-primary;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
 
-  &.blue   { background: #e6f7ff; color: $primary; }
-  &.green  { background: #f6ffed; color: $success; }
-  &.purple { background: #f9f0ff; color: #722ed1; }
-  &.cyan   { background: #e6fffb; color: #13c2c2; }
+.attention-arrow {
+  color: $text-tertiary;
+  font-size: 11px;
+}
+
+.attention-item :deep(.ant-btn-link) {
+  margin-left: auto;
+  padding-inline: 4px;
 }
 
 /* 内容双栏 */
@@ -396,69 +324,48 @@ onActivated(loadDashboard)
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: $spacing-md;
+  margin-bottom: $spacing-md;
 }
 
 /* 系统状态 */
-.system-status-section {
-  margin-top: $spacing-lg;
+.system-card {
+  margin-top: 0;
 }
 
-.system-status-card {
-  background: $bg-primary;
-  border-radius: $radius-md;
-  box-shadow: $shadow-card;
-  padding: 20px $spacing-lg;
+.system-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  align-items: center;
 }
 
-.status-items {
+.meta-item {
   display: flex;
   align-items: center;
-  gap: $spacing-lg;
+  gap: 8px;
+  min-width: 0;
 }
 
-.status-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 140px;
-}
-
-.status-item-label {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  color: $text-secondary;
-}
-
-.status-value {
-  font-size: 14px;
+.meta-label {
+  font-size: $fs-caption;
+  color: $text-tertiary;
   font-weight: 500;
-  color: $text-primary;
 }
 
-@media (max-width: 1200px) {
-  .action-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.meta-value {
+  font-size: $fs-body;
+  color: $text-primary;
+  font-weight: 500;
 
+  &.mono {
+    font-family: $font-mono;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 1100px) {
   .grid-row {
     grid-template-columns: 1fr;
-  }
-
-  .status-items {
-    flex-wrap: wrap;
-    gap: $spacing-md;
-  }
-}
-
-@media (max-width: 768px) {
-  .status-items {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .status-items :deep(.ant-divider-vertical) {
-    display: none;
   }
 }
 </style>

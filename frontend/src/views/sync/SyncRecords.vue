@@ -1,57 +1,22 @@
 <template>
   <div class="page-container">
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">执行记录</h1>
-        <p class="page-subtitle">查看所有同步任务的执行历史和详细日志</p>
-      </div>
-      <a-space>
+    <PageHeader title="执行记录" subtitle="同步任务的执行历史与结果">
+      <template #actions>
         <a-button @click="fetchRecords">
           <template #icon><ReloadOutlined /></template>
           刷新
         </a-button>
-      </a-space>
-    </div>
+      </template>
+    </PageHeader>
 
-    <!-- 统计概览 -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #e6f7ff; color: #1677ff;">
-          <ThunderboltOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.today }}</div>
-          <div class="stat-label">今日执行</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #f6ffed; color: #52c41a;">
-          <CheckCircleOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.successRate }}</div>
-          <div class="stat-label">成功率</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #fff2f0; color: #ff4d4f;">
-          <CloseCircleOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.failed }}</div>
-          <div class="stat-label">失败</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #fff7e6; color: #faad14;">
-          <ClockCircleOutlined />
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.avgDuration }}</div>
-          <div class="stat-label">平均耗时</div>
-        </div>
-      </div>
-    </div>
+    <MetricStrip
+      :items="[
+        { label: '今日执行', value: stats.today },
+        { label: '成功率', value: stats.successRate, tone: 'success' },
+        { label: '失败', value: stats.failed, tone: stats.failed ? 'danger' : 'default' },
+        { label: '平均耗时', value: stats.avgDuration },
+      ]"
+    />
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
@@ -107,6 +72,7 @@
     </div>
 
     <!-- 记录表格 -->
+    <div class="content-card">
     <a-table
       :columns="columns"
       :data-source="filteredRecords"
@@ -202,6 +168,7 @@
         </a-empty>
       </template>
     </a-table>
+    </div>
 
     <!-- 详情抽屉 -->
     <a-drawer
@@ -312,16 +279,14 @@ import {
   PlayCircleOutlined,
   DeleteOutlined,
   ArrowRightOutlined,
-  ThunderboltOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ClockCircleOutlined,
   RedoOutlined,
 } from '@ant-design/icons-vue'
 import { useSyncTaskStore } from '@/stores/syncTask'
 import { syncTaskApi } from '@/api'
 import type { SyncRun } from '@/types'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import MetricStrip from '@/components/common/MetricStrip.vue'
 import { triggerColor, triggerLabel } from '@/utils/dictionaries'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import dayjs, { type Dayjs } from 'dayjs'

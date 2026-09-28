@@ -10,7 +10,12 @@ export async function getAIStatus(): Promise<AIStatus> {
   const { data } = await statusHttp.get('/ai/status', {
     headers: { 'X-API-Key': auth.getApiKey() ?? '' },
   })
-  return data?.data ?? { enabled: false }
+  // 后端标准包装 {code,data} 或直接返回 AIStatus 均可
+  const body = data?.data ?? data
+  return {
+    enabled: body?.enabled === true,
+    model: body?.model ?? '',
+  }
 }
 
 export interface ChatStreamOptions {

@@ -73,6 +73,8 @@ dump.rdb
 .mimosa/
 .v2c/
 .playwright-mcp/
+.huginn/
+var/
 
 # 本地编译产物与设计源文件
 aistub

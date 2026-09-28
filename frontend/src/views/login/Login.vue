@@ -3,13 +3,13 @@
     <div class="login-card">
       <div class="login-header">
         <div class="logo-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1677FF" stroke-width="2">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
           </svg>
         </div>
-        <h1>Git Sync Service</h1>
-        <p>代码同步管理系统</p>
+        <h1>GitFerry</h1>
+        <p>代码摆渡 · 同步 · 发布 · 备份</p>
       </div>
 
       <a-form
@@ -98,43 +98,51 @@ const handleLogin = async () => {
 </script>
 
 <style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+
 .login-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    radial-gradient(1200px 500px at 50% -20%, #dbeafe 0%, transparent 60%),
+    $bg-canvas;
   padding: 24px;
 }
 
 .login-card {
-  width: 420px;
+  width: 400px;
   max-width: 100%;
-  padding: 40px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 36px 32px;
+  background: $bg-primary;
+  border: 1px solid $border-light;
+  border-radius: $radius-xl;
+  box-shadow: 0 12px 40px rgba(31, 35, 40, 0.08);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 
   .logo-icon {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+    color: $primary;
+    display: flex;
+    justify-content: center;
   }
 
   h1 {
-    font-size: 26px;
-    color: #1a1a1a;
-    margin: 0 0 8px 0;
+    font-size: 22px;
+    color: $text-primary;
+    margin: 0 0 6px 0;
     font-weight: 700;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.4px;
   }
 
   p {
-    font-size: 14px;
-    color: #8C8C8C;
+    font-size: $fs-body;
+    color: $text-secondary;
     margin: 0;
   }
 }
@@ -142,25 +150,25 @@ const handleLogin = async () => {
 .login-form {
   margin-bottom: 8px;
 
-  :deep(.ant-input-affix-wrapper) {
-    border-radius: 8px;
+  :deep(.ant-input-affix-wrapper),
+  :deep(.ant-btn) {
+    border-radius: $radius-md;
   }
 
   :deep(.ant-btn) {
-    height: 44px;
-    border-radius: 8px;
-    font-size: 15px;
+    height: 36px;
+    font-size: $fs-md;
     font-weight: 500;
   }
 }
 
 .login-footer {
   text-align: center;
-  margin-top: 24px;
+  margin-top: 20px;
 
   .footer-tip {
-    font-size: 13px;
-    color: #8C8C8C;
+    font-size: $fs-body;
+    color: $text-secondary;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -169,8 +177,8 @@ const handleLogin = async () => {
   }
 
   .footer-hint {
-    font-size: 12px;
-    color: #BFBFBF;
+    font-size: $fs-caption;
+    color: $text-tertiary;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,7 +187,7 @@ const handleLogin = async () => {
     .ant-tag {
       margin: 0;
       padding: 0 6px;
-      border-radius: 4px;
+      border-radius: $radius-sm;
     }
   }
 }

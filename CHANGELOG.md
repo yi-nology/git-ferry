@@ -4,6 +4,24 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+## [2026-09-29] - 前端重设计与 AI 配置
+
+### Added
+
+- **前端全面重设计**（GitHub/Linear 式冷静运维台）:设计 tokens + AntD 主题、
+  侧栏分组 IA、统一 `PageHeader` / `MetricStrip`、仪表盘失败任务「需要关注」。
+- **AI 助手配置界面**（系统 → AI 助手）:服务预设（OpenAI/DashScope/DeepSeek/Ollama/vLLM）、
+  Base URL、模型选择、API Key、温度/Max Tokens/超时；保存写 `data/ai-settings.json` 并热重建 Runner。
+- **AI 配置 API**: `GET/POST /api/v1/ai/config`、`POST /api/v1/ai/config/test`（密钥脱敏回传）。
+- **AI 面板重设计**:空态建议问题、工具 chip、危险操作确认卡、composer 输入区。
+- **文档与截图更新**: `docs/screenshots/` 新版 UI 全套;README / frontend README / designs 对齐现状。
+
+### Changed
+
+- 登录页品牌统一为 GitFerry（去掉紫色渐变）。
+- `getAIStatus` 兼容 `{code,data}` 与裸 JSON，避免误判「未启用」。
+- AI 工具事件文案改为「调用中… → 完成/失败摘要」。
+
 ## [2026-09-27] - 运维与备份能力批次
 
 ### Added

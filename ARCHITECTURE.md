@@ -49,6 +49,19 @@
 3. **Webhook 触发** - 事件驱动的同步触发
 4. **规则引擎** - 分支模式匹配、防抖控制
 5. **同步历史** - 运行记录、日志查看
+6. **镜像中心** - 开源发布 / 仓库备份通道
+7. **运维中心** - 健康评分、资产盘点、策略模板、失败补偿
+8. **AI 助手** - eino 对话式运维;模型/端点可界面配置
+
+### 1.5 Web 控制台
+
+`frontend/` 为 Vue 3 + Ant Design Vue 控制台（GitFerry UI）。
+
+- **设计系统**：`styles/variables.scss` tokens + `styles/theme.ts` AntD 主题;
+  中性优先、语义色克制（GitHub/Linear 式运维台）。
+- **页面骨架**：`PageHeader` → `MetricStrip` → 筛选栏 → `content-card` 表格。
+- **侧栏 IA**：仪表盘 / 管理（同步、仓库、镜像）/ 自动化（Webhook）/ 运维 / 系统（AI、平台）。
+- **截图与说明**：`docs/screenshots/`、`frontend/README.md`。
 
 ## 2. 目录结构
 
@@ -671,7 +684,37 @@ webhook:
 log:
   level: info
   format: json
+
+# AI 助手(可选;亦可完全在 Web「系统 → AI 助手」配置)
+# ai:
+#   enabled: true
+#   base_url: "https://api.openai.com/v1"   # 任意 OpenAI 兼容端点
+#   model: "gpt-4o-mini"
+#   temperature: 0.3
+#   max_tokens: 2048
+#   timeout_seconds: 60
 ```
+
+### 9.1 AI 运行时设置
+
+界面保存的配置写入 **`data/ai-settings.json`**（权限 0600，含 API Key，不进 yaml）：
+
+| 字段 | 说明 |
+|------|------|
+| `enabled` | 是否启用助手 |
+| `base_url` | OpenAI 兼容端点 |
+| `model` | 模型 ID |
+| `temperature` / `max_tokens` / `timeout_seconds` / `max_concurrent_chats` | 生成参数 |
+| `api_key` | 密钥明文仅存此文件;GET 接口只回 `has_api_key` / 脱敏值 |
+
+合并策略：yaml `ai` 段为默认值 → `ai-settings.json` 覆盖 → 环境变量 `GIT_SYNC_AI_API_KEY` 作密钥兜底。
+保存接口热重建 `agent.Runner`，无需重启进程。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/ai/config` | 读配置（脱敏） |
+| POST | `/api/v1/ai/config` | 保存并热生效 |
+| POST | `/api/v1/ai/config/test` | 探测端点 / 模型是否可用 |
 
 ## 10. 部署配置
 

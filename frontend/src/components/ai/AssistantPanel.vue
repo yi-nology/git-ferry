@@ -2,8 +2,8 @@
   <Teleport to="body">
     <a-float-button
       v-if="enabled !== false"
-      tooltip="AI 助手"
       class="ai-fab"
+      tooltip="AI 运维助手"
       @click="toggle"
     >
       <template #icon><RobotOutlined /></template>
@@ -11,75 +11,150 @@
 
     <a-drawer
       v-model:open="open"
-      title="AI 助手"
       placement="right"
-      :width="420"
-      :body-style="{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }"
+      :width="440"
+      :closable="false"
+      :body-style="{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }"
+      class="ai-drawer"
     >
-      <template #extra>
-        <a-space>
-          <a-tag v-if="model" color="blue">{{ model }}</a-tag>
-          <a-button size="small" type="text" @click="reset">清空</a-button>
-        </a-space>
-      </template>
-
-      <a-alert
-        v-if="enabled === false"
-        type="info"
-        show-icon
-        message="AI 助手未启用"
-        description="请在服务端配置 ai 配置段与 GIT_SYNC_AI_API_KEY 后重启服务。"
-      />
-
-      <div ref="listRef" class="msg-list">
-        <div v-if="!messages.length && enabled !== false" class="empty-tip">
-          试试:『有哪些仓库』『查看任务列表』『帮我同步 demo-task』
+      <!-- 头部 -->
+      <header class="ai-header">
+        <div class="ai-header-left">
+          <span class="ai-avatar"><RobotOutlined /></span>
+          <div class="ai-header-text">
+            <div class="ai-title">AI 运维助手</div>
+            <div class="ai-sub">
+              <span v-if="model" class="model-chip">{{ model }}</span>
+              <span v-else class="model-chip muted">只读查询 · 危险操作需确认</span>
+            </div>
+          </div>
         </div>
-
-        <div v-for="(m, i) in messages" :key="i" :class="['msg', m.role]">
-          <span v-if="m.role === 'tool'" class="tool-line">🔧 {{ m.content }}</span>
-          <span v-else class="bubble">{{ m.content }}<span v-if="m.streaming" class="cursor">▍</span></span>
+        <div class="ai-header-actions">
+          <a-tooltip title="清空会话">
+            <a-button type="text" class="icon-btn" @click="reset">
+              <DeleteOutlined />
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="关闭">
+            <a-button type="text" class="icon-btn" @click="toggle">
+              <CloseOutlined />
+            </a-button>
+          </a-tooltip>
         </div>
+      </header>
 
+      <!-- 未启用 -->
+      <div v-if="enabled === false" class="ai-disabled">
         <a-alert
-          v-if="pendingConfirm"
-          type="warning"
+          type="info"
           show-icon
-          class="confirm-card"
-        >
-          <template #message>确认执行 {{ pendingConfirm.tool }}</template>
-          <template #description>
-            <pre class="args">{{ prettyArgs }}</pre>
-            <a-space>
-              <a-button type="primary" danger size="small" :loading="streaming" @click="confirm">
-                确认执行
-              </a-button>
-              <a-button size="small" @click="deny">取消</a-button>
-            </a-space>
-          </template>
-        </a-alert>
-
-        <a-alert v-if="error" type="error" show-icon :message="error" closable @close="error = ''" />
-      </div>
-
-      <div class="input-row">
-        <a-textarea
-          v-model:value="draft"
-          :auto-size="{ minRows: 1, maxRows: 4 }"
-          :disabled="streaming"
-          placeholder="询问同步状态、仓库、任务…(Enter 发送,Shift+Enter 换行)"
-          @keydown.enter.exact.prevent="submit"
+          message="AI 助手未启用"
+          description="在服务端打开 ai 配置段并设置 GIT_SYNC_AI_API_KEY 后重启即可使用。"
         />
-        <a-button v-if="streaming" @click="cancelStream">停止</a-button>
-        <a-button v-else type="primary" :disabled="!draft.trim()" @click="submit">发送</a-button>
       </div>
+
+      <!-- 消息区 -->
+      <div v-else ref="listRef" class="msg-list">
+        <div v-if="!messages.length" class="empty-state">
+          <div class="empty-icon"><RobotOutlined /></div>
+          <div class="empty-title">需要查什么？</div>
+          <p class="empty-desc">只读查询直接执行；立即同步等危险操作会在界面弹确认。</p>
+          <div class="suggest-list">
+            <button
+              v-for="s in suggestions"
+              :key="s"
+              type="button"
+              class="suggest-chip"
+              @click="useSuggestion(s)"
+            >
+              {{ s }}
+            </button>
+          </div>
+        </div>
+
+        <template v-for="(m, i) in messages" :key="i">
+          <!-- 工具活动 -->
+          <div v-if="m.role === 'tool'" class="tool-row">
+            <span class="tool-dot" />
+            <span class="tool-name">{{ m.tool || 'tool' }}</span>
+            <span class="tool-text">{{ m.content }}</span>
+          </div>
+
+          <!-- 错误 -->
+          <div v-else-if="m.role === 'error'" class="msg error">
+            <div class="bubble error-bubble">{{ m.content }}</div>
+          </div>
+
+          <!-- 对话气泡 -->
+          <div v-else :class="['msg', m.role]">
+            <div class="bubble">
+              {{ m.content }}<span v-if="m.streaming" class="cursor">▍</span>
+            </div>
+          </div>
+        </template>
+
+        <!-- 危险操作确认 -->
+        <div v-if="pendingConfirm" class="confirm-card">
+          <div class="confirm-head">
+            <WarningOutlined class="confirm-icon" />
+            <span>确认执行</span>
+            <code class="confirm-tool">{{ pendingConfirm.tool }}</code>
+          </div>
+          <pre v-if="prettyArgs" class="args">{{ prettyArgs }}</pre>
+          <div class="confirm-actions">
+            <a-button size="small" @click="deny">取消</a-button>
+            <a-button danger size="small" :loading="streaming" @click="confirm">
+              确认执行
+            </a-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入区 -->
+      <footer v-if="enabled !== false" class="composer">
+        <div class="composer-box">
+          <a-textarea
+            v-model:value="draft"
+            :auto-size="{ minRows: 1, maxRows: 4 }"
+            :disabled="streaming"
+            :bordered="false"
+            placeholder="询问仓库、任务、同步状态…（Enter 发送）"
+            class="composer-input"
+            @keydown.enter.exact.prevent="submit"
+          />
+          <div class="composer-bar">
+            <span class="composer-hint">Shift+Enter 换行</span>
+            <a-button
+              v-if="streaming"
+              size="small"
+              @click="cancelStream"
+            >
+              停止
+            </a-button>
+            <a-button
+              v-else
+              type="primary"
+              size="small"
+              :disabled="!draft.trim()"
+              @click="submit"
+            >
+              发送
+            </a-button>
+          </div>
+        </div>
+      </footer>
     </a-drawer>
   </Teleport>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { RobotOutlined } from '@ant-design/icons-vue'
+import {
+  RobotOutlined,
+  DeleteOutlined,
+  CloseOutlined,
+  WarningOutlined,
+} from '@ant-design/icons-vue'
 import { useAIChat } from '@/composables/useAIChat'
 
 const {
@@ -88,7 +163,6 @@ const {
   model,
   messages,
   streaming,
-  error,
   pendingConfirm,
   send,
   confirm,
@@ -101,6 +175,13 @@ const {
 const draft = ref('')
 const listRef = ref<HTMLElement>()
 
+const suggestions = [
+  '有哪些仓库？',
+  '查看同步任务',
+  '最近执行记录怎么样？',
+  '系统健康评分',
+]
+
 const prettyArgs = computed(() => {
   if (!pendingConfirm.value?.args) return ''
   try {
@@ -109,6 +190,11 @@ const prettyArgs = computed(() => {
     return pendingConfirm.value.args
   }
 })
+
+function useSuggestion(text: string) {
+  if (streaming.value) return
+  void send(text)
+}
 
 function submit() {
   const text = draft.value.trim()
@@ -128,10 +214,104 @@ watch(
 )
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+
 .ai-fab {
   right: 24px;
   bottom: 24px;
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid $border-muted;
+  background: $bg-primary;
+  flex-shrink: 0;
+}
+
+.ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ai-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-md;
+  background: $primary-soft;
+  color: $primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ai-header-text {
+  min-width: 0;
+}
+
+.ai-title {
+  font-size: $fs-md;
+  font-weight: 600;
+  color: $text-primary;
+  line-height: 1.2;
+}
+
+.ai-sub {
+  margin-top: 2px;
+}
+
+.model-chip {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: $primary;
+  background: $primary-soft;
+  border: 1px solid $primary-border;
+  border-radius: 999px;
+  padding: 0 8px;
+  line-height: 18px;
+
+  &.muted {
+    color: $text-tertiary;
+    background: $bg-subtle;
+    border-color: $border-light;
+  }
+}
+
+.ai-header-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-secondary;
+  border-radius: $radius-md;
+
+  &:hover {
+    color: $text-primary;
+    background: $bg-hover;
+  }
+}
+
+.ai-disabled {
+  padding: 16px;
 }
 
 .msg-list {
@@ -139,53 +319,118 @@ watch(
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-right: 4px;
+  gap: 12px;
+  padding: 16px 14px;
+  background: $bg-canvas;
+  min-height: 0;
 }
 
-.empty-tip {
-  color: var(--ant-color-text-tertiary, #999);
-  font-size: 13px;
+/* 空态 */
+.empty-state {
+  margin: auto 0;
   text-align: center;
-  margin-top: 24px;
+  padding: 12px 8px 24px;
 }
 
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: $radius-xl;
+  background: $primary-soft;
+  color: $primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.empty-title {
+  font-size: $fs-lg;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 6px;
+}
+
+.empty-desc {
+  font-size: $fs-body;
+  color: $text-secondary;
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+
+.suggest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.suggest-chip {
+  appearance: none;
+  border: 1px solid $border-light;
+  background: $bg-primary;
+  color: $text-primary;
+  border-radius: $radius-lg;
+  padding: 10px 12px;
+  font-size: $fs-body;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color $duration-fast $ease, background $duration-fast $ease;
+
+  &:hover {
+    border-color: $primary-border;
+    background: $primary-soft;
+    color: $primary;
+  }
+}
+
+/* 消息 */
 .msg {
   display: flex;
-}
 
-.msg.user {
-  justify-content: flex-end;
-}
+  &.user {
+    justify-content: flex-end;
+  }
 
-.msg.user .bubble {
-  background: #1677ff;
-  color: #fff;
-  border-radius: 8px 8px 2px 8px;
-}
+  &.assistant {
+    justify-content: flex-start;
+  }
 
-.msg.assistant {
-  justify-content: flex-start;
-}
+  .bubble {
+    max-width: 88%;
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: $fs-md;
+    line-height: 1.6;
+  }
 
-.msg.assistant .bubble {
-  background: rgba(0, 0, 0, 0.06);
-  color: inherit;
-  border-radius: 8px 8px 8px 2px;
-}
+  &.user .bubble {
+    background: $primary;
+    color: #fff;
+    border-radius: 10px 10px 2px 10px;
+  }
 
-.msg.assistant .bubble,
-.msg.user .bubble {
-  max-width: 85%;
-  padding: 8px 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 14px;
-  line-height: 1.6;
+  &.assistant .bubble {
+    background: $bg-primary;
+    border: 1px solid $border-light;
+    color: $text-primary;
+    border-radius: 10px 10px 10px 2px;
+  }
+
+  &.error .bubble {
+    background: $error-soft;
+    border: 1px solid $error-border;
+    color: $error;
+    border-radius: $radius-lg;
+    max-width: 100%;
+  }
 }
 
 .cursor {
   animation: blink 1s step-start infinite;
+  margin-left: 1px;
 }
 
 @keyframes blink {
@@ -194,26 +439,139 @@ watch(
   }
 }
 
-.tool-line {
-  font-size: 12px;
-  color: #999;
-  font-style: italic;
+/* 工具活动 */
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $fs-caption;
+  color: $text-tertiary;
+  padding: 2px 4px;
+  min-width: 0;
 }
 
+.tool-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $text-tertiary;
+  flex-shrink: 0;
+}
+
+.tool-name {
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $text-secondary;
+  background: $bg-subtle;
+  border: 1px solid $border-light;
+  border-radius: $radius-sm;
+  padding: 0 5px;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.tool-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 确认卡 */
 .confirm-card {
-  margin-top: 4px;
+  background: $warning-soft;
+  border: 1px solid $warning-border;
+  border-radius: $radius-lg;
+  padding: 12px;
+}
+
+.confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $fs-md;
+  font-weight: 600;
+  color: $warning;
+  margin-bottom: 8px;
+}
+
+.confirm-icon {
+  font-size: 14px;
+}
+
+.confirm-tool {
+  font-family: $font-mono;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid $warning-border;
+  border-radius: $radius-sm;
+  padding: 0 6px;
+  color: $text-primary;
+  margin-left: 2px;
 }
 
 .args {
-  font-size: 12px;
-  margin: 0 0 8px;
+  font-family: $font-mono;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid $warning-border;
+  border-radius: $radius-md;
   white-space: pre-wrap;
   word-break: break-all;
+  color: $text-primary;
+  max-height: 160px;
+  overflow: auto;
 }
 
-.input-row {
+.confirm-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
-  align-items: flex-end;
+}
+
+/* 输入 */
+.composer {
+  padding: 12px 14px 14px;
+  border-top: 1px solid $border-muted;
+  background: $bg-primary;
+  flex-shrink: 0;
+}
+
+.composer-box {
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $bg-primary;
+  padding: 8px 10px 6px;
+
+  &:focus-within {
+    border-color: $primary;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  }
+}
+
+.composer-input {
+  padding: 0;
+  resize: none;
+  font-size: $fs-md;
+
+  :deep(textarea) {
+    padding: 0;
+  }
+}
+
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.composer-hint {
+  font-size: 11px;
+  color: $text-tertiary;
 }
 </style>

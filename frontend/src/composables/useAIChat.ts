@@ -29,22 +29,23 @@ function handleEvent(ev: AIEvent) {
       break
     }
     case 'tool_start':
-      messages.value.push({ role: 'tool', content: `调用 ${ev.tool}…`, tool: ev.tool })
+      messages.value.push({ role: 'tool', content: '调用中…', tool: ev.tool })
       break
     case 'tool_end': {
       // 提取结果摘要(错误/信息)附到工具行,直达执行的结果经此透出
       let extra = ''
       try {
         const r = ev.result ? (JSON.parse(ev.result) as Record<string, unknown>) : null
-        if (r?.error) extra = ` · 失败:${String(r.error).slice(0, 120)}`
-        else if (r?.message) extra = ` · ${String(r.message).slice(0, 80)}`
+        if (r?.error) extra = `失败:${String(r.error).slice(0, 120)}`
+        else if (r?.message) extra = String(r.message).slice(0, 80)
+        else extra = '完成'
       } catch {
-        /* result 非 JSON,忽略 */
+        extra = '完成'
       }
       for (let i = messages.value.length - 1; i >= 0; i--) {
         const m = messages.value[i]
-        if (m.role === 'tool' && m.content.endsWith('…')) {
-          m.content = `${m.tool ?? ev.tool ?? '工具'} 完成${extra}`
+        if (m.role === 'tool' && m.content === '调用中…') {
+          m.content = extra
           break
         }
       }
@@ -55,6 +56,7 @@ function handleEvent(ev: AIEvent) {
       break
     case 'error':
       error.value = ev.content ?? '未知错误'
+      messages.value.push({ role: 'error', content: error.value })
       break
     case 'done':
       streaming.value = false

@@ -1,15 +1,11 @@
 <template>
   <div class="page-container">
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">事件日志</h1>
-        <p class="page-subtitle">查看 Webhook 接收和处理的事件记录</p>
-      </div>
-      <a-space>
+    <PageHeader title="Webhook 事件" subtitle="查看 Webhook 接收和处理的事件记录">
+      <template #actions>
         <a-select
           v-model:value="repoKey"
           placeholder="选择仓库"
-          style="width: 220px"
+          style="width: 200px"
           show-search
           :filter-option="filterRepoOption"
           @change="loadEvents"
@@ -28,8 +24,8 @@
           <template #icon><ReloadOutlined /></template>
           刷新
         </a-button>
-      </a-space>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Tabs -->
     <a-tabs v-model:activeKey="activeTab" class="event-tabs">
@@ -154,6 +150,7 @@ import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
 import { useWebhookStore } from '@/stores/webhook'
 import { useRepoStore } from '@/stores/repo'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import type { WebhookEvent } from '@/types'
 import { eventTypeColor } from '@/utils/dictionaries'
 import { notifySuccess, notifyError } from '@/utils/notify'

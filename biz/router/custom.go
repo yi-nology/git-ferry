@@ -32,6 +32,9 @@ func CustomizedRegister(r *server.Hertz) {
 	ai := r.Group("/api/v1/ai", routergitsync.AuthMiddleware())
 	ai.GET("/status", git_sync.AIStatus)
 	ai.POST("/chat", git_sync.AIChat)
+	ai.GET("/config", git_sync.AIGetConfig)
+	ai.POST("/config", git_sync.AIUpdateConfig)
+	ai.POST("/config/test", git_sync.AITestConfig)
 
 	// 失败补偿与治理(鉴权)
 	ops := r.Group("/api/v1/ops", routergitsync.AuthMiddleware())

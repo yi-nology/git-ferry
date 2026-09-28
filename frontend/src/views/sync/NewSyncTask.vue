@@ -1,12 +1,10 @@
 <template>
   <div class="page-container">
-    <div class="page-header-bar">
-      <div>
-        <h1 class="page-title">新建同步任务</h1>
-        <p class="page-subtitle">配置源仓库和目标仓库之间的同步规则</p>
-      </div>
-      <a-button @click="router.push('/sync')">返回列表</a-button>
-    </div>
+    <PageHeader title="新建同步任务" subtitle="配置源仓库与目标仓库之间的同步规则">
+      <template #actions>
+        <a-button @click="router.push('/sync')">返回列表</a-button>
+      </template>
+    </PageHeader>
 
     <!-- Steps -->
     <a-steps :current="step" class="steps-bar" size="small">
@@ -257,6 +255,7 @@ import { useSyncTaskStore } from '@/stores/syncTask'
 import { repoApi } from '@/api'
 import { notifySuccess, notifyError, notifyWarning } from '@/utils/notify'
 import type { Repo } from '@/types'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const router = useRouter()
 const taskStore = useSyncTaskStore()

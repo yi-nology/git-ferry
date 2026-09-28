@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	"github.com/yi-nology/git-ferry/biz/serve"
@@ -40,36 +41,80 @@ func main() {
 	})
 	git_sync.SetAPIKey(shellCfg.APIKey)
 
-	// AI 助手:ai 段未启用 → 不构建 Runner,端点 501 降级
-	aiCfg, err := agent.LoadConfig("conf/config.yaml")
+	// AI 助手:yaml 默认 + data/ai-settings.json 界面覆盖;未启用 → Runner=nil,端点 501
+	yamlAI, err := agent.LoadConfig("conf/config.yaml")
 	if err != nil {
 		serve.ExitOnFail("load ai config failed", err)
 	}
+	aiStore, err := agent.OpenSettings("data/ai-settings.json")
+	if err != nil {
+		serve.ExitOnFail("open ai settings failed", err)
+	}
+	aiSettings := agent.MergeSettings(*yamlAI, aiStore.Get())
+
+	var aiRunnerMu sync.RWMutex
 	var aiRunner *agent.Runner
-	if aiCfg.Enabled {
-		if err := aiCfg.Validate(agent.APIKeyFromEnv()); err != nil {
-			serve.ExitOnFail("ai config invalid", err)
+
+	buildRunner := func(st agent.Settings) (*agent.Runner, error) {
+		if !st.Enabled {
+			return nil, nil
 		}
-		memPath := aiCfg.MemoryPath
+		cfg := st.ToConfig()
+		apiKey := st.APIKey
+		if apiKey == "" {
+			apiKey = agent.APIKeyFromEnv()
+		}
+		if err := cfg.Validate(apiKey); err != nil {
+			return nil, err
+		}
+		memPath := cfg.MemoryPath
 		if memPath == "" {
 			memPath = "data/ai-memory.json"
 		}
 		memStore, err := memory.Open(memPath)
 		if err != nil {
-			serve.ExitOnFail("open ai memory failed", err)
+			return nil, err
 		}
-		aiCfg.MemoryManifest = agent.MemoryManifest(memStore, 10)
-		aiRunner, err = agent.NewRunner(aiCfg, agent.APIKeyFromEnv(), syncSvc)
+		cfg.MemoryManifest = agent.MemoryManifest(memStore, 10)
+		r, err := agent.NewRunner(cfg, apiKey, syncSvc)
 		if err != nil {
-			serve.ExitOnFail("init ai runner failed", err)
+			return nil, err
 		}
-		aiRunner.SetMemory(agent.NewMemBridge(memStore), agent.MemoryManifest(memStore, 10))
-		aiRunner.SetPolicy(tools.NewPolicy())
+		r.SetMemory(agent.NewMemBridge(memStore), agent.MemoryManifest(memStore, 10))
+		r.SetPolicy(tools.NewPolicy())
 		agent.SetPersistDir(memPath[:max(0, len(memPath)-len("/ai-memory.json"))] + "/ai-tool-output")
-		slog.Info("ai tools: policy=default, persist=on")
-		slog.Info("ai assistant enabled", "model", aiCfg.Model, "base_url", aiCfg.BaseURL, "memory", memPath)
+		slog.Info("ai assistant ready", "model", cfg.Model, "base_url", cfg.BaseURL, "memory", memPath)
+		return r, nil
 	}
-	git_sync.SetAgentRunner(func() *agent.Runner { return aiRunner })
+
+	// 启动时按合并结果构建(启用失败不退出:设置页可改后热生效)
+	if r, err := buildRunner(aiSettings); err != nil {
+		slog.Warn("ai disabled at boot, fix via settings page", "error", err)
+	} else {
+		aiRunnerMu.Lock()
+		aiRunner = r
+		aiRunnerMu.Unlock()
+		if r != nil {
+			slog.Info("ai tools: policy=default, persist=on")
+		}
+	}
+
+	git_sync.SetAgentRunner(func() *agent.Runner {
+		aiRunnerMu.RLock()
+		defer aiRunnerMu.RUnlock()
+		return aiRunner
+	})
+	git_sync.SetAISettingsStore(func() *agent.SettingsStore { return aiStore })
+	git_sync.SetAIRebuildRunner(func(st agent.Settings) error {
+		r, err := buildRunner(st)
+		if err != nil {
+			return err
+		}
+		aiRunnerMu.Lock()
+		aiRunner = r
+		aiRunnerMu.Unlock()
+		return nil
+	})
 
 	// 同步策略模板库(文件型,零 DB 迁移)
 	tplStore, err := tpl.Open("data/templates.json")

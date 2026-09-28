@@ -1,46 +1,94 @@
-// Color Palette
-$primary: #1677FF;
-$success: #52C41A;
-$warning: #FAAD14;
-$error: #FF4D4F;
+// ============================================================
+// GitFerry 设计 tokens — 中性优先、语义克制、运维台密度
+// 视觉锚点：GitHub Enterprise / Linear 式冷静控制台
+// ============================================================
 
-$text-primary: #1F1F1F;
-$text-secondary: #8C8C8C;
-$text-tertiary: #BFBFBF;
+// ---------- Color ----------
+// 品牌 / 交互
+$primary: #2563eb;
+$primary-hover: #1d4ed8;
+$primary-soft: #eff6ff;
+$primary-border: #bfdbfe;
 
-$bg-primary: #FFFFFF;
-$bg-secondary: #F5F5F5;
-$border: #E8E8E8;
+// 语义（降饱和，避免彩虹噪声）
+$success: #1a7f37;
+$success-soft: #dafbe1;
+$success-border: #aceebb;
 
-// Spacing
+$warning: #9a6700;
+$warning-soft: #fff8c5;
+$warning-border: #eed888;
+
+$error: #cf222e;
+$error-soft: #ffebe9;
+$error-border: #ffcecb;
+
+$running: #0969da;
+$running-soft: #ddf4ff;
+$running-border: #b6e3ff;
+
+// 中性
+$text-primary: #1f2328;
+$text-secondary: #59636e;
+$text-tertiary: #8c959f;
+$text-inverse: #ffffff;
+
+$bg-canvas: #f6f8fa;
+$bg-primary: #ffffff;
+$bg-secondary: #f6f8fa;
+$bg-subtle: #eef1f4;
+$bg-hover: #f3f4f6;
+
+$border: #d0d7de;
+$border-light: #e6e9ed;
+$border-muted: #eaeef2;
+
+// ---------- Spacing（4px 栅格） ----------
 $spacing-xs: 4px;
 $spacing-sm: 8px;
-$spacing-md: 16px;
-$spacing-lg: 24px;
-$spacing-xl: 32px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 24px;
+$spacing-2xl: 32px;
 
-// Border Radius
+// ---------- Radius ----------
 $radius-sm: 4px;
-$radius-md: 8px;
-$radius-lg: 12px;
-$radius-xl: 16px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
 
-// Shadows
-$shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
-$shadow-card-hover: 0 6px 16px 0 rgba(0, 0, 0, 0.08);
-$shadow-modal: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+// ---------- Shadow（几乎不用阴影，靠描边分层） ----------
+$shadow-card: none;
+$shadow-card-hover: 0 1px 3px rgba(31, 35, 40, 0.06);
+$shadow-modal: 0 8px 24px rgba(31, 35, 40, 0.12);
+$shadow-drawer: -4px 0 16px rgba(31, 35, 40, 0.08);
 
-// Sidebar
-$sidebar-width-expanded: 240px;
-$sidebar-width-collapsed: 80px;
+// ---------- Layout ----------
+$sidebar-width-expanded: 232px;
+$sidebar-width-collapsed: 64px;
+$header-height: 52px;
+$content-padding: 20px;
+$content-max: 1440px;
 
-// Header
-$header-height: 56px;
+// ---------- Typography ----------
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+  'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+$font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+  'Liberation Mono', monospace;
 
-// Font
-$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$fs-caption: 12px;
+$fs-body: 13px;
+$fs-md: 14px;
+$fs-lg: 16px;
+$fs-xl: 20px;
+$fs-2xl: 24px;
 
-// Backward compatibility aliases
+// ---------- Motion ----------
+$ease: cubic-bezier(0.2, 0, 0, 1);
+$duration-fast: 120ms;
+$duration: 180ms;
+
+// ---------- Backward compatibility aliases ----------
 $primary-color: $primary;
 $success-color: $success;
 $warning-color: $warning;
