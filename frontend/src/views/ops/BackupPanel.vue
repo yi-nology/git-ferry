@@ -80,7 +80,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { opsApi, type BundleInfo } from '@/api/ops'
+import { opsApi, type BundleInfo, type MetadataSnapshot } from '@/api/ops'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 defineOptions({ name: 'BackupPanel' })
@@ -97,7 +97,7 @@ const metaOpen = ref(false)
 const metaLoading = ref(false)
 const metaRepoKey = ref('')
 const metaOpts = ref({ with_archives: true, with_assets: true, with_gists: true })
-const metaItems = ref<Array<Record<string, unknown>>>([])
+const metaItems = ref<MetadataSnapshot[]>([])
 const metaListLoading = ref(false)
 
 const metaColumns = [
@@ -183,7 +183,7 @@ async function loadMetaList() {
   metaListLoading.value = true
   try {
     const d = await opsApi.listMetadataBackups()
-    metaItems.value = (d.items as Array<Record<string, unknown>>) || []
+    metaItems.value = d.items || []
   } catch (e) {
     notifyError(e, '加载快照列表失败')
   } finally {

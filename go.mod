@@ -13,7 +13,7 @@ require (
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oklog/run v1.2.0
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.6.0
+	github.com/yi-nology/git-ferry-core v0.6.1
 	github.com/yi-nology/go-git-platform v0.64.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
