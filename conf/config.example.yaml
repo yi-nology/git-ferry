@@ -30,6 +30,8 @@ sync:
   backup_encrypt_key: ""     # AES-256-GCM 冷备加密(base64 32B 或口令);空=不加密
   backup_retention_days: 90  # 冷备保留天数,0=不按天清理
   legal_hold: false          # true=合规冻结,禁止自动清理
+  auto_discover_interval_minutes: 0  # 平台自动发现周期(分钟),0=关闭
+  auto_discover_import: false        # 发现新仓库是否自动导入
   backup_s3:                 # bundle 异地冷备(S3 兼容);空=只存本地
     endpoint: ""
     region: ""

@@ -103,7 +103,7 @@ Vue 3 + Ant Design Vue 自托管控制台,视觉锚点为 GitHub Enterprise / Li
 2. 设置环境变量 `GIT_SYNC_AI_API_KEY`(密钥不写入 yaml;界面保存的密钥同样可用);
 3. 重启服务。`data/ai-settings.json` 存在时优先覆盖 yaml 默认值。
 
-**能力:** 24 个工具(deep_analyze/plan_mode/记忆/权限分级/结果持久化):查询/健康评分/资产盘点/失败诊断/记忆(plan_mode/remember/recall)/危险操作确认 —— 仓库/分支/任务/执行历史/执行详情/平台/Webhook 规则/
+**能力:** 29 个工具(deep_analyze/plan_mode/记忆/权限分级/结果持久化/灾备演练):查询/健康评分/资产盘点/RPO/备份完整性/漂移检测/审计链/失败诊断/记忆(plan_mode/remember/recall)/危险操作确认 —— 仓库/分支/任务/执行历史/执行详情/平台/Webhook 规则/
 系统概览等只读查询直接执行;`run_task`(立即同步)、`test_repo_connection`、
 `test_platform_connection` 为危险操作,后端强制弹确认卡片并校验一次性令牌后才会执行。
 

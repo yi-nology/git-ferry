@@ -4,6 +4,13 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+### Added
+
+- **AI 工具扩展**: `get_rpo_report` / `get_backup_integrity` / `get_drift_report` /
+  `get_audit_chain` / `run_dr_drill`(确认门),共 29 个工具。
+- **生命周期后台**: `sync.auto_discover_interval_minutes` 周期自动发现 +
+  冷备 retention 自动清理(legal_hold 时跳过)。
+
 ## [v1.18.0] - 2026-09-29
 
 > 依赖 `git-ferry-core v0.6.0`。对标 gickup / gitea-mirror / ghorg 的 P0–P5 演进批次。

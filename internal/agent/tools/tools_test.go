@@ -45,12 +45,13 @@ func (f *fakeScope) LastConfirm() (string, string, string) {
 
 func TestRegistry_AllToolsRegistered(t *testing.T) {
 	reg := NewRegistry(toolstest.NewMock())
-	// 21 个工具:7 只读 + 8 概览/治理/记忆 + 4 危险 + plan/diagnose
-	assert.Len(t, reg.Names(), 24)
+	// 29 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose
+	assert.Len(t, reg.Names(), 29)
 	for _, name := range []string{
 		"list_repos", "get_repo", "list_branches", "list_tasks", "get_task",
 		"list_sync_history", "get_run_detail", "list_platforms", "list_webhook_rules",
 		"get_system_overview", "run_task", "test_repo_connection", "test_platform_connection",
+		"get_rpo_report", "get_backup_integrity", "get_drift_report", "get_audit_chain", "run_dr_drill",
 	} {
 		assert.NotNil(t, reg.ByName(name), "缺少工具 %s", name)
 	}
@@ -172,3 +173,34 @@ func TestMarshalJSON_FallbackOnFailure(t *testing.T) {
 type assertErr string
 
 func (e assertErr) Error() string { return string(e) }
+
+func TestGetRPOReport(t *testing.T) {
+	m := toolstest.NewMock()
+	m.RPO = &corebridge.RPOReport{OverallRPOHuman: "2h", WorstTask: "t1"}
+	reg := NewRegistry(m)
+	out, err := reg.ByName("get_rpo_report").InvokableRun(context.Background(), `{"max_seconds":3600}`)
+	require.NoError(t, err)
+	assert.Contains(t, out, "2h")
+}
+
+func TestGetDriftReport(t *testing.T) {
+	m := toolstest.NewMock()
+	m.Drift = &corebridge.DriftReport{Checked: 2, Drifted: 1, Items: []corebridge.DriftItem{
+		{TaskKey: "t1", Drifted: true, Message: "diverged"},
+	}}
+	reg := NewRegistry(m)
+	out, err := reg.ByName("get_drift_report").InvokableRun(context.Background(), `{}`)
+	require.NoError(t, err)
+	assert.Contains(t, out, "diverged")
+}
+
+func TestRunDRDrill_RequiresConfirm(t *testing.T) {
+	m := toolstest.NewMock()
+	reg := NewRegistry(m)
+	sc := &fakeScope{}
+	ctx := WithScope(context.Background(), sc)
+	out, err := reg.ByName("run_dr_drill").InvokableRun(ctx, `{"name":"a.bundle"}`)
+	require.NoError(t, err)
+	assert.Contains(t, out, "confirmation_required")
+	assert.Equal(t, "run_dr_drill", sc.lastTool)
+}

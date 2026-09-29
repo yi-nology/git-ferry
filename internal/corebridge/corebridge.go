@@ -67,6 +67,7 @@ type (
 	AutoDiscoverOptions  = coreservice.AutoDiscoverOptions
 	DiscoveryReport      = coreservice.DiscoveryReport
 	DriftReport          = coreservice.DriftReport
+	AuditChainResult     = coreservice.AuditChainResult
 	DriftItem            = coreservice.DriftItem
 	ForcePushPolicy      = coreservice.ForcePushPolicy
 	RPOReport            = coreservice.RPOReport

@@ -36,6 +36,14 @@ type SyncService interface {
 	CountTasksByStatus() (map[string]int64, error)
 	HealthCheck() map[string]string
 	RunTaskWithTrigger(ctx context.Context, taskKey, trigger string, webhookEventID *uint) error
+
+	// P0-P5:灾备 / RPO / 漂移 / 审计链
+	RPOReport(maxSeconds int64) (*corebridge.RPOReport, error)
+	VerifyBackupManifest() (*corebridge.ManifestVerifyResult, error)
+	DetectDrift(ctx context.Context, taskKeys []string) (*corebridge.DriftReport, error)
+	VerifyAuditChain() (*corebridge.AuditChainResult, error)
+	RunDRDrill(ctx context.Context, name string) (*corebridge.DrillReport, error)
+	BatchDRDrill(ctx context.Context, names []string, max int) ([]*corebridge.DrillReport, map[string]any, error)
 }
 
 // 编译期断言:corebridge.Service 必须满足 SyncService,签名漂移立即暴露。

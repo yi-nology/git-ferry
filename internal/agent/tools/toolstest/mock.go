@@ -33,6 +33,12 @@ type Mock struct {
 
 	RunTaskErr error
 
+	// P0-P5 可注入结果
+	RPO       *corebridge.RPOReport
+	RPOErr    error
+	Integrity *corebridge.ManifestVerifyResult
+	Drift     *corebridge.DriftReport
+
 	// mu 保护在请求 goroutine 与测试 goroutine 间并发的字段。
 	mu             sync.Mutex
 	lastRunTaskKey string
@@ -122,4 +128,43 @@ func (m *Mock) RunTaskKey() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.lastRunTaskKey
+}
+
+// ===== P0-P5:灾备 / RPO / 漂移 / 审计链 =====
+
+func (m *Mock) RPOReport(int64) (*corebridge.RPOReport, error) {
+	if m.RPOErr != nil {
+		return nil, m.RPOErr
+	}
+	if m.RPO == nil {
+		return &corebridge.RPOReport{Metrics: []corebridge.RPOMetric{}}, nil
+	}
+	return m.RPO, nil
+}
+
+func (m *Mock) VerifyBackupManifest() (*corebridge.ManifestVerifyResult, error) {
+	if m.Integrity != nil {
+		return m.Integrity, nil
+	}
+	return &corebridge.ManifestVerifyResult{OK: true, Message: "ok"}, nil
+}
+
+func (m *Mock) DetectDrift(context.Context, []string) (*corebridge.DriftReport, error) {
+	if m.Drift != nil {
+		return m.Drift, nil
+	}
+	return &corebridge.DriftReport{Items: []corebridge.DriftItem{}}, nil
+}
+
+func (m *Mock) VerifyAuditChain() (*corebridge.AuditChainResult, error) {
+	return &corebridge.AuditChainResult{OK: true, Checked: 0, Message: "ok"}, nil
+}
+
+func (m *Mock) RunDRDrill(context.Context, string) (*corebridge.DrillReport, error) {
+	return &corebridge.DrillReport{Success: true, EstRTO: "1s"}, nil
+}
+
+func (m *Mock) BatchDRDrill(context.Context, []string, int) ([]*corebridge.DrillReport, map[string]any, error) {
+	return []*corebridge.DrillReport{{Success: true}},
+		map[string]any{"total": 1, "success": 1, "failed": 0}, nil
 }
