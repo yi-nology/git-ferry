@@ -6,6 +6,8 @@ include "operation_log.thrift"
 include "platform.thrift"
 include "system.thrift"
 include "ops.thrift"
+include "ai.thrift"
+include "mirror.thrift"
 
 service RepoService {
     repo.ListReposResp RepoList(1: repo.ListReposReq req) (api.get="/api/v1/repos")

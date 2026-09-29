@@ -3,6 +3,7 @@ package git_sync
 import (
 	"context"
 	"fmt"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -82,14 +83,9 @@ func DeleteTemplate(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, map[string]any{"success": true})
 }
 
-// PreviewTemplateReq 预览模板会命中哪些任务。
-type PreviewTemplateReq struct {
-	TemplateID string `json:"template_id" form:"template_id" query:"template_id"`
-}
-
 // PreviewTemplate 套用前预览命中结果(借鉴 Renovate dry-run)。
 func PreviewTemplate(ctx context.Context, c *app.RequestContext) {
-	var req PreviewTemplateReq
+	var req ops.PreviewTemplateReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -98,7 +94,7 @@ func PreviewTemplate(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	t, err := st.Get(req.TemplateID)
+	t, err := st.Get(req.TemplateId)
 	if err != nil {
 		response.NotFound(c, "template not found")
 		return
@@ -229,17 +225,10 @@ func RepoInventory(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// ApplyTemplateReq 套用模板:对命中任务批量写入 Spec 默认值。
-type ApplyTemplateReq struct {
-	TemplateID string `json:"template_id" form:"template_id" query:"template_id"`
-	// DryRun true 时只返回将变更列表,不落库
-	DryRun bool `json:"dry_run" form:"dry_run" query:"dry_run"`
-}
-
 // ApplyTemplate 批量套用策略模板(借鉴 Renovate packageRules 应用)。
 // 只更新已存在任务的 cron/分支/启用位;不隐式创建任务,避免误建。
 func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
-	var req ApplyTemplateReq
+	var req ops.ApplyTemplateReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -248,7 +237,7 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	t, err := st.Get(req.TemplateID)
+	t, err := st.Get(req.TemplateId)
 	if err != nil {
 		response.NotFound(c, "template not found")
 		return
@@ -288,7 +277,7 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 		if !need {
 			continue
 		}
-		if !req.DryRun {
+		if !optBoolDefault(req.DryRun) {
 			// UpdateTaskRequest:空字符串=不改;Enabled 指针 nil=不改
 			upd := corebridge.UpdateTaskRequest{Key: task.Key, Name: task.Name}
 			if t.Spec.Cron != "" {
@@ -305,11 +294,11 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 		changed = append(changed, change{Key: task.Key, Name: task.Name, Before: before, After: after})
 	}
 	recordAudit(ctx, c, "apply_template", "template", t.ID,
-		fmt.Sprintf("套用模板 %s,变更 %d 条 (dry_run=%v)", t.Name, len(changed), req.DryRun))
+		fmt.Sprintf("套用模板 %s,变更 %d 条 (dry_run=%v)", t.Name, len(changed), optBoolDefault(req.DryRun)))
 	response.Success(c, map[string]any{
 		"template": t,
 		"changed":  changed,
 		"total":    len(changed),
-		"dry_run":  req.DryRun,
+		"dry_run":  optBoolDefault(req.DryRun),
 	})
 }

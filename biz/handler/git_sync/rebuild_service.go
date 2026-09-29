@@ -3,6 +3,7 @@ package git_sync
 import (
 	"context"
 	"fmt"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,16 +12,11 @@ import (
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
-// RebuildReq 一键从源重建(借鉴 ghorg reclone):清掉本地 workdir 再全量同步。
-type RebuildReq struct {
-	TaskKey string `json:"task_key" form:"task_key" query:"task_key"`
-}
-
 // RebuildRepo POST /api/v1/ops/rebuild
 // 删除任务临时工作目录后触发一次同步,等价于「冷启动全量拉取」。
 // 用于 workdir 损坏、浅克隆修复、或需要强制全量刷新时。
 func RebuildRepo(ctx context.Context, c *app.RequestContext) {
-	var req RebuildReq
+	var req ops.RebuildReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

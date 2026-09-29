@@ -2,6 +2,7 @@ package git_sync
 
 import (
 	"context"
+	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
 	"strconv"
 	"strings"
 
@@ -11,42 +12,6 @@ import (
 )
 
 // ===== 请求体 =====
-
-type MirrorTargetReq struct {
-	Remote       string `json:"remote"`
-	RepoURL      string `json:"repoUrl"`
-	TargetModule string `json:"targetModule"`
-	CredType     string `json:"credType"`
-	Credential   string `json:"credential"`
-	Username     string `json:"username"`
-}
-
-type CreateMirrorChannelReq struct {
-	Name    string            `json:"name"`
-	Mode    string            `json:"mode"`
-	RepoKey string            `json:"repoKey"`
-	Targets []MirrorTargetReq `json:"targets"`
-}
-
-type UpdateMirrorTargetReq struct {
-	MirrorTargetReq
-}
-
-type MirrorPreviewReq struct {
-	TargetID uint   `json:"targetId"`
-	Tag      string `json:"tag"`
-}
-
-type MirrorRunReq struct {
-	TargetID       uint     `json:"targetId"`
-	Tags           []string `json:"tags"`
-	AllowOverwrite bool     `json:"allowOverwrite"`
-}
-
-type MirrorVerifyReq struct {
-	TargetID uint   `json:"targetId"`
-	Tag      string `json:"tag"`
-}
 
 // ===== 辅助 =====
 
@@ -75,12 +40,15 @@ func parsePage(c *app.RequestContext) corebridge.Pagination {
 	return corebridge.DefaultPagination((page-1)*pageSize, pageSize)
 }
 
-func toMirrorTargetInputs(reqs []MirrorTargetReq) []corebridge.MirrorTargetInput {
+func toMirrorTargetInputs(reqs []*mirrormodel.MirrorTargetReq) []corebridge.MirrorTargetInput {
 	inputs := make([]corebridge.MirrorTargetInput, 0, len(reqs))
 	for _, r := range reqs {
+		if r == nil {
+			continue
+		}
 		inputs = append(inputs, corebridge.MirrorTargetInput{
 			Remote:       strings.TrimSpace(r.Remote),
-			RepoURL:      strings.TrimSpace(r.RepoURL),
+			RepoURL:      strings.TrimSpace(r.RepoUrl),
 			TargetModule: strings.TrimSpace(r.TargetModule),
 			CredType:     r.CredType,
 			Credential:   r.Credential,
@@ -103,7 +71,7 @@ func MirrorChannelList(ctx context.Context, c *app.RequestContext) {
 }
 
 func MirrorChannelCreate(ctx context.Context, c *app.RequestContext) {
-	var req CreateMirrorChannelReq
+	var req mirrormodel.CreateMirrorChannelReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -153,14 +121,14 @@ func MirrorTargetUpdate(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	var req UpdateMirrorTargetReq
+	var req mirrormodel.UpdateMirrorTargetReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 	t, err := GetSyncService().Mirror().UpdateMirrorTarget(ctx, id, corebridge.MirrorTargetInput{
 		Remote:       req.Remote,
-		RepoURL:      req.RepoURL,
+		RepoURL:      req.RepoUrl,
 		TargetModule: req.TargetModule,
 		CredType:     req.CredType,
 		Credential:   req.Credential,
@@ -217,7 +185,7 @@ func MirrorPreview(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	var req MirrorPreviewReq
+	var req mirrormodel.MirrorPreviewReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -226,7 +194,7 @@ func MirrorPreview(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "tag is required")
 		return
 	}
-	rep, err := GetSyncService().Mirror().PreviewMirrorRun(ctx, id, req.TargetID, req.Tag)
+	rep, err := GetSyncService().Mirror().PreviewMirrorRun(ctx, id, uint(req.TargetId), req.Tag)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -239,13 +207,13 @@ func MirrorRunCreate(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	var req MirrorRunReq
+	var req mirrormodel.MirrorRunReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 	run, err := GetSyncService().Mirror().ExecuteMirrorRun(ctx, id, corebridge.ExecuteMirrorRunInput{
-		TargetID:       req.TargetID,
+		TargetID:       uint(req.TargetId),
 		Tags:           req.Tags,
 		AllowOverwrite: req.AllowOverwrite,
 	})
@@ -302,7 +270,7 @@ func MirrorVerify(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	var req MirrorVerifyReq
+	var req mirrormodel.MirrorVerifyReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -311,7 +279,7 @@ func MirrorVerify(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "tag is required")
 		return
 	}
-	run, err := GetSyncService().Mirror().VerifyMirrorTargetVersion(ctx, id, req.TargetID, req.Tag)
+	run, err := GetSyncService().Mirror().VerifyMirrorTargetVersion(ctx, id, uint(req.TargetId), req.Tag)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return

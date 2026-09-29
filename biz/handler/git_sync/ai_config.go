@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yi-nology/git-ferry/biz/model/ai"
 	"io"
 	"net/http"
 	"strings"
@@ -34,18 +35,6 @@ func getAISettingsStore() *agent.SettingsStore {
 	return aiSettingsStore.get()
 }
 
-type aiConfigRequest struct {
-	Enabled            bool    `json:"enabled"`
-	BaseURL            string  `json:"base_url"`
-	Model              string  `json:"model"`
-	Temperature        float64 `json:"temperature"`
-	MaxTokens          int     `json:"max_tokens"`
-	TimeoutSeconds     int     `json:"timeout_seconds"`
-	MaxConcurrentChats int     `json:"max_concurrent_chats"`
-	// APIKey 空表示沿用已保存密钥;显式传 **** 不会被当成新密钥
-	APIKey string `json:"api_key"`
-}
-
 // AIGetConfig GET /api/v1/ai/config —— 读取 AI 配置(密钥脱敏)。
 func AIGetConfig(ctx context.Context, c *app.RequestContext) {
 	st := getAISettingsStore()
@@ -64,24 +53,24 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, consts.StatusNotImplemented, "ai_settings_unavailable")
 		return
 	}
-	var req aiConfigRequest
+	var req ai.AIConfigRequest
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	key := req.APIKey
+	key := optStr(req.ApiKey)
 	// 界面回显的脱敏值不可当作新密钥
 	if strings.Contains(key, "****") {
 		key = ""
 	}
 	saved, err := st.Save(&agent.Settings{
 		Enabled:            req.Enabled,
-		BaseURL:            req.BaseURL,
+		BaseURL:            req.BaseUrl,
 		Model:              req.Model,
 		Temperature:        req.Temperature,
-		MaxTokens:          req.MaxTokens,
-		TimeoutSeconds:     req.TimeoutSeconds,
-		MaxConcurrentChats: req.MaxConcurrentChats,
+		MaxTokens:          int(req.MaxTokens),
+		TimeoutSeconds:     int(req.TimeoutSeconds),
+		MaxConcurrentChats: int(req.MaxConcurrentChats),
 		APIKey:             key,
 	})
 	if err != nil {
@@ -109,12 +98,6 @@ func rebuildAgentRunner(st *agent.Settings) error {
 		return fmt.Errorf("runner rebuild not wired")
 	}
 	return rebuildAgentRunnerFn(st)
-}
-
-type aiTestRequest struct {
-	BaseURL string `json:"base_url"`
-	Model   string `json:"model"`
-	APIKey  string `json:"api_key"`
 }
 
 // AIListModels GET /api/v1/ai/models —— 列出 OpenAI 兼容端点可用模型。
@@ -181,17 +164,17 @@ func AIListModels(ctx context.Context, c *app.RequestContext) {
 
 // AITestConfig POST /api/v1/ai/config/test —— 探测 OpenAI 兼容端点(不落盘)。
 func AITestConfig(ctx context.Context, c *app.RequestContext) {
-	var req aiTestRequest
+	var req ai.AITestRequest
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	base := strings.TrimRight(strings.TrimSpace(req.BaseURL), "/")
+	base := strings.TrimRight(strings.TrimSpace(req.BaseUrl), "/")
 	if base == "" {
 		response.BadRequest(c, "base_url 不能为空")
 		return
 	}
-	key := req.APIKey
+	key := optStr(req.ApiKey)
 	if strings.Contains(key, "****") {
 		key = ""
 	}
@@ -203,7 +186,7 @@ func AITestConfig(ctx context.Context, c *app.RequestContext) {
 
 	// 优先 GET /models(OpenAI 兼容);失败再 POST /chat/completions 极短补全
 	client := &http.Client{Timeout: 8 * time.Second}
-	status, modelOK, msg := probeOpenAICompat(ctx, client, base, key, req.Model)
+	status, modelOK, msg := probeOpenAICompat(ctx, client, base, key, optStr(req.Model))
 	response.Success(c, map[string]any{
 		"ok":         status > 0 && status < 400,
 		"status":     status,

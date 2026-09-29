@@ -3,6 +3,7 @@ package git_sync
 import (
 	"context"
 	"fmt"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -13,23 +14,10 @@ import (
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
-// ExportIssuesReq 导出仓库 issues(备份/迁移用)。
-type ExportIssuesReq struct {
-	RepoKey string `json:"repo_key" form:"repo_key" query:"repo_key"`
-	// State open/closed/all
-	State string `json:"state" form:"state" query:"state"`
-	// Max 最多导出条数,默认 500,上限 2000
-	Max int `json:"max" form:"max" query:"max"`
-	// Format json | csv
-	Format string `json:"format" form:"format" query:"format"`
-	// WithComments 同时导出评论(仅 json)
-	WithComments bool `json:"with_comments" form:"with_comments" query:"with_comments"`
-}
-
 // ExportIssues GET /api/v1/ops/issues-export
 // 借鉴 gickup 的 issues 备份:导出仓库 issue 列表,可选带评论。
 func ExportIssues(ctx context.Context, c *app.RequestContext) {
-	var req ExportIssuesReq
+	var req ops.ExportIssuesReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -38,7 +26,7 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "repo_key is required")
 		return
 	}
-	max := req.Max
+	max := int(req.Max)
 	if max <= 0 {
 		max = 500
 	}
@@ -66,13 +54,13 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, err.Error())
 		return
 	}
-	issues, err := listIssues(ctx, prov, repo, req.State, max)
+	issues, err := listIssues(ctx, prov, repo, optStr(req.State), max)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}
 
-	if req.WithComments && req.Format != "csv" {
+	if optBool(req.WithComments) && optStr(req.Format) != "csv" {
 		if im, ok := prov.(sdkprov.IssueManager); ok {
 			for _, iss := range issues {
 				comments, cerr := im.ListIssueComments(ctx, repo.PlatformOwner, repo.PlatformRepo, iss.Number)
@@ -83,7 +71,7 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	if req.Format == "csv" {
+	if optStr(req.Format) == "csv" {
 		csv := buildIssuesCSV(issues)
 		c.Data(consts.StatusOK, "text/csv; charset=utf-8", []byte(csv))
 		return

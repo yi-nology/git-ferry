@@ -14,11 +14,6 @@ import (
 
 // ===== 失败补偿:手动/批量重试 =====
 
-// RetryRunReq 按执行记录重跑对应任务。
-type RetryRunReq struct {
-	RunID uint `json:"run_id" form:"run_id" query:"run_id"`
-}
-
 // RetryRun 手动重试一条失败执行:取 run 的 task_key 再触发一次同步。
 // 只允许重试 failed 状态,避免把成功任务误触发。
 func RetryRun(ctx context.Context, c *app.RequestContext) {
@@ -54,14 +49,6 @@ func RetryRun(ctx context.Context, c *app.RequestContext) {
 		"message":  "retry started",
 		"task_key": taskKey,
 	})
-}
-
-// BatchRetryReq 批量重试最近失败的执行。
-type BatchRetryReq struct {
-	// Limit 最多重试多少条;默认 10,上限 50
-	Limit int `json:"limit" form:"limit" query:"limit"`
-	// TaskKey 仅重试该任务的失败
-	TaskKey string `json:"task_key" form:"task_key" query:"task_key"`
 }
 
 // BatchRetryFailed 扫描最近失败执行并批量重跑(返回将要/已重试列表)。

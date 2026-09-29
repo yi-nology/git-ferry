@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/yi-nology/git-ferry/biz/model/ai"
 	"strings"
 	"sync"
 
@@ -47,15 +48,6 @@ func AIStatus(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, map[string]any{"enabled": true, "model": r.ModelName()})
 }
 
-type aiChatRequest struct {
-	SessionID string `json:"session_id"`
-	Message   string `json:"message"`
-	Confirmed *struct {
-		Tool  string `json:"tool"`
-		Token string `json:"token"`
-	} `json:"confirmed_tool_call"`
-}
-
 // AIChat POST /api/v1/ai/chat —— SSE 流式响应。
 // 事件:start(含 session_id)→ delta* / tool_start / tool_end / tool_confirm → done|error。
 func AIChat(ctx context.Context, c *app.RequestContext) {
@@ -64,24 +56,24 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, consts.StatusNotImplemented, "ai_disabled")
 		return
 	}
-	var req aiChatRequest
+	var req ai.AIChatRequest
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
 	// 校验前置:先建会话后校验会让空消息请求留下垃圾会话
-	if req.Confirmed == nil && strings.TrimSpace(req.Message) == "" {
+	if req.ConfirmedToolCall == nil && strings.TrimSpace(req.Message) == "" {
 		response.BadRequest(c, "message 不能为空")
 		return
 	}
 
 	store := r.Sessions()
 	var sess *agent.Session
-	if req.SessionID == "" {
+	if optStr(req.SessionId) == "" {
 		sess = store.Create()
 	} else {
 		var err error
-		sess, err = store.Get(req.SessionID)
+		sess, err = store.Get(optStr(req.SessionId))
 		if err != nil {
 			response.Error(c, consts.StatusNotFound, "会话不存在或已过期,请重新开始")
 			return
@@ -101,8 +93,8 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// 确认路径:校验令牌 → 直达执行 → tool_end/done,不经模型。
-	if req.Confirmed != nil {
-		out, err := r.ExecuteConfirmed(ctx, sess, req.Confirmed.Tool, req.Confirmed.Token)
+	if req.ConfirmedToolCall != nil {
+		out, err := r.ExecuteConfirmed(ctx, sess, req.ConfirmedToolCall.Tool, req.ConfirmedToolCall.Token)
 		if err != nil {
 			if !publish(agent.Event{Type: "error", Content: confirmErrText(err)}) {
 				return
@@ -110,7 +102,7 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 			publish(agent.Event{Type: "done"})
 			return
 		}
-		publish(agent.Event{Type: "tool_end", Tool: req.Confirmed.Tool, Result: truncateRunes(out, 600)})
+		publish(agent.Event{Type: "tool_end", Tool: req.ConfirmedToolCall.Tool, Result: truncateRunes(out, 600)})
 		publish(agent.Event{Type: "done"})
 		return
 	}

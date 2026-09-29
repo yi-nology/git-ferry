@@ -182,3 +182,54 @@ struct AuditReportReq {
 struct HealthScoreReq {
     1: i32 limit (api.json="limit")
 }
+
+// ===== 诊断 / 重建 / 部署密钥 =====
+
+struct DiagnoseReq {
+    1: i32 runId (api.json="run_id")
+}
+
+struct RebuildReq {
+    1: string taskKey (api.json="task_key")
+}
+
+struct GenerateDeployKeyReq {
+    1: optional string comment (api.json="comment")
+}
+
+// ===== Issues 导出 / 过滤导入 / Migration =====
+
+struct ExportIssuesReq {
+    1: string repoKey (api.json="repo_key")
+    2: optional string state (api.json="state")
+    3: i32 max (api.json="max")
+    4: optional string format (api.json="format")
+    5: optional bool withComments (api.json="with_comments")
+}
+
+struct SyncPlatformFilteredReq {
+    1: string key (api.json="key")
+    2: optional bool excludeArchived (api.json="exclude_archived")
+    3: optional bool excludeForks (api.json="exclude_forks")
+    4: i32 minStars (api.json="min_stars")
+    5: optional string includeLanguage (api.json="include_language")
+    6: optional string includeGlobs (api.json="include_globs")
+    7: optional string excludeGlobs (api.json="exclude_globs")
+}
+
+struct ExportMigrationReq {
+    1: string platformKey (api.json="platform_key")
+    2: optional string org (api.json="org")
+    3: optional bool wait (api.json="wait")
+}
+
+// ===== 策略模板 =====
+
+struct PreviewTemplateReq {
+    1: string templateId (api.json="template_id")
+}
+
+struct ApplyTemplateReq {
+    1: string templateId (api.json="template_id")
+    2: optional bool dryRun (api.json="dry_run")
+}

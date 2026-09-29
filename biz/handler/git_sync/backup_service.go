@@ -9,11 +9,6 @@ import (
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
-// ListBundlesReq 列出冷备。
-type ListBundlesReq struct {
-	TaskKey string `json:"task_key" form:"task_key" query:"task_key"`
-}
-
 // ListBundles GET /api/v1/ops/bundles
 func ListBundles(ctx context.Context, c *app.RequestContext) {
 	svc, ok := requireSyncService(c)
@@ -30,11 +25,6 @@ func ListBundles(ctx context.Context, c *app.RequestContext) {
 		"items":      list,
 		"total":      len(list),
 	})
-}
-
-// VerifyBundleReq 校验 bundle。
-type VerifyBundleReq struct {
-	Name string `json:"name" form:"name" query:"name"`
 }
 
 // VerifyBundle GET /api/v1/ops/bundles/verify?name=
@@ -58,12 +48,6 @@ func VerifyBundle(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	response.Success(c, info)
-}
-
-// RestoreBundleReq 从 bundle 恢复。
-type RestoreBundleReq struct {
-	Name    string `json:"name" form:"name" query:"name"`
-	DestDir string `json:"dest_dir" form:"dest_dir" query:"dest_dir"`
 }
 
 // RestoreBundle POST /api/v1/ops/bundles/restore

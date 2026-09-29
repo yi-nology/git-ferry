@@ -2,6 +2,7 @@ package git_sync
 
 import (
 	"context"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -12,16 +13,10 @@ import (
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
-// BackupGistsReq 平台级 gists 备份请求。
-type BackupGistsReq struct {
-	PlatformKey string `json:"platform_key" form:"platform_key" query:"platform_key"`
-	MaxGists    int    `json:"max_gists" form:"max_gists"`
-}
-
 // BackupGists POST /api/v1/ops/gists-backup
 // 备份平台 token 可见的 gists 到冷备目录(仅 GitHub)。
 func BackupGists(ctx context.Context, c *app.RequestContext) {
-	var req BackupGistsReq
+	var req ops.BackupGistsReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -50,7 +45,7 @@ func BackupGists(ctx context.Context, c *app.RequestContext) {
 	}
 	dest := filepath.Join(backupDir, "gists", textutil.SanitizePathToken(req.PlatformKey),
 		time.Now().UTC().Format("20060102-150405"))
-	count, warnings, err := githubapi.BackupGists(ctx, plat.APIURL, plat.AccessToken, dest, req.MaxGists)
+	count, warnings, err := githubapi.BackupGists(ctx, plat.APIURL, plat.AccessToken, dest, int(req.MaxGists))
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return

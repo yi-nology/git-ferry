@@ -3,6 +3,7 @@ package git_sync
 import (
 	"context"
 	"fmt"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -10,21 +11,16 @@ import (
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
-// DiagnoseReq 失败诊断。
-type DiagnoseReq struct {
-	RunID uint `json:"run_id" form:"run_id" query:"run_id"`
-}
-
 // DiagnoseRun GET /api/v1/ops/diagnose?run_id=
 // 对失败 run 做结构化诊断:错误分类 → 可能原因 → 建议动作。
 // 借鉴 AI 助手的解释能力,但无需模型即可给出规则化结论。
 func DiagnoseRun(ctx context.Context, c *app.RequestContext) {
-	var req DiagnoseReq
+	var req ops.DiagnoseReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if req.RunID == 0 {
+	if uint(req.RunId) == 0 {
 		response.BadRequest(c, "run_id is required")
 		return
 	}
@@ -32,7 +28,7 @@ func DiagnoseRun(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	run, taskKey, err := findRunByID(ctx, svc, req.RunID)
+	run, taskKey, err := findRunByID(ctx, svc, uint(req.RunId))
 	if err != nil {
 		response.NotFound(c, "run not found")
 		return

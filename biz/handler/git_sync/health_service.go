@@ -22,11 +22,6 @@ type HealthScoreItem struct {
 	Issues []string `json:"issues,omitempty"`
 }
 
-// HealthScoreReq 评分请求。
-type HealthScoreReq struct {
-	Limit int `json:"limit" form:"limit" query:"limit"`
-}
-
 // HealthScore 按规则给任务打分(借鉴 Port Scorecards 的等级模型)。
 // 规则(壳层可计算,不依赖 core 扩展):
 //   - 有最近成功执行 (+40)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"io"
 	"net/http"
 	"strings"
@@ -13,21 +14,11 @@ import (
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
-// ExportMigrationReq GitHub Migration API 全量归档(借鉴 gitbackup createUserMigration)。
-type ExportMigrationReq struct {
-	// PlatformKey 必须是 github 类型平台
-	PlatformKey string `json:"platform_key" form:"platform_key" query:"platform_key"`
-	// Org 组织名(与 User 二选一;都空=当前 token 用户)
-	Org string `json:"org" form:"org" query:"org"`
-	// ArchiveURL 是否只返回归档下载地址
-	Wait bool `json:"wait" form:"wait" query:"wait"`
-}
-
 // ExportGitHubMigration POST /api/v1/ops/migration
 // 调 GitHub Migration API 导出用户/组织全量 tar.gz(仓库+issues+PR+releases)。
 // 与逐项 issues-export 互补:这是平台原生「一键全量归档」。
 func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
-	var req ExportMigrationReq
+	var req ops.ExportMigrationReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -61,8 +52,8 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	}
 
 	var migURL string
-	if req.Org != "" {
-		migURL = apiBase + "/orgs/" + req.Org + "/migrations"
+	if optStr(req.Org) != "" {
+		migURL = apiBase + "/orgs/" + optStr(req.Org) + "/migrations"
 	} else {
 		migURL = apiBase + "/user/migrations"
 	}
@@ -100,7 +91,7 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	_ = json.Unmarshal(raw, &parsed)
 
 	recordAudit(ctx, c, "export_migration", "platform", req.PlatformKey,
-		fmt.Sprintf("发起 GitHub Migration 导出 org=%s", req.Org))
+		fmt.Sprintf("发起 GitHub Migration 导出 org=%s", optStr(req.Org)))
 
 	result := map[string]any{
 		"migration_id": parsed.ID,
@@ -110,10 +101,10 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// wait=true 时轮询到 completed(最多 60s)
-	if req.Wait && parsed.ID != 0 {
+	if optBool(req.Wait) && parsed.ID != 0 {
 		for i := 0; i < 12; i++ {
 			time.Sleep(5 * time.Second)
-			if done := pollMigration(ctx, apiBase, token, req.Org, parsed.ID); done != nil {
+			if done := pollMigration(ctx, apiBase, token, optStr(req.Org), parsed.ID); done != nil {
 				result["state"] = done.State
 				result["archive_url"] = done.ArchiveURL
 				break
