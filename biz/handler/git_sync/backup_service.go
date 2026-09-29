@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -67,7 +68,7 @@ type RestoreBundleReq struct {
 
 // RestoreBundle POST /api/v1/ops/bundles/restore
 func RestoreBundle(ctx context.Context, c *app.RequestContext) {
-	var req RestoreBundleReq
+	var req ops.RestoreBundleReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

@@ -25,4 +25,3 @@ func newIssueProvider(plat *corebridge.Platform, repoToken string) (sdkprov.Prov
 	}
 	return p, nil
 }
-

@@ -6,21 +6,14 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
-
-// RunDRDrillReq 灾备演练请求。
-type RunDRDrillReq struct {
-	Name string `json:"name" form:"name" query:"name"`
-	// All=true 时演练目录下全部(或最近 max 个)bundle;否则仅 Name。
-	All bool `json:"all" form:"all" query:"all"`
-	Max int  `json:"max" form:"max" query:"max"`
-}
 
 // RunDRDrill POST /api/v1/ops/dr-drill
 // 从冷备 bundle 恢复到临时目录 → git fsck → refs 比对 → 出 RTO 报告。
 func RunDRDrill(ctx context.Context, c *app.RequestContext) {
-	var req RunDRDrillReq
+	var req ops.RunDRDrillReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -29,8 +22,8 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	if req.All {
-		max := req.Max
+	if optBool(req.All) {
+		max := int(req.Max)
 		if max <= 0 {
 			max = 5
 		}
@@ -47,16 +40,16 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
-	if req.Name == "" {
+	if optStr(req.Name) == "" {
 		response.BadRequest(c, "name is required (or set all=true)")
 		return
 	}
-	rep, err := svc.RunDRDrill(ctx, req.Name)
+	rep, err := svc.RunDRDrill(ctx, optStr(req.Name))
 	if err != nil && rep == nil {
 		response.InternalError(c, err.Error())
 		return
 	}
-	recordAudit(ctx, c, "dr_drill", "backup", req.Name, "灾备演练")
+	recordAudit(ctx, c, "dr_drill", "backup", optStr(req.Name), "灾备演练")
 	response.Success(c, map[string]any{
 		"mode":    "single",
 		"reports": []any{rep},

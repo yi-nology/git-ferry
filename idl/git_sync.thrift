@@ -5,6 +5,7 @@ include "webhook.thrift"
 include "operation_log.thrift"
 include "platform.thrift"
 include "system.thrift"
+include "ops.thrift"
 
 service RepoService {
     repo.ListReposResp RepoList(1: repo.ListReposReq req) (api.get="/api/v1/repos")

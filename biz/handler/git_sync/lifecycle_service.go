@@ -5,24 +5,15 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
-// AutoDiscoverReq 自动发现请求。
-type AutoDiscoverReq struct {
-	PlatformKey     string `json:"platform_key" form:"platform_key" query:"platform_key"`
-	ImportNew       bool   `json:"import_new" form:"import_new" query:"import_new"`
-	ExcludeArchived *bool  `json:"exclude_archived" form:"exclude_archived"`
-	ExcludeForks    *bool  `json:"exclude_forks" form:"exclude_forks"`
-	MinStars        int    `json:"min_stars" form:"min_stars"`
-	IncludeLanguage string `json:"include_language" form:"include_language"`
-}
-
 // AutoDiscover POST /api/v1/ops/auto-discover
 // 扫描平台仓库找本地未登记项;import_new=true 时自动导入。
 func AutoDiscover(ctx context.Context, c *app.RequestContext) {
-	var req AutoDiscoverReq
+	var req ops.AutoDiscoverReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -36,13 +27,13 @@ func AutoDiscover(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	filter := &corebridge.RepoImportFilter{
-		ExcludeArchived: req.ExcludeArchived == nil || *req.ExcludeArchived,
-		ExcludeForks:    req.ExcludeForks == nil || *req.ExcludeForks,
-		MinStars:        req.MinStars,
+		ExcludeArchived: optBoolDefault(req.ExcludeArchived),
+		ExcludeForks:    optBoolDefault(req.ExcludeForks),
+		MinStars:        int(req.MinStars),
 		IncludeLanguage: req.IncludeLanguage,
 	}
 	rep, err := svc.AutoDiscover(ctx, req.PlatformKey, corebridge.AutoDiscoverOptions{
-		ImportNew: req.ImportNew,
+		ImportNew: optBool(req.ImportNew),
 		Filter:    filter,
 	})
 	if err != nil {
@@ -50,7 +41,7 @@ func AutoDiscover(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	action := "auto_discover_scan"
-	if req.ImportNew {
+	if optBool(req.ImportNew) {
 		action = "auto_discover_import"
 	}
 	recordAudit(ctx, c, action, "repo", req.PlatformKey,
@@ -58,15 +49,10 @@ func AutoDiscover(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, rep)
 }
 
-// DetectDriftReq 漂移检测请求。
-type DetectDriftReq struct {
-	TaskKeys []string `json:"task_keys" form:"task_keys" query:"task_keys"`
-}
-
 // DetectDrift POST /api/v1/ops/drift
 // 比对本地 workdir 与目标远端分支 tip,发现静默漂移。
 func DetectDrift(ctx context.Context, c *app.RequestContext) {
-	var req DetectDriftReq
+	var req ops.DetectDriftReq
 	_ = c.BindAndValidate(&req)
 	svc, ok := requireSyncService(c)
 	if !ok {
@@ -80,15 +66,10 @@ func DetectDrift(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, rep)
 }
 
-// CleanupBackupsReq 冷备清理请求。
-type CleanupBackupsReq struct {
-	Confirm string `json:"confirm" form:"confirm" query:"confirm"`
-}
-
 // CleanupBackups POST /api/v1/ops/backup-cleanup
 // 按 retention 天数清理;legal_hold 时拒绝。
 func CleanupBackups(ctx context.Context, c *app.RequestContext) {
-	var req CleanupBackupsReq
+	var req ops.CleanupBackupsReq
 	_ = c.BindAndValidate(&req)
 	svc, ok := requireSyncService(c)
 	if !ok {

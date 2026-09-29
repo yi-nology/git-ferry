@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
@@ -26,12 +27,12 @@ type AuditReportReq struct {
 
 // AuditReport 导出操作日志,便于合规留档(策略变更/重试记录都在审计里)。
 func AuditReport(ctx context.Context, c *app.RequestContext) {
-	var req AuditReportReq
+	var req ops.AuditReportReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	limit := req.Limit
+	limit := int(req.Limit)
 	if limit <= 0 {
 		limit = 200
 	}
@@ -43,16 +44,16 @@ func AuditReport(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	filter := corebridge.OperationLogFilter{
-		Action:    req.Action,
-		StartDate: req.StartDate,
-		EndDate:   req.EndDate,
+		Action:    optStr(req.Action),
+		StartDate: optStr(req.StartDate),
+		EndDate:   optStr(req.EndDate),
 	}
-	logs, total, err := svc.ListOperations(ctx, 0, limit, &filter)
+	logs, total, err := svc.ListOperations(ctx, 0, int(limit), &filter)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}
-	if req.Format == "csv" {
+	if optStr(req.Format) == "csv" {
 		csv := buildAuditCSV(logs)
 		c.Data(consts.StatusOK, "text/csv; charset=utf-8", []byte(csv))
 		return

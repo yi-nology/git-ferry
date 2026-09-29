@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
@@ -21,12 +22,12 @@ type RetryRunReq struct {
 // RetryRun 手动重试一条失败执行:取 run 的 task_key 再触发一次同步。
 // 只允许重试 failed 状态,避免把成功任务误触发。
 func RetryRun(ctx context.Context, c *app.RequestContext) {
-	var req RetryRunReq
+	var req ops.RetryRunReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if req.RunID == 0 {
+	if uint(req.RunId) == 0 {
 		response.BadRequest(c, "run_id is required")
 		return
 	}
@@ -34,7 +35,7 @@ func RetryRun(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	run, taskKey, err := findRunByID(ctx, svc, req.RunID)
+	run, taskKey, err := findRunByID(ctx, svc, uint(req.RunId))
 	if err != nil {
 		response.NotFound(c, "run not found")
 		return
@@ -47,7 +48,7 @@ func RetryRun(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, err.Error())
 		return
 	}
-	recordAudit(ctx, c, "retry", "sync_run", fmt.Sprint(req.RunID), "手动重试同步 "+taskKey)
+	recordAudit(ctx, c, "retry", "sync_run", fmt.Sprint(uint(req.RunId)), "手动重试同步 "+taskKey)
 	response.Success(c, map[string]any{
 		"success":  true,
 		"message":  "retry started",
@@ -65,12 +66,12 @@ type BatchRetryReq struct {
 
 // BatchRetryFailed 扫描最近失败执行并批量重跑(返回将要/已重试列表)。
 func BatchRetryFailed(ctx context.Context, c *app.RequestContext) {
-	var req BatchRetryReq
+	var req ops.BatchRetryReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	limit := req.Limit
+	limit := int(req.Limit)
 	if limit <= 0 {
 		limit = 10
 	}
@@ -81,7 +82,7 @@ func BatchRetryFailed(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	failed, err := collectRecentFailedRuns(ctx, svc, req.TaskKey, limit)
+	failed, err := collectRecentFailedRuns(ctx, svc, optStr(req.TaskKey), limit)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
@@ -99,7 +100,7 @@ func BatchRetryFailed(ctx context.Context, c *app.RequestContext) {
 			"task_key": item.taskKey,
 		})
 	}
-	recordAudit(ctx, c, "batch_retry", "sync_run", req.TaskKey,
+	recordAudit(ctx, c, "batch_retry", "sync_run", optStr(req.TaskKey),
 		fmt.Sprintf("批量重试 %d 条失败执行", len(retried)))
 	response.Success(c, map[string]any{
 		"success":   true,

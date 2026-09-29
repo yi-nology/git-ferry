@@ -55,6 +55,9 @@ clean-data:
 generate:
 	@echo "Generating code from IDL..."
 	@cd idl && thriftgo -r -g "go:package_prefix=github.com/yi-nology/git-ferry/biz" --out ../biz git_sync.thrift
+	@hz model --idl idl/ops.thrift --module github.com/yi-nology/git-ferry --model_dir biz/model --snake_tag
+	@rm -rf biz/base biz/git_sync biz/operation_log biz/platform biz/repo biz/sync_task biz/system biz/webhook biz/ops
+	@echo ">> generated biz/model/* (ops via hz --snake_tag)"
 
 # 从 IDL 生成 OpenAPI 3.0 spec → docs/openapi.json(同时更新内嵌副本)
 apidoc:

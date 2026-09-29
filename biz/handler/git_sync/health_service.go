@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/health"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -33,12 +34,12 @@ type HealthScoreReq struct {
 //   - 有 cron 或 webhook 触发配置 (+20)
 //   - 有任务名/描述元数据 (+10)
 func HealthScore(ctx context.Context, c *app.RequestContext) {
-	var req HealthScoreReq
+	var req ops.HealthScoreReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	limit := req.Limit
+	limit := int(req.Limit)
 	if limit <= 0 {
 		limit = 50
 	}

@@ -8,8 +8,8 @@ import (
 	hertzserver "github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
 	"github.com/stretchr/testify/assert"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"github.com/stretchr/testify/require"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
 	"github.com/yi-nology/git-ferry/internal/health"
 )
