@@ -254,6 +254,17 @@
               <span style="font-weight: 500;">Prune</span>
               <span style="color: #8C8C8C; font-size: 12px; margin-left: 8px;">清理远程已删除的分支</span>
             </a-checkbox>
+            <div style="margin-top: 8px">
+              <div style="font-weight: 500; margin-bottom: 4px">强制推送保护</div>
+              <a-select
+                v-model:value="formData.force_push_policy"
+                style="width: 100%"
+                :options="forcePushOptions"
+              />
+              <div style="color: #8C8C8C; font-size: 12px; margin-top: 4px">
+                block=拒绝覆盖分歧分支;backup_on_demand=覆盖前自动快照;allow=允许 force
+              </div>
+            </div>
           </a-space>
         </a-form-item>
       </a-form>
@@ -413,7 +424,14 @@ const formData = reactive({
   git_tags: false,
   git_force: false,
   git_prune: false,
+  force_push_policy: 'block' as 'allow' | 'block' | 'backup_on_demand',
 })
+
+const forcePushOptions = [
+  { label: 'block — 分支有分歧时拒绝覆盖', value: 'block' },
+  { label: 'backup_on_demand — 覆盖前自动快照', value: 'backup_on_demand' },
+  { label: 'allow — 允许 force 覆盖(危险)', value: 'allow' },
+]
 
 const cronPresets = [
   { label: '每5分钟', value: '*/5 * * * *' },
@@ -450,6 +468,7 @@ function openCreate() {
     name: '', source_repo_key: '', source_branch: 'main',
     target_repo_key: '', target_branch: 'main', sync_mode: 'single',
     cron: '', git_tags: false, git_force: false, git_prune: false,
+    force_push_policy: 'block',
   })
   dialogVisible.value = true
 }
@@ -468,6 +487,8 @@ function openEdit(task: SyncTask) {
     git_tags: task.git_tags,
     git_force: task.git_force,
     git_prune: task.git_prune,
+    force_push_policy: (task.force_push_policy as 'allow' | 'block' | 'backup_on_demand')
+      || (task.keep_divergent === false ? 'allow' : 'block'),
   })
   dialogVisible.value = true
 }
@@ -478,11 +499,15 @@ async function handleSubmit() {
     return
   }
   try {
+    const payload = {
+      ...formData,
+      keep_divergent: formData.force_push_policy !== 'allow',
+    }
     if (editingKey.value) {
-      await taskStore.updateTask({ key: editingKey.value, ...formData })
+      await taskStore.updateTask({ key: editingKey.value, ...payload })
       notifySuccess('更新任务成功')
     } else {
-      await taskStore.createTask(formData)
+      await taskStore.createTask(payload)
       notifySuccess('创建任务成功')
     }
     dialogVisible.value = false

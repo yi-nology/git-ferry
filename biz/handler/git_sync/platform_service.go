@@ -21,8 +21,14 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if req.Name == "" || req.Type == "" || req.AccessToken == "" {
-		response.BadRequest(c, "name, type, access_token are required")
+	if req.Name == "" || req.Type == "" {
+		response.BadRequest(c, "name, type are required")
+		return
+	}
+	// 二选一:PAT 或 GitHub App(app_id+installation_id+private_key)
+	hasApp := req.GitHubAppID > 0 && req.GitHubInstallationID > 0 && req.GitHubPrivateKey != ""
+	if req.AccessToken == "" && !hasApp {
+		response.BadRequest(c, "access_token is required (or configure GitHub App: github_app_id + github_installation_id + github_private_key)")
 		return
 	}
 	if !corebridge.ValidPlatformType(req.Type) {
@@ -48,6 +54,9 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 		ProxyURL:              req.ProxyUrl,
 		SSHHostKeyFingerprint: req.SSHHostKeyFingerprint,
 		SSHKnownHostsPath:     req.SSHKnownHostsPath,
+		GitHubAppID:           req.GitHubAppID,
+		GitHubInstallationID:  req.GitHubInstallationID,
+		GitHubPrivateKey:      req.GitHubPrivateKey,
 		IsDefault:             req.IsDefault,
 		Status:                corebridge.PlatformStatusActive,
 	}

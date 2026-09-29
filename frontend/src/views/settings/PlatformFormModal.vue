@@ -54,10 +54,33 @@
         </div>
       </a-form-item>
 
-      <a-form-item label="访问令牌" required>
-        <a-input-password v-model:value="formData.token" placeholder="请输入 Personal Access Token" />
+      <a-form-item label="访问令牌">
+        <a-input-password
+          v-model:value="formData.token"
+          :placeholder="formData.type === 'github' && useGithubApp ? '已配置 GitHub App,可留空' : '请输入 Personal Access Token'"
+        />
         <div class="form-tip">{{ tokenTip }}</div>
       </a-form-item>
+
+      <a-form-item v-if="formData.type === 'github'">
+        <a-checkbox v-model:checked="useGithubApp">使用 GitHub App 认证(优先于 PAT)</a-checkbox>
+      </a-form-item>
+      <template v-if="formData.type === 'github' && useGithubApp">
+        <a-form-item label="App ID">
+          <a-input v-model:value="formData.github_app_id" placeholder="GitHub App ID(数字)" />
+        </a-form-item>
+        <a-form-item label="Installation ID">
+          <a-input v-model:value="formData.github_installation_id" placeholder="Installation ID(数字)" />
+        </a-form-item>
+        <a-form-item label="App 私钥(PEM)">
+          <a-textarea
+            v-model:value="formData.github_private_key"
+            :rows="4"
+            placeholder="-----BEGIN RSA PRIVATE KEY----- ..."
+          />
+          <div class="form-tip">私钥加密入库;保存后自动换 installation token</div>
+        </a-form-item>
+      </template>
 
       <a-alert
         v-if="formData.type !== 'custom' && isPrivateInstance"
@@ -155,7 +178,11 @@ const formData = reactive({
   is_default: false,
   ssh_host_key_fingerprint: '',
   ssh_known_hosts_path: '',
+  github_app_id: '',
+  github_installation_id: '',
+  github_private_key: '',
 })
+const useGithubApp = ref(false)
 
 const urlPlaceholder = ref('')
 const urlTip = ref('')
@@ -224,6 +251,10 @@ watch(
       formData.is_default = getIsDefault(p)
       formData.ssh_host_key_fingerprint = p.ssh_host_key_fingerprint || ''
       formData.ssh_known_hosts_path = p.ssh_known_hosts_path || ''
+      formData.github_app_id = p.github_app_id ? String(p.github_app_id) : ''
+      formData.github_installation_id = ''
+      formData.github_private_key = ''
+      useGithubApp.value = !!p.has_github_app
       const preset = PLATFORM_PRESETS[p.type]
       if (preset) {
         urlPlaceholder.value = `https://${preset.defaultInstance}${preset.apiPath}`
@@ -245,6 +276,10 @@ watch(
       formData.is_default = false
       formData.ssh_host_key_fingerprint = ''
       formData.ssh_known_hosts_path = ''
+      formData.github_app_id = ''
+      formData.github_installation_id = ''
+      formData.github_private_key = ''
+      useGithubApp.value = false
       applyPreset('github')
     }
   },
@@ -260,8 +295,11 @@ async function handleSubmit() {
     message.warning('请填写必填项')
     return
   }
-  if (!isEditing.value && !formData.token) {
-    message.warning('请填写访问令牌')
+  const appID = Number(formData.github_app_id) || 0
+  const installID = Number(formData.github_installation_id) || 0
+  const hasApp = formData.type === 'github' && useGithubApp.value && appID > 0 && installID > 0 && !!formData.github_private_key
+  if (!isEditing.value && !formData.token && !hasApp) {
+    message.warning('请填写访问令牌,或配置 GitHub App')
     return
   }
   submitting.value = true
@@ -279,6 +317,11 @@ async function handleSubmit() {
       ssh_known_hosts_path: formData.ssh_known_hosts_path,
     }
     if (formData.token) base.access_token = formData.token
+    if (hasApp) {
+      base.github_app_id = appID
+      base.github_installation_id = installID
+      base.github_private_key = formData.github_private_key
+    }
 
     if (isEditing.value && props.platform) {
       const upd: UpdatePlatformRequest = { key: props.platform.key, ...base }

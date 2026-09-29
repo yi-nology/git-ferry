@@ -20,6 +20,8 @@ struct PlatformInfo {
     15: string lastTestAt (api.json="last_test_at")
     16: string updatedAt (api.json="updated_at")
     17: bool hasToken (api.json="has_token")
+    18: bool hasGithubApp (api.json="has_github_app")
+    19: optional i64 githubAppId (api.json="github_app_id")
 }
 
 struct ListPlatformsReq {}
@@ -47,6 +49,9 @@ struct CreatePlatformReq {
     7: string caCertPath (api.json="ca_cert_path")
     8: string proxyUrl (api.json="proxy_url")
     9: bool isDefault (api.json="is_default")
+    22: optional i64 githubAppId (api.json="github_app_id")
+    23: optional i64 githubInstallationId (api.json="github_installation_id")
+    24: optional string githubPrivateKey (api.json="github_private_key")
 }
 
 struct CreatePlatformResp {
@@ -63,6 +68,9 @@ struct UpdatePlatformReq {
     7: string caCertPath (api.json="ca_cert_path")
     8: string proxyUrl (api.json="proxy_url")
     9: optional bool isDefault (api.json="is_default")
+    22: optional i64 githubAppId (api.json="github_app_id")
+    23: optional i64 githubInstallationId (api.json="github_installation_id")
+    24: optional string githubPrivateKey (api.json="github_private_key")
 }
 
 struct UpdatePlatformResp {

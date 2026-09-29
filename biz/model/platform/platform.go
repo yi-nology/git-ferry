@@ -30,6 +30,8 @@ type PlatformInfo struct {
 	LastTestAt            string `thrift:"lastTestAt,15" form:"last_test_at" json:"last_test_at" query:"last_test_at"`
 	UpdatedAt             string `thrift:"updatedAt,16" form:"updated_at" json:"updated_at" query:"updated_at"`
 	HasToken              bool   `thrift:"hasToken,17" form:"has_token" json:"has_token" query:"has_token"`
+	HasGithubApp          bool   `thrift:"hasGithubApp,18" form:"has_github_app" json:"has_github_app" query:"has_github_app"`
+	GitHubAppID           int64  `thrift:"githubAppId,19,optional" form:"github_app_id" json:"github_app_id" query:"github_app_id"`
 }
 
 func NewPlatformInfo() *PlatformInfo {
@@ -1476,6 +1478,9 @@ type CreatePlatformReq struct {
 	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
 	ProxyUrl              string `thrift:"proxyUrl,8" form:"proxy_url" json:"proxy_url" query:"proxy_url"`
 	IsDefault             bool   `thrift:"isDefault,9" form:"is_default" json:"is_default" query:"is_default"`
+	GitHubAppID           int64  `thrift:"githubAppId,22,optional" form:"github_app_id" json:"github_app_id" query:"github_app_id"`
+	GitHubInstallationID  int64  `thrift:"githubInstallationId,23,optional" form:"github_installation_id" json:"github_installation_id" query:"github_installation_id"`
+	GitHubPrivateKey      string `thrift:"githubPrivateKey,24,optional" form:"github_private_key" json:"github_private_key" query:"github_private_key"`
 }
 
 func NewCreatePlatformReq() *CreatePlatformReq {
@@ -2132,6 +2137,9 @@ type UpdatePlatformReq struct {
 	IsDefault             *bool  `thrift:"isDefault,9,optional" form:"is_default" json:"is_default,omitempty" query:"is_default"`
 	SSHHostKeyFingerprint string `thrift:"sshHostKeyFingerprint,20" form:"ssh_host_key_fingerprint" json:"ssh_host_key_fingerprint" query:"ssh_host_key_fingerprint"`
 	SSHKnownHostsPath     string `thrift:"sshKnownHostsPath,21" form:"ssh_known_hosts_path" json:"ssh_known_hosts_path" query:"ssh_known_hosts_path"`
+	GitHubAppID           int64  `thrift:"githubAppId,22,optional" form:"github_app_id" json:"github_app_id" query:"github_app_id"`
+	GitHubInstallationID  int64  `thrift:"githubInstallationId,23,optional" form:"github_installation_id" json:"github_installation_id" query:"github_installation_id"`
+	GitHubPrivateKey      string `thrift:"githubPrivateKey,24,optional" form:"github_private_key" json:"github_private_key" query:"github_private_key"`
 }
 
 func NewUpdatePlatformReq() *UpdatePlatformReq {

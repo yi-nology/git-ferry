@@ -37,6 +37,8 @@ func ToPlatformInfo(p *model.Platform) *platformmodel.PlatformInfo {
 		LastTestAt:            lastTestAt,
 		UpdatedAt:             p.UpdatedAt.Format(time.RFC3339),
 		HasToken:              p.AccessToken != "",
+		HasGithubApp:          p.GitHubAppID > 0 && p.GitHubInstallationID > 0,
+		GitHubAppID:           p.GitHubAppID,
 	}
 }
 
@@ -80,6 +82,16 @@ func ApplyPlatformUpdate(p *model.Platform, req *platformmodel.UpdatePlatformReq
 	}
 	if req.ProxyUrl != "" {
 		p.ProxyURL = req.ProxyUrl
+	}
+	// GitHub App:私钥空=不更新;app/installation id 0=不更新(与 token 同语义)
+	if req.GitHubAppID > 0 {
+		p.GitHubAppID = req.GitHubAppID
+	}
+	if req.GitHubInstallationID > 0 {
+		p.GitHubInstallationID = req.GitHubInstallationID
+	}
+	if req.GitHubPrivateKey != "" {
+		p.GitHubPrivateKey = req.GitHubPrivateKey
 	}
 	if req.IsDefault != nil {
 		p.IsDefault = *req.IsDefault

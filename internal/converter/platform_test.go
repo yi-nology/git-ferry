@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/yi-nology/git-ferry-core/model"
 	platformmodel "github.com/yi-nology/git-ferry/biz/model/platform"
 )
@@ -180,4 +181,22 @@ func TestApplyPlatformUpdateNil(t *testing.T) {
 	ApplyPlatformUpdate(nil, nil)
 	ApplyPlatformUpdate(&model.Platform{}, nil)
 	ApplyPlatformUpdate(nil, &platformmodel.UpdatePlatformReq{})
+}
+
+func TestApplyPlatformUpdate_GitHubApp(t *testing.T) {
+	p := &model.Platform{Name: "gh"}
+	appID, instID := int64(42), int64(7)
+	req := &platformmodel.UpdatePlatformReq{
+		GitHubAppID:          appID,
+		GitHubInstallationID: instID,
+		GitHubPrivateKey:     "PEM",
+	}
+	ApplyPlatformUpdate(p, req)
+	assert.Equal(t, appID, p.GitHubAppID)
+	assert.Equal(t, instID, p.GitHubInstallationID)
+	assert.Equal(t, "PEM", p.GitHubPrivateKey)
+
+	info := ToPlatformInfo(p)
+	assert.True(t, info.HasGithubApp)
+	assert.Equal(t, appID, info.GitHubAppID)
 }

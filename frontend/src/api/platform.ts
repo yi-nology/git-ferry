@@ -13,6 +13,8 @@ export interface Platform {
   apiUrl: string  // camelCase from backend
   access_token?: string
   has_token?: boolean  // 后端不回传令牌明文,仅回传是否已配置
+  has_github_app?: boolean
+  github_app_id?: number
   skip_tls_verify: boolean
   skipTlsVerify: boolean  // camelCase from backend
   ca_cert_path: string
@@ -47,6 +49,9 @@ export interface CreatePlatformRequest {
   ca_cert_path?: string
   proxy_url?: string
   is_default?: boolean
+  github_app_id?: number
+  github_installation_id?: number
+  github_private_key?: string
 }
 
 export interface UpdatePlatformRequest {
@@ -57,6 +62,9 @@ export interface UpdatePlatformRequest {
   access_token?: string
   skip_tls_verify?: boolean
   ssh_host_key_fingerprint?: string
+  github_app_id?: number
+  github_installation_id?: number
+  github_private_key?: string
   ssh_known_hosts_path?: string
   ca_cert_path?: string
   proxy_url?: string

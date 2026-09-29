@@ -6,10 +6,14 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ### Added
 
+- **GitHub App 配置贯通**: 平台表单/IDL/接口支持 `github_app_id/installation_id/private_key`,
+  与 PAT 二选一;PlatformInfo 回传 `has_github_app`。
+- **任务编辑 `force_push_policy`**: 创建/编辑统一三策略,兼容 `keep_divergent`。
 - **AI 工具扩展**: `get_rpo_report` / `get_backup_integrity` / `get_drift_report` /
   `get_audit_chain` / `run_dr_drill`(确认门),共 29 个工具。
 - **生命周期后台**: `sync.auto_discover_interval_minutes` 周期自动发现 +
   冷备 retention 自动清理(legal_hold 时跳过)。
+- **OpenAPI/ARCHITECTURE 对齐** Ops 接口(77 paths);冷备页元数据快照列表。
 
 ## [v1.18.0] - 2026-09-29
 
