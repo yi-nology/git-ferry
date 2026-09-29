@@ -605,4 +605,60 @@ func addCustomPaths(paths map[string]any) {
 			},
 		}
 	}
+	// Ops:灾备 / 元数据 / 生命周期 / 治理
+	opsGET := []struct{ path, summary string }{
+		{"/api/v1/ops/health-score", "健康评分"},
+		{"/api/v1/ops/overview", "系统概览"},
+		{"/api/v1/ops/audit-report", "审计导出"},
+		{"/api/v1/ops/audit-chain/verify", "审计哈希链校验"},
+		{"/api/v1/ops/rbac", "当前角色与权限"},
+		{"/api/v1/ops/inventory", "资产盘点"},
+		{"/api/v1/ops/bundles", "冷备 bundle 列表"},
+		{"/api/v1/ops/bundles/verify", "校验 bundle"},
+		{"/api/v1/ops/dr-drill/history", "灾备演练历史"},
+		{"/api/v1/ops/dr-drill/chain/verify", "演练哈希链校验"},
+		{"/api/v1/ops/backup-manifest/verify", "冷备完整性校验"},
+		{"/api/v1/ops/rpo", "RPO/RTO 报告"},
+		{"/api/v1/ops/metadata-backups", "元数据快照列表"},
+		{"/api/v1/ops/diagnose", "失败执行诊断"},
+		{"/api/v1/ops/templates", "策略模板列表"},
+		{"/api/v1/ops/issues-export", "Issues 导出"},
+	}
+	for _, op := range opsGET {
+		paths[op.path] = map[string]any{
+			"get": map[string]any{
+				"tags": []string{"Ops"}, "summary": op.summary,
+				"responses": map[string]any{"200": map[string]any{"description": "Success"}},
+			},
+		}
+	}
+	opsPOST := []struct{ path, summary string }{
+		{"/api/v1/ops/dr-drill", "灾备演练(单/批)"},
+		{"/api/v1/ops/backup-manifest", "生成 Merkle 完整性清单"},
+		{"/api/v1/ops/metadata-backup", "元数据/资产快照"},
+		{"/api/v1/ops/gists-backup", "Gists 备份"},
+		{"/api/v1/ops/auto-discover", "平台自动发现"},
+		{"/api/v1/ops/drift", "漂移检测"},
+		{"/api/v1/ops/backup-cleanup", "过期冷备清理(admin)"},
+		{"/api/v1/ops/bundles/restore", "从冷备恢复(admin)"},
+		{"/api/v1/ops/rebuild", "一键重建(admin)"},
+		{"/api/v1/ops/migration", "GitHub Migration 归档(admin)"},
+		{"/api/v1/ops/sync-platform", "过滤导入平台仓库"},
+		{"/api/v1/ops/deploy-key", "生成部署密钥(admin)"},
+		{"/api/v1/ops/retry", "重试失败执行"},
+		{"/api/v1/ops/retry-batch", "批量重试"},
+		{"/api/v1/ops/templates", "创建策略模板"},
+		{"/api/v1/ops/templates/apply", "应用策略模板(admin)"},
+	}
+	for _, op := range opsPOST {
+		paths[op.path] = map[string]any{
+			"post": map[string]any{
+				"tags": []string{"Ops"}, "summary": op.summary,
+				"requestBody": map[string]any{
+					"content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object"}}},
+				},
+				"responses": map[string]any{"200": map[string]any{"description": "Success"}},
+			},
+		}
+	}
 }

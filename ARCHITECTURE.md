@@ -647,6 +647,27 @@ git-ferry
 | POST | /api/webhook/receive/:repoKey | 接收 Webhook |
 | GET | /api/v1/webhook/events | 事件列表 |
 | POST | /api/v1/webhook/event/retry?id=xxx | 重试事件 |
+| **运维 / 灾备** | | |
+| GET | /api/v1/ops/health-score | 健康评分 |
+| GET | /api/v1/ops/overview | 系统概览 |
+| GET | /api/v1/ops/inventory | 资产盘点(孤儿仓库) |
+| GET | /api/v1/ops/rpo | RPO/RTO 报告 |
+| GET | /api/v1/ops/backup-manifest/verify | 冷备 Merkle 完整性校验 |
+| POST | /api/v1/ops/backup-manifest | 生成完整性清单 |
+| POST | /api/v1/ops/dr-drill | 灾备演练(单/批) |
+| GET | /api/v1/ops/dr-drill/history | 演练历史(哈希链) |
+| GET | /api/v1/ops/dr-drill/chain/verify | 演练链校验 |
+| POST | /api/v1/ops/metadata-backup | 元数据/Release 附件/Gists 快照 |
+| GET | /api/v1/ops/metadata-backups | 快照列表 |
+| POST | /api/v1/ops/gists-backup | Gists 备份 |
+| POST | /api/v1/ops/auto-discover | 平台自动发现 |
+| POST | /api/v1/ops/drift | 漂移检测 |
+| POST | /api/v1/ops/backup-cleanup | 过期冷备清理(admin) |
+| GET | /api/v1/ops/bundles | 冷备列表 |
+| GET | /api/v1/ops/bundles/verify | 校验 bundle |
+| POST | /api/v1/ops/bundles/restore | 恢复(admin) |
+| GET | /api/v1/ops/audit-chain/verify | 审计哈希链校验 |
+| GET | /api/v1/ops/rbac | 当前角色 |
 
 ## 9. 配置文件
 
@@ -677,6 +698,14 @@ sync:
   max_concurrent: 5
   default_timeout: 300
   retry_count: 3
+  backup_dir: data/bundles
+  backup_keep: 5
+  backup_encrypt_key: ""      # AES-256-GCM;空=不加密
+  backup_retention_days: 90
+  legal_hold: false
+  auto_discover_interval_minutes: 0
+  auto_discover_import: false
+  backup_destinations: []     # s3/webdav/azure/local 多目的地扇出
 
 webhook:
   rate_limit: 100

@@ -19,6 +19,29 @@
       </template>
     </a-table>
 
+    <a-divider style="margin: 24px 0 12px">元数据快照</a-divider>
+    <a-space class="toolbar">
+      <a-button size="small" :loading="metaListLoading" @click="loadMetaList">刷新快照</a-button>
+      <a-typography-text type="secondary">issues/PR/releases + 附件 + gists 落在冷备 metadata/ 目录</a-typography-text>
+    </a-space>
+    <a-table
+      :data-source="metaItems"
+      :columns="metaColumns"
+      row-key="dir"
+      size="middle"
+      :loading="metaListLoading"
+      :pagination="{ pageSize: 5 }"
+    >
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'counts'">
+          <a-tag v-for="(v, k) in record.counts || {}" :key="k">{{ k }}: {{ v }}</a-tag>
+        </template>
+        <template v-else-if="column.key === 'time'">
+          {{ (record.created_at || '').replace('T', ' ').slice(0, 19) }}
+        </template>
+      </template>
+    </a-table>
+
     <a-modal v-model:open="restoreOpen" title="从冷备恢复" @ok="doRestore">
       <a-form layout="vertical">
         <a-form-item label="Bundle">{{ restoreName }}</a-form-item>
@@ -74,6 +97,16 @@ const metaOpen = ref(false)
 const metaLoading = ref(false)
 const metaRepoKey = ref('')
 const metaOpts = ref({ with_archives: true, with_assets: true, with_gists: true })
+const metaItems = ref<Array<Record<string, unknown>>>([])
+const metaListLoading = ref(false)
+
+const metaColumns = [
+  { title: '仓库', dataIndex: 'repo_key', ellipsis: true },
+  { title: '平台', dataIndex: 'platform', width: 100 },
+  { title: '时间', key: 'time', width: 170 },
+  { title: '内容', key: 'counts' },
+  { title: '目录', dataIndex: 'dir', ellipsis: true },
+]
 
 const columns = [
   { title: '名称', dataIndex: 'name', ellipsis: true },
@@ -138,6 +171,7 @@ async function doMetaBackup() {
       `快照完成: issues=${counts.issues || 0} prs=${counts.pull_requests || 0} assets=${counts.release_assets || 0} gists=${counts.gists || 0}`,
     )
     metaOpen.value = false
+    await loadMetaList()
   } catch (e) {
     notifyError(e, '元数据快照失败')
   } finally {
@@ -145,7 +179,22 @@ async function doMetaBackup() {
   }
 }
 
-onMounted(load)
+async function loadMetaList() {
+  metaListLoading.value = true
+  try {
+    const d = await opsApi.listMetadataBackups()
+    metaItems.value = (d.items as Array<Record<string, unknown>>) || []
+  } catch (e) {
+    notifyError(e, '加载快照列表失败')
+  } finally {
+    metaListLoading.value = false
+  }
+}
+
+onMounted(() => {
+  load()
+  loadMetaList()
+})
 </script>
 
 <style scoped>

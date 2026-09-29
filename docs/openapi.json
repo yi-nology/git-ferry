@@ -149,11 +149,20 @@
           "git_force": {
             "type": "boolean"
           },
+          "git_lfs": {
+            "type": "boolean"
+          },
           "git_prune": {
+            "type": "boolean"
+          },
+          "git_push_prune": {
             "type": "boolean"
           },
           "git_tags": {
             "type": "boolean"
+          },
+          "keep_divergent": {
+            "type": "string"
           },
           "name": {
             "type": "string"
@@ -1090,7 +1099,13 @@
           "git_force": {
             "type": "boolean"
           },
+          "git_lfs": {
+            "type": "boolean"
+          },
           "git_prune": {
+            "type": "boolean"
+          },
+          "git_push_prune": {
             "type": "boolean"
           },
           "git_tags": {
@@ -1099,6 +1114,9 @@
           "id": {
             "format": "int64",
             "type": "integer"
+          },
+          "keep_divergent": {
+            "type": "boolean"
           },
           "key": {
             "type": "string"
@@ -1320,11 +1338,20 @@
           "git_force": {
             "type": "boolean"
           },
+          "git_lfs": {
+            "type": "boolean"
+          },
           "git_prune": {
+            "type": "boolean"
+          },
+          "git_push_prune": {
             "type": "boolean"
           },
           "git_tags": {
             "type": "boolean"
+          },
+          "keep_divergent": {
+            "type": "string"
           },
           "key": {
             "type": "string"
@@ -1672,6 +1699,553 @@
         "summary": "镜像中心操作(/api/v1/mirror/targets)",
         "tags": [
           "Mirror"
+        ]
+      }
+    },
+    "/api/v1/ops/audit-chain/verify": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "审计哈希链校验",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/audit-report": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "审计导出",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/auto-discover": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "平台自动发现",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/backup-cleanup": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "过期冷备清理(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/backup-manifest": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "生成 Merkle 完整性清单",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/backup-manifest/verify": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "冷备完整性校验",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/bundles": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "冷备 bundle 列表",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/bundles/restore": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "从冷备恢复(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/bundles/verify": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "校验 bundle",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/deploy-key": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "生成部署密钥(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/diagnose": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "失败执行诊断",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/dr-drill": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "灾备演练(单/批)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/dr-drill/chain/verify": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "演练哈希链校验",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/dr-drill/history": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "灾备演练历史",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/drift": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "漂移检测",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/gists-backup": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "Gists 备份",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/health-score": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "健康评分",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/inventory": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "资产盘点",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/issues-export": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "Issues 导出",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/metadata-backup": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "元数据/资产快照",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/metadata-backups": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "元数据快照列表",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/migration": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "GitHub Migration 归档(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/overview": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "系统概览",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/rbac": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "当前角色与权限",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/rebuild": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "一键重建(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/retry": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "重试失败执行",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/retry-batch": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "批量重试",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/rpo": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "RPO/RTO 报告",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/sync-platform": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "过滤导入平台仓库",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/templates": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "创建策略模板",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/templates/apply": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "应用策略模板(admin)",
+        "tags": [
+          "Ops"
         ]
       }
     },
