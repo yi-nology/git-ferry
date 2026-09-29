@@ -80,17 +80,25 @@
             </a-form-item>
 
             <a-form-item label="模型" required>
-              <a-select
-                v-model:value="form.model"
-                show-search
-                allow-clear
-                :options="modelOptions"
-                placeholder="选择或输入模型名"
-                mode="combobox"
-                @change="onModelChange"
-              />
+              <div class="model-row">
+                <a-select
+                  v-model:value="form.model"
+                  show-search
+                  allow-clear
+                  :options="modelOptions"
+                  placeholder="选择或输入模型名"
+                  mode="combobox"
+                  class="model-select"
+                  @change="onModelChange"
+                />
+                <a-button :loading="loadingModels" @click="fetchModels">
+                  <template #icon><CloudDownloadOutlined /></template>
+                  获取模型
+                </a-button>
+              </div>
               <div class="form-tip">
-                也可直接输入任意模型 ID，例如 <code>gpt-4o-mini</code>、<code>qwen2.5:14b</code>。
+                从端点拉取真实模型列表；也可手输
+                <code>gpt-4o-mini</code>、<code>qwen2.5:14b</code> 等。
               </div>
             </a-form-item>
 
@@ -174,9 +182,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { ApiOutlined, SaveOutlined } from '@ant-design/icons-vue'
+import { ApiOutlined, SaveOutlined, CloudDownloadOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { aiConfigApi, type AIConfig, type AITestResult } from '@/api/aiConfig'
+import { aiConfigApi, type AIConfig, type AITestResult, type AIModelItem } from '@/api/aiConfig'
 import { useAIChat } from '@/composables/useAIChat'
 
 defineOptions({ name: 'AISettings' })
@@ -186,7 +194,9 @@ type Preset = 'openai' | 'dashscope' | 'deepseek' | 'ollama' | 'vllm' | 'custom'
 const preset = ref<Preset>('custom')
 const saving = ref(false)
 const testing = ref(false)
+const loadingModels = ref(false)
 const testResult = ref<AITestResult | null>(null)
+const remoteModels = ref<AIModelItem[]>([])
 
 const form = reactive({
   enabled: false,
@@ -229,8 +239,20 @@ const PRESETS: Record<Preset, { base_url: string; models: string[] }> = {
 }
 
 const modelOptions = computed(() => {
-  const list = PRESETS[preset.value]?.models ?? []
-  return list.map((m) => ({ label: m, value: m }))
+  const presetModels = (PRESETS[preset.value]?.models ?? []).map((m) => ({ label: m, value: m }))
+  const remote = remoteModels.value.map((m) => ({
+    label: m.owned_by ? `${m.id} · ${m.owned_by}` : m.id,
+    value: m.id,
+  }))
+  // 远端列表优先,预设作补充;按 value 去重
+  const seen = new Set<string>()
+  const out: { label: string; value: string }[] = []
+  for (const opt of [...remote, ...presetModels]) {
+    if (seen.has(opt.value)) continue
+    seen.add(opt.value)
+    out.push(opt)
+  }
+  return out
 })
 
 const keyPlaceholder = computed(() => {
@@ -260,6 +282,34 @@ function detectPreset(url: string): Preset {
 
 function onModelChange() {
   /* combobox 允许自由输入 */
+}
+
+async function fetchModels() {
+  if (!form.base_url) {
+    message.warning('请先填写 API Base URL')
+    return
+  }
+  loadingModels.value = true
+  try {
+    const data = await aiConfigApi.listModels({
+      base_url: form.base_url,
+      api_key: form.api_key || undefined,
+    })
+    remoteModels.value = data.models || []
+    if (!remoteModels.value.length) {
+      message.info('端点未返回模型列表')
+    } else {
+      message.success(`已获取 ${remoteModels.value.length} 个模型`)
+      // 无当前模型时默认选第一个
+      if (!form.model && remoteModels.value[0]) {
+        form.model = remoteModels.value[0].id
+      }
+    }
+  } catch (e) {
+    message.error((e as Error).message || '获取模型失败')
+  } finally {
+    loadingModels.value = false
+  }
 }
 
 function applyConfig(cfg: AIConfig) {
@@ -384,6 +434,18 @@ onMounted(load)
 .mono-input {
   font-family: $font-mono;
   font-size: 12px;
+}
+
+.model-row {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .test-result {

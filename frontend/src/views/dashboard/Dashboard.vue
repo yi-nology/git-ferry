@@ -34,6 +34,43 @@
       </ul>
     </div>
 
+    <!-- 运维健康：一眼看清整体水位 -->
+    <section v-if="healthSummary" class="content-card health-card">
+      <div class="card-header">
+        <span class="card-title">运维健康</span>
+        <router-link to="/ops">
+          <a-button type="link" size="small">运维中心</a-button>
+        </router-link>
+      </div>
+      <div class="card-body is-padded">
+        <div class="health-row">
+          <div class="health-score">
+            <span class="health-score-num">{{ healthSummary.avg }}</span>
+            <span class="health-score-label">平均分</span>
+          </div>
+          <div class="health-levels">
+            <div
+              v-for="lv in healthSummary.levels"
+              :key="lv.key"
+              class="level-chip"
+              :class="lv.key"
+            >
+              <span class="level-dot" />
+              <span class="level-name">{{ lv.label }}</span>
+              <span class="level-count">{{ lv.count }}</span>
+            </div>
+          </div>
+          <div class="health-issues">
+            <template v-if="healthSummary.issueCount > 0">
+              <WarningOutlined class="issue-icon" />
+              <span>{{ healthSummary.issueCount }} 项待改进</span>
+            </template>
+            <span v-else class="health-ok">未发现明显问题</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 内容双栏 -->
     <div class="grid-row">
       <section class="content-card">
@@ -146,9 +183,10 @@ defineOptions({ name: 'Dashboard' })
 
 import { computed, onMounted, onActivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { syncTaskApi, systemApi, repoApi } from '@/api'
+import { syncTaskApi, systemApi, repoApi, opsApi } from '@/api'
 import type { SystemStatusData } from '@/types/api'
 import type { Repo, SyncTask } from '@/types'
+import type { HealthScoreItem } from '@/api/ops'
 import { notifyError } from '@/utils/notify'
 import { STATUS } from '@/constants/status'
 import { platformLabel } from '@/utils/platform'
@@ -160,6 +198,7 @@ import {
   FolderAddOutlined,
   ArrowRightOutlined,
   AlertOutlined,
+  WarningOutlined,
 } from '@ant-design/icons-vue'
 
 const router = useRouter()
@@ -179,6 +218,31 @@ const runningCount = computed(() => dashTasks.value.filter((t) => t.last_status 
 const failedTasks = computed(() => dashTasks.value.filter((t) => t.last_status === STATUS.Failed))
 const recentTasks = computed(() => dashTasks.value.slice(0, 5))
 const recentRepos = computed(() => dashRepos.value.slice(0, 5))
+
+const healthItems = ref<HealthScoreItem[]>([])
+
+const healthSummary = computed(() => {
+  if (!healthItems.value.length) return null
+  const levels = [
+    { key: 'gold', label: '金牌', count: 0 },
+    { key: 'silver', label: '银牌', count: 0 },
+    { key: 'bronze', label: '铜牌', count: 0 },
+    { key: 'basic', label: '基础', count: 0 },
+  ] as const
+  const counts: Record<string, number> = { gold: 0, silver: 0, bronze: 0, basic: 0 }
+  let sum = 0
+  let issueCount = 0
+  for (const it of healthItems.value) {
+    counts[it.level] = (counts[it.level] || 0) + 1
+    sum += it.score || 0
+    if (it.issues?.length) issueCount += it.issues.length
+  }
+  return {
+    avg: Math.round(sum / healthItems.value.length),
+    levels: levels.map((l) => ({ ...l, count: counts[l.key] || 0 })),
+    issueCount,
+  }
+})
 
 const metrics = computed<MetricItem[]>(() => [
   { label: '仓库', value: dashRepoTotal.value, path: '/repos' },
@@ -238,6 +302,14 @@ async function loadDashboard() {
     dashTaskTotal.value = taskData.total ?? dashTasks.value.length
   } catch (e) {
     notifyError(e, '加载仪表盘数据失败')
+  }
+
+  // 健康评分独立拉取:失败不影响主内容
+  try {
+    const data = await opsApi.healthScore(50)
+    healthItems.value = data.items || []
+  } catch {
+    healthItems.value = []
   }
 }
 
@@ -317,6 +389,107 @@ onActivated(loadDashboard)
 .attention-item :deep(.ant-btn-link) {
   margin-left: auto;
   padding-inline: 4px;
+}
+
+/* 运维健康 */
+.health-card {
+  margin-bottom: $spacing-md;
+}
+
+.health-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.health-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-right: 16px;
+  border-right: 1px solid $border-muted;
+}
+
+.health-score-num {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  color: $text-primary;
+}
+
+.health-score-label {
+  font-size: $fs-caption;
+  color: $text-tertiary;
+}
+
+.health-levels {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.level-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid $border-light;
+  background: $bg-subtle;
+  font-size: $fs-caption;
+  color: $text-secondary;
+
+  .level-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $text-tertiary;
+  }
+
+  .level-count {
+    font-weight: 600;
+    color: $text-primary;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.gold {
+    background: #fff8c5;
+    border-color: #eed888;
+    .level-dot { background: #9a6700; }
+  }
+  &.silver {
+    background: #f6f8fa;
+    border-color: $border;
+    .level-dot { background: #656d76; }
+  }
+  &.bronze {
+    background: #ffebe9;
+    border-color: #ffcecb;
+    .level-dot { background: #cf222e; }
+  }
+  &.basic {
+    background: $bg-subtle;
+    .level-dot { background: $text-tertiary; }
+  }
+}
+
+.health-issues {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $fs-body;
+  color: $warning;
+
+  .issue-icon {
+    font-size: 13px;
+  }
+
+  .health-ok {
+    color: $success;
+  }
 }
 
 /* 内容双栏 */

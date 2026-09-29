@@ -3,6 +3,7 @@ server:
   port: 8890
   mode: debug
   api_key: "change-me-to-a-strong-random-key"
+  api_key_role: admin        # admin | operator | readonly
 
 database:
   driver: sqlite
@@ -26,6 +27,9 @@ sync:
   backup_dir: data/bundles   # git bundle 冷备目录(任务开启 git_bundle 时)
   backup_keep: 5             # 每任务保留最近 N 份,0=不轮转
   partial_clone: ""          # blob:none / tree:0 部分克隆,空=全量
+  backup_encrypt_key: ""     # AES-256-GCM 冷备加密(base64 32B 或口令);空=不加密
+  backup_retention_days: 90  # 冷备保留天数,0=不按天清理
+  legal_hold: false          # true=合规冻结,禁止自动清理
   backup_s3:                 # bundle 异地冷备(S3 兼容);空=只存本地
     endpoint: ""
     region: ""
@@ -34,6 +38,38 @@ sync:
     access_key: ""
     secret_key: ""
     path_style: false
+  backup_destinations:       # 多目的地扇出(与 backup_s3 并存,逐个独立上传)
+    # - type: s3             # s3 | webdav | azure | local
+    #   name: oss
+    #   endpoint: https://oss-cn-hangzhou.aliyuncs.com
+    #   region: oss-cn-hangzhou
+    #   bucket: my-bundles
+    #   prefix: ferry
+    #   access_key: ""
+    #   secret_key: ""
+    #   path_style: false
+    # - type: webdav
+    #   name: nas
+    #   url: https://nas.local/dav/bundles
+    #   username: ""
+    #   password: ""
+    # - type: azure
+    #   name: azure
+    #   account_name: myacct
+    #   account_key: ""
+    #   container: bundles
+    #   prefix: ferry
+
+auth:
+  # OIDC/JWT Bearer(HS256);启用后优先于 X-API-Key
+  oidc:
+    enabled: false
+    secret: ""               # HS256 共享密钥
+    issuer: ""
+    audience: ""
+    role_claim: role         # JWT 角色声明键
+    user_claim: sub
+    default_role: readonly   # admin | operator | readonly
 
 webhook:
   rate_limit: 100

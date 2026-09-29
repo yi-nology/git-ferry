@@ -52,6 +52,7 @@
     </a-tabs>
 
     <!-- Table -->
+    <div class="content-card">
     <a-table
       :columns="columns"
       :data-source="filteredEvents"
@@ -101,6 +102,7 @@
         <a-empty :description="repoKey ? '该仓库暂无事件记录' : '请选择一个仓库查看事件'" />
       </template>
     </a-table>
+    </div>
 
     <!-- Detail Modal -->
     <a-modal
@@ -249,29 +251,7 @@ async function handleRetry(id: number) {
 @import '@/styles/variables.scss';
 
 .page-container {
-  background: $background-color;
   min-height: 100%;
-}
-
-.page-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: $spacing-lg;
-}
-
-.page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: $text-primary;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: $text-secondary;
-  margin: 4px 0 0 0;
 }
 
 .event-tabs {

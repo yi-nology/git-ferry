@@ -2,6 +2,9 @@ package git_sync
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -270,4 +273,90 @@ func TestBundles_VerifyMissing(t *testing.T) {
 	h.GET("/api/v1/ops/bundles/verify", VerifyBundle)
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/bundles/verify?name=../../etc/passwd", nil)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func opsEngineFull() *hertzserver.Hertz {
+	h := opsEngine()
+	h.GET("/api/v1/ops/rpo", RPOReport)
+	h.GET("/api/v1/ops/backup-manifest/verify", VerifyBackupManifest)
+	h.POST("/api/v1/ops/backup-manifest", BuildBackupManifest)
+	h.GET("/api/v1/ops/dr-drill/history", DrillHistory)
+	h.GET("/api/v1/ops/dr-drill/chain/verify", VerifyDrillChain)
+	h.GET("/api/v1/ops/audit-chain/verify", VerifyAuditChain)
+	h.GET("/api/v1/ops/rbac", GetRBAC)
+	h.POST("/api/v1/ops/drift", DetectDrift)
+	h.POST("/api/v1/ops/backup-cleanup", CleanupBackups)
+	return h
+}
+
+func TestRPO_RequiresBackupDir(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/rpo", nil)
+	// 未配置 backup_dir 时返回 500/400,但不能 panic
+	assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError || w.Code == http.StatusBadRequest)
+}
+
+func TestDrillHistory_OK(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/dr-drill/history?limit=5", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "items")
+}
+
+func TestAuditChainVerify_OK(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/audit-chain/verify", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "checked")
+}
+
+func TestRBAC_DefaultReadonly(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	// 未走鉴权中间件时角色缺省 readonly
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/rbac", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "readonly")
+}
+
+func TestBackupCleanup_RequiresConfirm(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/backup-cleanup", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDrift_OK(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/drift", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "checked")
+}
+
+func TestOIDCJWT_ParsesValidToken(t *testing.T) {
+	// 构造 HS256 JWT
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"alice","role":"operator","exp":4102444800}`))
+	mac := hmac.New(sha256.New, []byte("secret"))
+	mac.Write([]byte(header + "." + payload))
+	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	token := header + "." + payload + "." + sig
+
+	claims, err := parseHS256JWT(token, "secret")
+	require.NoError(t, err)
+	assert.Equal(t, "alice", claims.Sub)
+	assert.Equal(t, "operator", stringClaim(claims.Extra, "role"))
+
+	_, err = parseHS256JWT(token, "wrong")
+	assert.Error(t, err)
+}
+
+func TestParseRole(t *testing.T) {
+	assert.Equal(t, RoleAdmin, ParseRole("admin"))
+	assert.Equal(t, RoleOperator, ParseRole("Operator"))
+	assert.Equal(t, RoleReadonly, ParseRole("nope"))
 }

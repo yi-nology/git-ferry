@@ -3,6 +3,7 @@
     <a-space class="toolbar">
       <a-input v-model:value="taskFilter" placeholder="按 task_key 过滤" style="width: 220px" allow-clear />
       <a-button type="primary" :loading="loading" @click="load">刷新</a-button>
+      <a-button @click="metaOpen = true">元数据快照</a-button>
       <a-statistic title="备份数" :value="items.length" />
     </a-space>
 
@@ -30,6 +31,26 @@
     <a-modal v-model:open="verifyOpen" title="校验结果" :footer="null">
       <pre style="max-height: 320px; overflow: auto">{{ verifyResult }}</pre>
     </a-modal>
+
+    <a-modal v-model:open="metaOpen" title="元数据 / 资产快照" :confirm-loading="metaLoading" @ok="doMetaBackup">
+      <a-form layout="vertical">
+        <a-form-item label="仓库 key" required>
+          <a-input v-model:value="metaRepoKey" placeholder="repo-key" />
+        </a-form-item>
+        <a-form-item>
+          <a-checkbox v-model:checked="metaOpts.with_archives">source archive（各 tag 源码包）</a-checkbox>
+        </a-form-item>
+        <a-form-item>
+          <a-checkbox v-model:checked="metaOpts.with_assets">Release 二进制附件（GitHub）</a-checkbox>
+        </a-form-item>
+        <a-form-item>
+          <a-checkbox v-model:checked="metaOpts.with_gists">附带 Gists（GitHub）</a-checkbox>
+        </a-form-item>
+      </a-form>
+      <a-typography-paragraph type="secondary" style="margin: 0">
+        快照含 issues/PR/labels/milestones/releases 元数据；附件与 gists 落在冷备 metadata/ 目录。
+      </a-typography-paragraph>
+    </a-modal>
   </div>
 </template>
 
@@ -49,6 +70,10 @@ const restoreName = ref('')
 const destDir = ref('/tmp/gitferry-restore')
 const verifyOpen = ref(false)
 const verifyResult = ref('')
+const metaOpen = ref(false)
+const metaLoading = ref(false)
+const metaRepoKey = ref('')
+const metaOpts = ref({ with_archives: true, with_assets: true, with_gists: true })
 
 const columns = [
   { title: '名称', dataIndex: 'name', ellipsis: true },
@@ -97,6 +122,26 @@ async function doRestore() {
     restoreOpen.value = false
   } catch (e) {
     message.error((e as Error)?.message || '恢复失败')
+  }
+}
+
+async function doMetaBackup() {
+  if (!metaRepoKey.value) {
+    notifyError(new Error('missing repo_key'), '请填写仓库 key')
+    return
+  }
+  metaLoading.value = true
+  try {
+    const snap = await opsApi.metadataBackup(metaRepoKey.value, metaOpts.value)
+    const counts = snap.counts || {}
+    notifySuccess(
+      `快照完成: issues=${counts.issues || 0} prs=${counts.pull_requests || 0} assets=${counts.release_assets || 0} gists=${counts.gists || 0}`,
+    )
+    metaOpen.value = false
+  } catch (e) {
+    notifyError(e, '元数据快照失败')
+  } finally {
+    metaLoading.value = false
   }
 }
 

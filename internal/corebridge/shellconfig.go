@@ -13,11 +13,26 @@ type ShellConfig struct {
 	*Config
 	// APIKey 公网壳默认 X-API-Key；内网壳可忽略，改用网关/SSO。
 	APIKey string
+	// APIKeyRole 共享 API Key 的 RBAC 角色(admin/operator/readonly),默认 admin。
+	APIKeyRole string
+	// OIDC 可选 JWT Bearer 鉴权(HS256)。
+	OIDC *OIDCSettings
 	// Notify 多通道通知（ntfy/gotify/heartbeat）。
 	Notify *notify.Config
 	// RunWatch 运行观察与失败自动补偿设置。
 	// 独立 struct 而非 runwatch.Config:corebridge 不依赖 runwatch,避免 import 环。
 	RunWatch *RunWatchSettings
+}
+
+// OIDCSettings 对应 yaml auth.oidc 段。
+type OIDCSettings struct {
+	Enabled     bool   `yaml:"enabled"`
+	Secret      string `yaml:"secret"`
+	Issuer      string `yaml:"issuer"`
+	Audience    string `yaml:"audience"`
+	RoleClaim   string `yaml:"role_claim"`
+	UserClaim   string `yaml:"user_claim"`
+	DefaultRole string `yaml:"default_role"`
 }
 
 // RunWatchSettings 对应 yaml runwatch 段,main 启动时转成 runwatch.Config。
@@ -33,13 +48,17 @@ type RunWatchSettings struct {
 // shellOverlay 壳层专有 YAML 段。
 type shellOverlay struct {
 	Server struct {
-		APIKey string `yaml:"api_key"`
+		APIKey     string `yaml:"api_key"`
+		APIKeyRole string `yaml:"api_key_role"`
 	} `yaml:"server"`
+	Auth struct {
+		OIDC *OIDCSettings `yaml:"oidc"`
+	} `yaml:"auth"`
 	Notify   *notify.Config    `yaml:"notify"`
 	RunWatch *RunWatchSettings `yaml:"runwatch"`
 }
 
-// LoadShellConfig 加载 core 配置，并叠加壳层 server.api_key / notify / runwatch。
+// LoadShellConfig 加载 core 配置，并叠加壳层 server.api_key / auth.oidc / notify / runwatch。
 //
 //	INTEGRATION: yaml server.api_key 或环境变量 GIT_SYNC_SERVER_API_KEY
 func LoadShellConfig(path string) (*ShellConfig, error) {
@@ -60,11 +79,17 @@ func LoadShellConfig(path string) (*ShellConfig, error) {
 	case "test-api-key-123", "dev-local-key", "change-me-to-a-strong-random-key", "change-me":
 		apiKey = ""
 	}
+	apiKeyRole := os.Getenv("GIT_SYNC_API_KEY_ROLE")
+	if apiKeyRole == "" {
+		apiKeyRole = overlay.Server.APIKeyRole
+	}
 	return &ShellConfig{
-		Config:   cfg,
-		APIKey:   apiKey,
-		Notify:   overlay.Notify,
-		RunWatch: overlay.RunWatch,
+		Config:     cfg,
+		APIKey:     apiKey,
+		APIKeyRole: apiKeyRole,
+		OIDC:       overlay.Auth.OIDC,
+		Notify:     overlay.Notify,
+		RunWatch:   overlay.RunWatch,
 	}, nil
 }
 

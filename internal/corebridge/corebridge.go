@@ -61,9 +61,19 @@ func GetAPIURL(platformType, instanceURL string) string {
 // ===== DAO 过滤器 / 分页 =====
 
 type (
-	RepoFilter         = dao.RepoFilter
-	RepoImportFilter   = coreservice.RepoImportFilter
-	OperationLogFilter = dao.OperationLogFilter
+	RepoFilter           = dao.RepoFilter
+	RepoImportFilter     = coreservice.RepoImportFilter
+	OperationLogFilter   = dao.OperationLogFilter
+	AutoDiscoverOptions  = coreservice.AutoDiscoverOptions
+	DiscoveryReport      = coreservice.DiscoveryReport
+	DriftReport          = coreservice.DriftReport
+	DriftItem            = coreservice.DriftItem
+	ForcePushPolicy      = coreservice.ForcePushPolicy
+	RPOReport            = coreservice.RPOReport
+	RPOMetric            = coreservice.RPOMetric
+	BackupManifest       = coreservice.BackupManifest
+	ManifestVerifyResult = coreservice.ManifestVerifyResult
+	DrillReport          = coreservice.DrillReport
 )
 
 func DefaultPagination(offset, limit int) dao.Pagination {

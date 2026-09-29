@@ -22,6 +22,9 @@
         <a-tab-pane key="backup" tab="冷备恢复">
           <BackupPanel />
         </a-tab-pane>
+        <a-tab-pane key="dr" tab="灾备演练">
+          <DRPanel />
+        </a-tab-pane>
       </a-tabs>
     </div>
   </div>
@@ -36,6 +39,7 @@ import InventoryPanel from './InventoryPanel.vue'
 import TemplatesPanel from './TemplatesPanel.vue'
 import DeployKeyPanel from './DeployKeyPanel.vue'
 import BackupPanel from './BackupPanel.vue'
+import DRPanel from './DRPanel.vue'
 
 defineOptions({ name: 'OpsCenter' })
 

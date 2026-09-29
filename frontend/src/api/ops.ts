@@ -130,4 +130,156 @@ export const opsApi = {
     http.get<unknown, Record<string, unknown>>('/ops/diagnose', { params: { run_id } }),
   auditReport: (params?: { format?: 'json' | 'csv'; limit?: number; action?: string }) =>
     http.get<unknown, { items: unknown[]; total: number }>('/ops/audit-report', { params }),
+
+  // P0 灾备闭环
+  runDRDrill: (name?: string, all = false, max = 5) =>
+    http.post<unknown, { mode: string; reports: DrillReport[]; summary?: Record<string, unknown> }>(
+      '/ops/dr-drill', { name, all, max },
+    ),
+  drillHistory: (limit = 20) =>
+    http.get<unknown, { items: DrillHistoryEntry[]; total: number }>('/ops/dr-drill/history', { params: { limit } }),
+  verifyDrillChain: () =>
+    http.get<unknown, { ok: boolean; checked: number; broken: string }>('/ops/dr-drill/chain/verify'),
+  buildBackupManifest: () =>
+    http.post<unknown, BackupManifest>('/ops/backup-manifest', {}),
+  verifyBackupManifest: () =>
+    http.get<unknown, ManifestVerifyResult>('/ops/backup-manifest/verify'),
+  rpoReport: (maxSeconds = 0) =>
+    http.get<unknown, RPOReport>('/ops/rpo', { params: { max_seconds: maxSeconds } }),
+
+  // P1 元数据资产
+  metadataBackup: (repo_key: string, opts?: { with_archives?: boolean; with_assets?: boolean; with_gists?: boolean }) =>
+    http.post<unknown, MetadataSnapshot>('/ops/metadata-backup', { repo_key, ...opts }),
+  listMetadataBackups: (repo_key?: string) =>
+    http.get<unknown, { items: MetadataSnapshot[]; total: number }>('/ops/metadata-backups', { params: { repo_key } }),
+  backupGists: (platform_key: string, max_gists = 200) =>
+    http.post<unknown, { platform_key: string; count: number; dir: string; warnings?: string[] }>(
+      '/ops/gists-backup', { platform_key, max_gists },
+    ),
+
+  // P3 生命周期
+  autoDiscover: (platform_key: string, import_new = false) =>
+    http.post<unknown, DiscoveryReport>('/ops/auto-discover', { platform_key, import_new }),
+  detectDrift: (task_keys?: string[]) =>
+    http.post<unknown, DriftReport>('/ops/drift', { task_keys }),
+  cleanupBackups: () =>
+    http.post<unknown, { removed: number; legal_hold: boolean }>('/ops/backup-cleanup', { confirm: 'yes' }),
+
+  // P4 治理
+  verifyAuditChain: () =>
+    http.get<unknown, { ok: boolean; checked: number; broken_at?: number; message: string }>('/ops/audit-chain/verify'),
+  rbac: () =>
+    http.get<unknown, { role: string; user: string; permissions: Record<string, boolean> }>('/ops/rbac'),
+}
+
+/** DR 演练报告 */
+export interface DrillReport {
+  bundle_name: string
+  started_at: string
+  finished_at: string
+  duration_ms: number
+  success: boolean
+  ref_specs?: string[]
+  restored_refs?: string[]
+  missing_refs?: string[]
+  extra_refs?: string[]
+  fsck_ok: boolean
+  fsck_output?: string
+  commit_count: number
+  est_rto: string
+  bundle_size: number
+  errors?: string[]
+}
+
+export interface DrillHistoryEntry {
+  report: DrillReport
+  prev_hash: string
+  hash: string
+}
+
+export interface BackupManifest {
+  version: number
+  generated: string
+  backup_dir: string
+  entry_count: number
+  total_size: number
+  merkle_root: string
+  entries: Array<{ name: string; size: number; sha256: string; mod_time: string; leaf_hash: string }>
+}
+
+export interface ManifestVerifyResult {
+  ok: boolean
+  merkle_root: string
+  stored_root?: string
+  checked_count: number
+  missing_files?: string[]
+  hash_mismatch?: string[]
+  extra_files?: string[]
+  message: string
+}
+
+export interface RPOMetric {
+  task_key: string
+  latest_bundle: string
+  last_backup_at: string
+  bundle_count: number
+  total_size: number
+  rpo_seconds: number
+  rpo_human: string
+  rpo_violated: boolean
+  est_rto: string
+}
+
+export interface RPOReport {
+  generated: string
+  backup_dir: string
+  rpo_max_seconds: number
+  overall_rpo_seconds: number
+  overall_rpo_human: string
+  worst_task: string
+  violations: number
+  metrics: RPOMetric[]
+}
+
+export interface MetadataSnapshot {
+  repo_key: string
+  platform: string
+  owner: string
+  repo: string
+  created_at: string
+  dir: string
+  counts: Record<string, number>
+  files: string[]
+  archives?: string[]
+  warnings?: string[]
+}
+
+export interface DiscoveryReport {
+  platform_key: string
+  scanned_at: string
+  found: number
+  existing: number
+  new_repos: string[]
+  imported: number
+  warnings?: string[]
+}
+
+export interface DriftItem {
+  task_key: string
+  repo_key: string
+  branch: string
+  local_ref: string
+  remote_ref?: string
+  drifted: boolean
+  local_ahead: number
+  remote_ahead: number
+  message: string
+}
+
+export interface DriftReport {
+  generated: string
+  checked: number
+  drifted: number
+  items: DriftItem[]
+  warnings?: string[]
 }

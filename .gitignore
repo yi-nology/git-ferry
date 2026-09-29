@@ -84,3 +84,4 @@ frontend/pnpm-lock.yaml
 
 # 本地真实配置(含 api_key),只入库 config.example.yaml
 conf/config.yaml
+go.work*

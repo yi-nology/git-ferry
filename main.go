@@ -40,6 +40,18 @@ func main() {
 		return syncSvc
 	})
 	git_sync.SetAPIKey(shellCfg.APIKey)
+	git_sync.SetAPIKeyRole(shellCfg.APIKeyRole)
+	if shellCfg.OIDC != nil && shellCfg.OIDC.Enabled {
+		git_sync.SetOIDCConfig(&git_sync.OIDCConfig{
+			Enabled:     shellCfg.OIDC.Enabled,
+			Secret:      shellCfg.OIDC.Secret,
+			Issuer:      shellCfg.OIDC.Issuer,
+			Audience:    shellCfg.OIDC.Audience,
+			RoleClaim:   shellCfg.OIDC.RoleClaim,
+			UserClaim:   shellCfg.OIDC.UserClaim,
+			DefaultRole: shellCfg.OIDC.DefaultRole,
+		})
+	}
 
 	// AI 助手:yaml 默认 + data/ai-settings.json 界面覆盖;未启用 → Runner=nil,端点 501
 	yamlAI, err := agent.LoadConfig("conf/config.yaml")

@@ -22,12 +22,15 @@ func SetAuthMiddlewareProvider(p AuthMiddlewareProvider) {
 	authProvider = p
 }
 
-// ResolveAuthMiddleware 供 AuthMiddleware 使用：优先壳层 Provider，否则默认 API Key。
+// ResolveAuthMiddleware 供 AuthMiddleware 使用：优先壳层 Provider,其次 OIDC Bearer,否则默认 API Key。
 func ResolveAuthMiddleware() app.HandlerFunc {
 	if authProvider != nil {
 		if mw := authProvider(); mw != nil {
 			return mw
 		}
+	}
+	if mw := handler.OIDCAuthMiddleware(); mw != nil {
+		return mw
 	}
 	return DefaultAPIKeyAuthMiddleware()
 }
@@ -35,6 +38,7 @@ func ResolveAuthMiddleware() app.HandlerFunc {
 // DefaultAPIKeyAuthMiddleware 校验 X-API-Key（常量时间比较）。
 // API Key 由壳层注入（handler.SetAPIKey），不经过 git-sync-core。
 // 服务端 API Key 为空时拒绝全部请求。
+// 角色:环境变量 GIT_SYNC_API_KEY_ROLE 指定(默认 admin,兼容旧行为)。
 func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		serverKey := handler.GetAPIKey()
@@ -52,6 +56,7 @@ func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {
 		// 写入不可伪造的审计身份:共享 API Key 场景下客户端 X-User 可信度为零,
 		// 若不在此覆盖,任何持 key 的调用方都能冒充任意操作人。
 		handler.SetAuthUser(c, "api-key:"+keyFingerprint(serverKey))
+		handler.SetAuthRole(c, handler.ParseRole(handler.GetAPIKeyRole()))
 		c.Next(ctx)
 	}
 }

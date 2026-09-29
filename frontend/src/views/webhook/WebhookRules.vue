@@ -25,6 +25,7 @@
       </template>
     </PageHeader>
 
+    <div class="content-card">
     <a-table
       :columns="columns"
       :data-source="webhookStore.rules"
@@ -79,6 +80,7 @@
         </a-empty>
       </template>
     </a-table>
+    </div>
 
     <!-- Create/Edit Modal -->
     <a-modal
@@ -467,29 +469,7 @@ async function deletePlatform(id: number) {
 @import '@/styles/variables.scss';
 
 .page-container {
-  background: $background-color;
   min-height: 100%;
-}
-
-.page-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: $spacing-lg;
-}
-
-.page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: $text-primary;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: $text-secondary;
-  margin: 4px 0 0 0;
 }
 
 .rule-name {

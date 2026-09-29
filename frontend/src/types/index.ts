@@ -33,6 +33,7 @@ export interface SyncTask {
   submodules?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
+  force_push_policy?: 'allow' | 'block' | 'backup_on_demand' | ''
   last_run_at: string
   last_status: string
   created_at: string
@@ -112,6 +113,7 @@ export interface CreateTaskRequest {
   submodules?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
+  force_push_policy?: 'allow' | 'block' | 'backup_on_demand' | ''
 }
 
 export interface UpdateTaskRequest {
@@ -131,6 +133,7 @@ export interface UpdateTaskRequest {
   submodules?: boolean
   git_push_prune?: boolean
   keep_divergent?: boolean
+  force_push_policy?: 'allow' | 'block' | 'backup_on_demand' | ''
 }
 
 export interface CreateRuleRequest {

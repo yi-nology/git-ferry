@@ -117,6 +117,68 @@ type aiTestRequest struct {
 	APIKey  string `json:"api_key"`
 }
 
+// AIListModels GET /api/v1/ai/models —— 列出 OpenAI 兼容端点可用模型。
+// Query: base_url(必填), api_key(可选,缺省用已保存密钥)。
+func AIListModels(ctx context.Context, c *app.RequestContext) {
+	base := strings.TrimRight(strings.TrimSpace(string(c.Query("base_url"))), "/")
+	if base == "" {
+		response.BadRequest(c, "base_url 不能为空")
+		return
+	}
+	key := string(c.Query("api_key"))
+	if strings.Contains(key, "****") {
+		key = ""
+	}
+	if key == "" {
+		if st := getAISettingsStore(); st != nil {
+			key = st.Get().APIKey
+		}
+	}
+
+	client := &http.Client{Timeout: 8 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models", http.NoBody)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		response.BadRequest(c, "无法连接端点: "+err.Error())
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
+	if resp.StatusCode >= 400 {
+		response.Error(c, resp.StatusCode, fmt.Sprintf("端点返回 HTTP %d", resp.StatusCode))
+		return
+	}
+	var parsed struct {
+		Data []struct {
+			ID      string `json:"id"`
+			OwnedBy string `json:"owned_by"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		response.BadRequest(c, "端点响应不是合法 models 列表")
+		return
+	}
+	models := make([]map[string]string, 0, len(parsed.Data))
+	for _, m := range parsed.Data {
+		if m.ID == "" {
+			continue
+		}
+		models = append(models, map[string]string{"id": m.ID, "owned_by": m.OwnedBy})
+	}
+	response.Success(c, map[string]any{
+		"models":   models,
+		"total":    len(models),
+		"base_url": base,
+	})
+}
+
 // AITestConfig POST /api/v1/ai/config/test —— 探测 OpenAI 兼容端点(不落盘)。
 func AITestConfig(ctx context.Context, c *app.RequestContext) {
 	var req aiTestRequest
@@ -143,11 +205,11 @@ func AITestConfig(ctx context.Context, c *app.RequestContext) {
 	client := &http.Client{Timeout: 8 * time.Second}
 	status, modelOK, msg := probeOpenAICompat(ctx, client, base, key, req.Model)
 	response.Success(c, map[string]any{
-		"ok":        status > 0 && status < 400,
-		"status":    status,
-		"model_ok":  modelOK,
-		"message":   msg,
-		"base_url":  base,
+		"ok":         status > 0 && status < 400,
+		"status":     status,
+		"model_ok":   modelOK,
+		"message":    msg,
+		"base_url":   base,
 		"checked_at": time.Now().Format(time.RFC3339),
 	})
 }

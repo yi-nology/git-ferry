@@ -831,11 +831,6 @@ async function testConn(key: string) {
 
 // -- Responsive --
 @media (max-width: 768px) {
-  .page-header-bar {
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
   .filter-bar {
     flex-direction: column;
     align-items: stretch;

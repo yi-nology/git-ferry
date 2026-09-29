@@ -7,7 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/yi-nology/git-ferry)](https://goreportcard.com/report/github.com/yi-nology/git-ferry)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-ferry)](https://go.dev/)
 [![License](https://img.shields.io/github/license/yi-nology/git-ferry)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases/tag/v1.10.0)
+[![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases/tag/v1.18.0)
 
 GitFerry is a self-hosted hub for Git repositories: sync across platforms, publish to the open-source world (dual-identity module mirrors), and back up — all in one place.
 
@@ -63,6 +63,12 @@ Vue 3 + Ant Design Vue 自托管控制台,视觉锚点为 GitHub Enterprise / Li
 | Issues 导出 | `GET /api/v1/ops/issues-export?repo_key=` JSON/CSV |
 | 通用回调 | `notify.webhook` 成功/失败分路 + HMAC 签名 |
 | 冷备 Bundle | 任务开启 `git_bundle`,`sync.backup_dir` + `backup_keep` 轮转 |
+| 灾备演练 | `POST /api/v1/ops/dr-drill` 恢复+fsck+refs 比对;RPO `GET /ops/rpo` |
+| 完整性证明 | Merkle Root 清单 `POST /ops/backup-manifest` + verify |
+| 元数据快照 | issues/PR/releases + source archive + Release 附件 + gists `POST /ops/metadata-backup` |
+| 多目的地扇出 | `sync.backup_destinations`(s3/webdav/azure/local) |
+| 生命周期 | 自动发现 `/ops/auto-discover`、漂移检测 `/ops/drift`、强制推送保护策略 |
+| 治理 | RBAC 三角色、OIDC JWT、审计哈希链 `/ops/audit-chain/verify`、legal_hold |
 | 一键重建 | `POST /api/v1/ops/rebuild` 清 workdir 全量重拉 |
 | 过滤导入 | `POST /api/v1/ops/sync-platform` 排除 archived/fork、按 star/语言/glob |
 | GitHub 全量归档 | `POST /api/v1/ops/migration` Migration API tar.gz |
@@ -82,7 +88,7 @@ Vue 3 + Ant Design Vue 自托管控制台,视觉锚点为 GitHub Enterprise / Li
 
 1. 打开「启用 AI 助手」;
 2. 选择服务预设(OpenAI / DashScope / DeepSeek / Ollama / vLLM / 自定义),或直接填 **API Base URL**;
-3. 选择或输入 **模型**(`gpt-4o-mini`、`qwen-plus`、`qwen2.5:14b` 等);
+3. 选择或输入 **模型**，可点 **获取模型** 从端点拉取真实列表(`gpt-4o-mini`、`qwen-plus`、`qwen2.5:14b` 等);
 4. 填写 **API Key**(本地端点可留空),可先 **测试连接**;
 5. **保存并生效** —— 配置写入 `data/ai-settings.json`,Runner 热重建,无需重启进程。
 
@@ -120,7 +126,7 @@ Vue 3 + Ant Design Vue 自托管控制台,视觉锚点为 GitHub Enterprise / Li
 
 | Repository | Import path | Role |
 |------------|-------------|------|
-| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-sync-core` | Sync engine library (no HTTP)，当前 `v0.3.4` |
+| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-ferry-core` | Sync engine library (no HTTP)，当前 `v0.6.0` |
 | **git-ferry**（本仓） | `github.com/yi-nology/git-ferry` | Public shell: hz API + Vue UI |
 | [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | Intranet shell (gateway/SSO auth) |
 

@@ -34,9 +34,24 @@ export interface AITestResult {
   checked_at: string
 }
 
+export interface AIModelItem {
+  id: string
+  owned_by?: string
+}
+
+export interface AIModelList {
+  models: AIModelItem[]
+  total: number
+  base_url: string
+}
+
 export const aiConfigApi = {
   get: () => api.get<unknown, AIConfig>('/ai/config'),
   update: (data: AIConfigInput) => api.post<unknown, AIConfig>('/ai/config', data),
   test: (data: { base_url: string; model: string; api_key?: string }) =>
     api.post<unknown, AITestResult>('/ai/config/test', data),
+  listModels: (params: { base_url: string; api_key?: string }) =>
+    api.get<unknown, AIModelList>('/ai/models', {
+      params: { base_url: params.base_url, api_key: params.api_key || undefined },
+    }),
 }

@@ -4,6 +4,43 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+## [v1.18.0] - 2026-09-29
+
+> 依赖 `git-ferry-core v0.6.0`。对标 gickup / gitea-mirror / ghorg 的 P0–P5 演进批次。
+
+### Added
+
+- **P0 灾备闭环**:
+  - DR 演练 `POST /ops/dr-drill`(单个/批量):恢复到临时目录 → `git fsck` → refs 比对 → RTO 观测;
+    历史 JSONL 哈希链(`GET /ops/dr-drill/history`、`/dr-drill/chain/verify`)。
+  - 备份完整性证明:SHA256 + Merkle Root 清单(`POST /ops/backup-manifest`、`GET /ops/backup-manifest/verify`)。
+  - RPO/RTO 观测 `GET /ops/rpo`:按任务暴露最近备份时长、超标标记、估算恢复时间。
+- **P1 元数据资产**: `POST /ops/metadata-backup` 快照 issues(+评论)/PR/labels/milestones/releases,
+  可选下载各 tag 的 source archive;`GET /ops/metadata-backups` 列表。
+- **P2 多目的地扇出**: `sync.backup_destinations`(s3/webdav/azure/local),与 `backup_s3` 并存;
+  同步成功后自动加密(可选)并逐目的地上传,失败互不阻断。
+- **P3 生命周期**:
+  - `POST /ops/auto-discover` 平台新仓库发现/导入。
+  - `POST /ops/drift` 本地与目标远端分支漂移检测。
+  - 任务字段 `force_push_policy`:`allow | block | backup_on_demand`(覆盖前自动打回滚快照)。
+  - `POST /ops/backup-cleanup` 按 `backup_retention_days` 清理;`legal_hold` 时拒绝。
+- **P4 认证治理**:
+  - RBAC `admin|operator|readonly`;写操作 `WriteGuard`、治理操作 `AdminGuard`。
+  - OIDC/JWT Bearer(HS256)可选鉴权 `auth.oidc`。
+  - 审计哈希链 `prev_hash/entry_hash` + `GET /ops/audit-chain/verify`。
+  - 平台表新增 GitHub App 字段(app_id / installation_id / private_key)。
+- **P5 存储效率**: 冷备 AES-256-GCM(`sync.backup_encrypt_key`),`.bundle.enc` 恢复自动解密;
+  retention + legal_hold;前端运维中心新增「灾备演练」页签。
+- **GitHub App 签发**: RS256 JWT + installation access token(缓存 55min),配置了
+  `github_app_id/installation_id/private_key` 时优先于 PAT;私钥加密入库。
+- **Release 二进制附件**: `metadata-backup` 可下载 GitHub Release assets(`with_assets`);
+  **Gists 备份** `POST /ops/gists-backup` 或快照 `with_gists`。
+- **前端**: 任务表单「强制推送保护」三策略;冷备页「元数据快照」;灾备页「漂移检测」。
+
+- **AI 模型发现**: `GET /api/v1/ai/models` + 设置页「获取模型」，从端点拉取真实模型列表。
+- **仪表盘运维健康**: 平均分、金银铜/基础分布、待改进项数，直达运维中心。
+- Webhook 列表表格式内容卡；清理残留旧页头样式。
+
 ## [2026-09-29] - 前端重设计与 AI 配置
 
 ### Added

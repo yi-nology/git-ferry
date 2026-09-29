@@ -196,10 +196,14 @@
                   <div class="option-desc">clone/fetch 时同步 git submodule</div>
                 </div>
                 <div class="option-item">
-                  <a-tooltip title="关闭后允许 force 覆盖目标独有提交(危险)">
-                    <a-checkbox v-model:checked="form.keep_divergent">分歧保护</a-checkbox>
+                  <a-tooltip title="分歧保护策略: block=拒绝覆盖;backup_on_demand=覆盖前自动快照;allow=允许 force 覆盖">
+                    <a-select
+                      v-model:value="form.force_push_policy"
+                      style="width: 100%"
+                      :options="forcePushOptions"
+                    />
                   </a-tooltip>
-                  <div class="option-desc">目标分支有源没有的提交时拒绝覆盖</div>
+                  <div class="option-desc">强制推送保护(替代单一「分歧保护」开关)</div>
                 </div>
               </a-space>
             </a-form-item>
@@ -279,7 +283,14 @@ const form = reactive({
   submodules: false,
   git_push_prune: false,
   keep_divergent: true,
+  force_push_policy: 'block' as 'allow' | 'block' | 'backup_on_demand',
 })
+
+const forcePushOptions = [
+  { label: 'block — 分支有分歧时拒绝覆盖', value: 'block' },
+  { label: 'backup_on_demand — 覆盖前自动快照', value: 'backup_on_demand' },
+  { label: 'allow — 允许 force 覆盖(危险)', value: 'allow' },
+]
 
 const cronPresets = [
   { label: '每5分钟', value: '*/5 * * * *' },
@@ -410,7 +421,12 @@ async function submit() {
   }
   submitting.value = true
   try {
-    await taskStore.createTask(form)
+    // 兼容旧字段:allow → keep_divergent=false,其余保持保护
+    const payload = {
+      ...form,
+      keep_divergent: form.force_push_policy !== 'allow',
+    }
+    await taskStore.createTask(payload)
     notifySuccess('创建任务成功')
     router.push('/sync')
   } catch (e) {
