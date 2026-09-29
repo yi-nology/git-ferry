@@ -264,6 +264,19 @@
               <div style="color: #8C8C8C; font-size: 12px; margin-top: 4px">
                 block=拒绝覆盖分歧分支;backup_on_demand=覆盖前自动快照;allow=允许 force
               </div>
+              <!-- 策略变更预览:编辑时 diff 原值 → 新值 -->
+              <div v-if="policyPreview" class="policy-preview">
+                <div class="preview-title">策略变更预览</div>
+                <div class="preview-diff">
+                  <a-tag :color="policyRisk(previewFrom).color">{{ previewFrom }}</a-tag>
+                  <span style="margin: 0 8px">→</span>
+                  <a-tag :color="policyRisk(formData.force_push_policy).color">{{ formData.force_push_policy }}</a-tag>
+                </div>
+                <div class="preview-note">{{ policyRisk(formData.force_push_policy).note }}</div>
+                <div v-if="previewRiskUp" class="preview-warn">
+                  ⚠ 权限放宽:目标分支独有提交可能被覆盖,建议保持 backup_on_demand。
+                </div>
+              </div>
             </div>
           </a-space>
         </a-form-item>
@@ -275,7 +288,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'SyncTaskList' })
 
-import { onMounted, onActivated, ref, reactive, computed } from 'vue'
+import { onMounted, onActivated, ref, reactive, computed, watch } from 'vue'
 import {
   PlusOutlined,
   PlayCircleOutlined,
@@ -433,6 +446,32 @@ const forcePushOptions = [
   { label: 'allow — 允许 force 覆盖(危险)', value: 'allow' },
 ]
 
+/** 编辑时记录的原始策略;空=新建 */
+const previewFrom = ref('block')
+const policyPreview = ref(false)
+const previewRiskUp = computed(() => {
+  const rank: Record<string, number> = { block: 2, backup_on_demand: 1, allow: 0 }
+  return rank[formData.force_push_policy] < rank[previewFrom.value]
+})
+
+function policyRisk(p: string) {
+  switch (p) {
+    case 'block':
+      return { color: 'green', note: '最安全:目标分支有源没有的提交时直接失败,不覆盖。' }
+    case 'backup_on_demand':
+      return { color: 'orange', note: '覆盖前自动打目标分支快照 bundle,可回滚。' }
+    default:
+      return { color: 'red', note: '危险:强制覆盖目标独有提交,不可恢复。' }
+  }
+}
+
+watch(
+  () => formData.force_push_policy,
+  () => {
+    policyPreview.value = editingKey.value !== '' && formData.force_push_policy !== previewFrom.value
+  },
+)
+
 const cronPresets = [
   { label: '每5分钟', value: '*/5 * * * *' },
   { label: '每小时', value: '0 * * * *' },
@@ -470,6 +509,8 @@ function openCreate() {
     cron: '', git_tags: false, git_force: false, git_prune: false,
     force_push_policy: 'block',
   })
+  previewFrom.value = 'block'
+  policyPreview.value = false
   dialogVisible.value = true
 }
 
@@ -490,6 +531,8 @@ function openEdit(task: SyncTask) {
     force_push_policy: (task.force_push_policy as 'allow' | 'block' | 'backup_on_demand')
       || (task.keep_divergent === false ? 'allow' : 'block'),
   })
+  previewFrom.value = formData.force_push_policy
+  policyPreview.value = false
   dialogVisible.value = true
 }
 
@@ -635,5 +678,34 @@ async function handleBatchDelete() {
   .filter-select {
     width: 100%;
   }
+}
+
+.policy-preview {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #f0d0a0;
+  border-radius: 6px;
+  background: #fffbe6;
+}
+.preview-title {
+  font-weight: 500;
+  font-size: 12px;
+  color: #8c6a2a;
+  margin-bottom: 6px;
+}
+.preview-diff {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.preview-note {
+  font-size: 12px;
+  color: #666;
+}
+.preview-warn {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #cf1322;
+  font-weight: 500;
 }
 </style>

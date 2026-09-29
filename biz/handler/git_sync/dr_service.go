@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -81,6 +82,37 @@ func DrillHistory(ctx context.Context, c *app.RequestContext) {
 		"items": entries,
 		"total": len(entries),
 	})
+}
+
+// ExportDrillHistory GET /api/v1/ops/dr-drill/export?format=json|csv&limit=
+func ExportDrillHistory(ctx context.Context, c *app.RequestContext) {
+	format := c.Query("format")
+	if format == "" {
+		format = "json"
+	}
+	if format != "json" && format != "csv" {
+		response.BadRequest(c, "format must be json or csv")
+		return
+	}
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if limit <= 0 {
+		limit = 100
+	}
+	svc, ok := requireSyncService(c)
+	if !ok {
+		return
+	}
+	contentType, data, err := svc.ExportDrillHistory(format, limit)
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+	if format == "csv" {
+		c.Header("Content-Disposition", `attachment; filename="dr-drill-report.csv"`)
+	} else {
+		c.Header("Content-Disposition", `attachment; filename="dr-drill-report.json"`)
+	}
+	c.Data(consts.StatusOK, contentType, data)
 }
 
 // VerifyDrillChain GET /api/v1/ops/dr-drill/chain/verify

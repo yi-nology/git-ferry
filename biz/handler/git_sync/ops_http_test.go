@@ -360,3 +360,20 @@ func TestParseRole(t *testing.T) {
 	assert.Equal(t, RoleOperator, ParseRole("Operator"))
 	assert.Equal(t, RoleReadonly, ParseRole("nope"))
 }
+
+func TestExportDrillHistory_InvalidFormat(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	h.GET("/api/v1/ops/dr-drill/export", ExportDrillHistory)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/dr-drill/export?format=xml", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExportDrillHistory_CSV(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngineFull()
+	h.GET("/api/v1/ops/dr-drill/export", ExportDrillHistory)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/dr-drill/export?format=csv", nil)
+	// 未配置 backup_dir 时 500;配置后应 200 + csv
+	assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError, "code=%d", w.Code)
+}

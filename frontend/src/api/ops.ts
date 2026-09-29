@@ -138,6 +138,13 @@ export const opsApi = {
     ),
   drillHistory: (limit = 20) =>
     http.get<unknown, { items: DrillHistoryEntry[]; total: number }>('/ops/dr-drill/history', { params: { limit } }),
+  exportDrillHistory: async (format: 'json' | 'csv' = 'json', limit = 100): Promise<Blob> => {
+    const resp = await http.get(`/ops/dr-drill/export`, {
+      params: { format, limit },
+      responseType: 'blob',
+    })
+    return resp as unknown as Blob
+  },
   verifyDrillChain: () =>
     http.get<unknown, { ok: boolean; checked: number; broken: string }>('/ops/dr-drill/chain/verify'),
   buildBackupManifest: () =>

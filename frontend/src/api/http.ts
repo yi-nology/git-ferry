@@ -36,6 +36,10 @@ http.interceptors.request.use((config) => {
  */
 http.interceptors.response.use(
   (response) => {
+    // blob/arraybuffer 直接透传(导出文件)
+    if (response.config.responseType === 'blob' || response.config.responseType === 'arraybuffer') {
+      return response.data
+    }
     // 204 No Content(删除类操作,空 body)
     if (response.status === 204 || response.data == null || response.data === '') {
       return { success: true }

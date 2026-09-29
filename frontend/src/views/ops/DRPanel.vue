@@ -7,6 +7,8 @@
       <a-button @click="loadRpo">刷新 RPO</a-button>
       <a-button :loading="driftLoading" @click="runDrift">漂移检测</a-button>
       <a-button @click="verifyAuditChain">审计链校验</a-button>
+      <a-button @click="exportReport('json')">导出 JSON</a-button>
+      <a-button @click="exportReport('csv')">导出 CSV</a-button>
     </a-space>
 
     <a-row :gutter="16" style="margin-top: 16px">
@@ -234,6 +236,21 @@ async function runDrift() {
     notifyError(e, '漂移检测失败')
   } finally {
     driftLoading.value = false
+  }
+}
+
+async function exportReport(format: 'json' | 'csv') {
+  try {
+    const blob = await opsApi.exportDrillHistory(format)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dr-drill-report.${format}`
+    a.click()
+    URL.revokeObjectURL(url)
+    notifySuccess(`已导出 ${format.toUpperCase()}`)
+  } catch (e) {
+    notifyError(e, '导出演练报告失败')
   }
 }
 

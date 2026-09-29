@@ -65,6 +65,7 @@ func CustomizedRegister(r *server.Hertz) {
 	// P0 灾备闭环:DR 演练 / 完整性证明 / RPO-RTO
 	ops.POST("/dr-drill", git_sync.WriteGuard(), git_sync.RunDRDrill)
 	ops.GET("/dr-drill/history", git_sync.DrillHistory)
+	ops.GET("/dr-drill/export", git_sync.ExportDrillHistory)
 	ops.GET("/dr-drill/chain/verify", git_sync.VerifyDrillChain)
 	ops.POST("/backup-manifest", git_sync.WriteGuard(), git_sync.BuildBackupManifest)
 	ops.GET("/backup-manifest/verify", git_sync.VerifyBackupManifest)

@@ -6,6 +6,9 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ### Added
 
+- **任务策略变更预览**: 编辑时改 `force_push_policy` 显示 原值→新值 diff、风险说明与放宽警告。
+- **DR 演练报告导出**: `GET /ops/dr-drill/export?format=json|csv`,前端一键下载。
+- **GitHub App 全链路联调测试**: JWT 签发 → installation token → 缓存 → provider 配置。
 - **GitHub App 配置贯通**: 平台表单/IDL/接口支持 `github_app_id/installation_id/private_key`,
   与 PAT 二选一;PlatformInfo 回传 `has_github_app`。
 - **任务编辑 `force_push_policy`**: 创建/编辑统一三策略,兼容 `keep_divergent`。
