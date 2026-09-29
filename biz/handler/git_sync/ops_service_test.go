@@ -8,6 +8,7 @@ import (
 	hertzserver "github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
 	"github.com/stretchr/testify/assert"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"github.com/stretchr/testify/require"
 
 	"github.com/yi-nology/git-ferry/internal/health"
@@ -24,9 +25,9 @@ func TestScoreLevelMapping(t *testing.T) {
 }
 
 func TestCSVEscape(t *testing.T) {
-	assert.Equal(t, "plain", csvEscape("plain"))
-	assert.Equal(t, `"a,b"`, csvEscape("a,b"))
-	assert.Equal(t, `"say ""hi"""`, csvEscape(`say "hi"`))
+	assert.Equal(t, "plain", textutil.CSVEscape("plain"))
+	assert.Equal(t, `"a,b"`, textutil.CSVEscape("a,b"))
+	assert.Equal(t, `"say ""hi"""`, textutil.CSVEscape(`say "hi"`))
 }
 
 func TestBoolFact(t *testing.T) {

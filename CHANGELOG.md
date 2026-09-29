@@ -4,6 +4,14 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+### Changed
+
+- **代码内聚重构**:
+  - `internal/githubapi`: GitHub 附件/gists 客户端独立包,与 handler 解耦。
+  - `internal/pkg/textutil`: 路径安全化 + CSV 转义统一实现,消除重复。
+  - `ops_service` 拆为 `retry_service` / `health_service` / `audit_report`。
+  - `newIssueProvider` 抽到 `provider_access`,issues/metadata 共用。
+
 ### Added
 
 - **任务策略变更预览**: 编辑时改 `force_push_policy` 显示 原值→新值 diff、风险说明与放宽警告。

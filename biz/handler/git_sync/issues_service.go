@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
@@ -110,24 +111,6 @@ type issueRow struct {
 	CommentList []*sdkprov.IssueComment `json:"comments,omitempty"`
 }
 
-func newIssueProvider(plat *corebridge.Platform, repoToken string) (sdkprov.Provider, error) {
-	token := repoToken
-	if token == "" {
-		token = plat.AccessToken
-	}
-	cfg := sdkprov.Config{
-		Platform: sdkprov.Platform(plat.Type),
-		BaseURL:  plat.APIURL,
-		Token:    token,
-		SkipTLS:  plat.SkipTLSVerify,
-	}
-	p, err := sdkprov.NewProvider(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("create provider: %w", err)
-	}
-	return p, nil
-}
-
 func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, state string, max int) ([]*issueRow, error) {
 	// 平台不一定实现 IssueManager
 	im, ok := p.(sdkprov.IssueManager)
@@ -194,8 +177,8 @@ func buildIssuesCSV(issues []*issueRow) string {
 			labels += l
 		}
 		b = append(b, []byte(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
-			csvEscape(iss.Number), csvEscape(iss.State), csvEscape(iss.Author),
-			csvEscape(iss.Title), csvEscape(labels), iss.CreatedAt))...)
+			textutil.CSVEscape(iss.Number), textutil.CSVEscape(iss.State), textutil.CSVEscape(iss.Author),
+			textutil.CSVEscape(iss.Title), textutil.CSVEscape(labels), iss.CreatedAt))...)
 	}
 	return string(b)
 }

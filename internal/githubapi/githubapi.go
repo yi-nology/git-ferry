@@ -1,4 +1,6 @@
-package git_sync
+// Package githubapi 封装 GitHub REST 专属能力(release 附件、gists),
+// 与业务 handler 解耦:只依赖 corebridge 模型与标准库 HTTP。
+package githubapi
 
 import (
 	"context"
@@ -11,11 +13,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yi-nology/git-ferry/internal/corebridge"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
-// githubReleaseAsset GitHub Release 附件元数据(SDK ReleaseInfo 不含 assets,这里直接打 API)。
-type githubReleaseAsset struct {
+// Platform 平台连接信息(githubapi 不依赖 corebridge,降低耦合)。
+type Platform struct {
+	APIURL string
+	Type   string
+}
+
+// IsGitHub 判断平台类型是否 GitHub/GHES。
+func IsGitHub(platformType string) bool {
+	return strings.EqualFold(platformType, "github") || strings.EqualFold(platformType, "ghe")
+}
+
+// ReleaseAsset GitHub Release 附件元数据。
+type ReleaseAsset struct {
 	ID                 int64  `json:"id"`
 	Name               string `json:"name"`
 	Size               int64  `json:"size"`
@@ -24,31 +37,45 @@ type githubReleaseAsset struct {
 	URL                string `json:"url"`
 }
 
-type githubReleaseWithAssets struct {
-	TagName string               `json:"tag_name"`
-	Name    string               `json:"name"`
-	Assets  []githubReleaseAsset `json:"assets"`
+type releaseWithAssets struct {
+	TagName string         `json:"tag_name"`
+	Assets  []ReleaseAsset `json:"assets"`
 }
 
-// DownloadGitHubReleaseAssets 下载仓库全部 Release 附件到 destDir。
-// 仅支持 GitHub/GHES(REST API);返回成功/失败清单。
-// 这是 git bundle 的盲区:release 二进制不在 git 对象里。
-func DownloadGitHubReleaseAssets(ctx context.Context, plat *corebridge.Platform, token, owner, repo, destDir string, maxAssets int) (saved, warnings []string, err error) {
+// Gist GitHub Gist 元数据。
+type Gist struct {
+	ID          string    `json:"id"`
+	Description string    `json:"description"`
+	Public      bool      `json:"public"`
+	HTMLURL     string    `json:"html_url"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Files       map[string]struct {
+		Filename string `json:"filename"`
+		Language string `json:"language"`
+		RawURL   string `json:"raw_url"`
+		Size     int64  `json:"size"`
+		Content  string `json:"content"`
+	} `json:"files"`
+}
+
+// DownloadReleaseAssets 下载仓库 Release 附件到 destDir。
+func DownloadReleaseAssets(ctx context.Context, apiURL, token, owner, repo, destDir string, maxAssets int) (saved, warnings []string, err error) {
 	if maxAssets <= 0 {
 		maxAssets = 50
 	}
-	apiBase := strings.TrimRight(plat.APIURL, "/")
-	if apiBase == "" {
-		apiBase = "https://api.github.com"
+	base := strings.TrimRight(apiURL, "/")
+	if base == "" {
+		base = "https://api.github.com"
 	}
 	client := &http.Client{Timeout: 60 * time.Second}
 
-	listURL := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=30", apiBase, owner, repo)
+	listURL := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=30", base, owner, repo)
 	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, listURL, http.NoBody)
 	if rerr != nil {
 		return nil, nil, rerr
 	}
-	setGitHubHeaders(req, token)
+	setHeaders(req, token)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, nil, err
@@ -57,7 +84,7 @@ func DownloadGitHubReleaseAssets(ctx context.Context, plat *corebridge.Platform,
 	if resp.StatusCode >= 300 {
 		return nil, nil, fmt.Errorf("list releases: status %d", resp.StatusCode)
 	}
-	var releases []githubReleaseWithAssets
+	var releases []releaseWithAssets
 	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return nil, nil, err
 	}
@@ -67,13 +94,14 @@ func DownloadGitHubReleaseAssets(ctx context.Context, plat *corebridge.Platform,
 	}
 	count := 0
 	for _, rel := range releases {
-		for _, asset := range rel.Assets {
+		for i := range rel.Assets {
 			if count >= maxAssets {
 				return saved, warnings, nil
 			}
-			name := sanitizePathToken(rel.TagName) + "__" + sanitizePathToken(asset.Name)
+			asset := &rel.Assets[i]
+			name := textutil.SanitizePathToken(rel.TagName) + "__" + textutil.SanitizePathToken(asset.Name)
 			dest := filepath.Join(destDir, name)
-			if err := downloadGitHubAsset(ctx, client, token, &asset, dest); err != nil {
+			if err := downloadAsset(ctx, client, token, asset, dest); err != nil {
 				warnings = append(warnings, fmt.Sprintf("%s/%s: %v", rel.TagName, asset.Name, err))
 				continue
 			}
@@ -84,7 +112,7 @@ func DownloadGitHubReleaseAssets(ctx context.Context, plat *corebridge.Platform,
 	return saved, warnings, nil
 }
 
-func downloadGitHubAsset(ctx context.Context, client *http.Client, token string, asset *githubReleaseAsset, dest string) error {
+func downloadAsset(ctx context.Context, client *http.Client, token string, asset *ReleaseAsset, dest string) error {
 	url := asset.URL
 	if url == "" {
 		url = asset.BrowserDownloadURL
@@ -96,8 +124,7 @@ func downloadGitHubAsset(ctx context.Context, client *http.Client, token string,
 	if err != nil {
 		return err
 	}
-	setGitHubHeaders(req, token)
-	// API 附件端点需要 octet-stream 才会 302 到真实下载
+	setHeaders(req, token)
 	if strings.Contains(url, "/releases/assets/") {
 		req.Header.Set("Accept", "application/octet-stream")
 	}
@@ -118,40 +145,21 @@ func downloadGitHubAsset(ctx context.Context, client *http.Client, token string,
 	return err
 }
 
-// githubGist GitHub Gist 元数据。
-type githubGist struct {
-	ID          string    `json:"id"`
-	Description string    `json:"description"`
-	Public      bool      `json:"public"`
-	HTMLURL     string    `json:"html_url"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Files       map[string]struct {
-		Filename string `json:"filename"`
-		Language string `json:"language"`
-		RawURL   string `json:"raw_url"`
-		Size     int64  `json:"size"`
-		Content  string `json:"content"`
-	} `json:"files"`
-}
-
-// BackupGitHubGists 备份当前 token 可见的 gists(含文件内容)。
-// gickup 有 starred/gists 附带备份;这里是可检索的本地快照。
-func BackupGitHubGists(ctx context.Context, plat *corebridge.Platform, token, destDir string, maxGists int) (count int, warnings []string, err error) {
+// BackupGists 备份 token 可见的 gists 到 destDir。
+func BackupGists(ctx context.Context, apiURL, token, destDir string, maxGists int) (count int, warnings []string, err error) {
 	if maxGists <= 0 {
 		maxGists = 200
 	}
-	apiBase := strings.TrimRight(plat.APIURL, "/")
-	if apiBase == "" {
-		apiBase = "https://api.github.com"
+	base := strings.TrimRight(apiURL, "/")
+	if base == "" {
+		base = "https://api.github.com"
 	}
 	client := &http.Client{Timeout: 60 * time.Second}
-	url := fmt.Sprintf("%s/gists?per_page=100", apiBase)
-	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, base+"/gists?per_page=100", http.NoBody)
 	if rerr != nil {
 		return 0, nil, rerr
 	}
-	setGitHubHeaders(req, token)
+	setHeaders(req, token)
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, nil, err
@@ -160,7 +168,7 @@ func BackupGitHubGists(ctx context.Context, plat *corebridge.Platform, token, de
 	if resp.StatusCode >= 300 {
 		return 0, nil, fmt.Errorf("list gists: status %d", resp.StatusCode)
 	}
-	var gists []githubGist
+	var gists []Gist
 	if err := json.NewDecoder(resp.Body).Decode(&gists); err != nil {
 		return 0, nil, err
 	}
@@ -176,7 +184,7 @@ func BackupGitHubGists(ctx context.Context, plat *corebridge.Platform, token, de
 			warnings = append(warnings, g.ID+": marshal")
 			continue
 		}
-		name := sanitizePathToken(g.ID) + ".json"
+		name := textutil.SanitizePathToken(g.ID) + ".json"
 		if werr := os.WriteFile(filepath.Join(destDir, name), data, 0o600); werr != nil {
 			warnings = append(warnings, g.ID+": write")
 			continue
@@ -186,7 +194,7 @@ func BackupGitHubGists(ctx context.Context, plat *corebridge.Platform, token, de
 	return count, warnings, nil
 }
 
-func setGitHubHeaders(req *http.Request, token string) {
+func setHeaders(req *http.Request, token string) {
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	if token != "" {

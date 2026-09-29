@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/internal/githubapi"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
@@ -92,7 +93,7 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "sync.backup_dir not configured")
 		return
 	}
-	snapDir := filepath.Join(backupDir, "metadata", sanitizePathToken(req.RepoKey), time.Now().UTC().Format("20060102-150405"))
+	snapDir := filepath.Join(backupDir, "metadata", textutil.SanitizePathToken(req.RepoKey), time.Now().UTC().Format("20060102-150405"))
 	if err := os.MkdirAll(snapDir, 0o750); err != nil {
 		response.InternalError(c, err.Error())
 		return
@@ -201,7 +202,7 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 					snap.Warnings = append(snap.Warnings, "archive "+rel.TagName+": "+aerr.Error())
 					continue
 				}
-				name := sanitizePathToken(rel.TagName) + ".tar.gz"
+				name := textutil.SanitizePathToken(rel.TagName) + ".tar.gz"
 				if err := os.WriteFile(filepath.Join(archDir, name), data, 0o600); err != nil {
 					snap.Warnings = append(snap.Warnings, "write archive "+name+": "+err.Error())
 					continue
@@ -213,13 +214,13 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// Release 二进制附件(git bundle 盲区,仅 GitHub)
-	if with(req.WithAssets) && isGitHubPlatform(plat.Type) {
+	if with(req.WithAssets) && githubapi.IsGitHub(plat.Type) {
 		token := repo.AccessToken
 		if token == "" {
 			token = plat.AccessToken
 		}
 		assetDir := filepath.Join(snapDir, "release-assets")
-		saved, warns, aerr := DownloadGitHubReleaseAssets(ctx, plat, token,
+		saved, warns, aerr := githubapi.DownloadReleaseAssets(ctx, plat.APIURL, token,
 			repo.PlatformOwner, repo.PlatformRepo, assetDir, 100)
 		snap.Warnings = append(snap.Warnings, warns...)
 		if aerr != nil {
@@ -231,13 +232,13 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// Gists 附带备份(仅 GitHub)
-	if with(req.WithGists) && isGitHubPlatform(plat.Type) {
+	if with(req.WithGists) && githubapi.IsGitHub(plat.Type) {
 		token := repo.AccessToken
 		if token == "" {
 			token = plat.AccessToken
 		}
 		gistDir := filepath.Join(snapDir, "gists")
-		gc, warns, gerr := BackupGitHubGists(ctx, plat, token, gistDir, 200)
+		gc, warns, gerr := githubapi.BackupGists(ctx, plat.APIURL, token, gistDir, 200)
 		snap.Warnings = append(snap.Warnings, warns...)
 		if gerr != nil {
 			snap.Warnings = append(snap.Warnings, "gists: "+gerr.Error())
@@ -252,10 +253,6 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 			snap.Counts["issues"], snap.Counts["pull_requests"], snap.Counts["releases"],
 			snap.Counts["archives"], snap.Counts["release_assets"], snap.Counts["gists"]))
 	response.Success(c, snap)
-}
-
-func isGitHubPlatform(platformType string) bool {
-	return strings.EqualFold(platformType, "github") || strings.EqualFold(platformType, "ghe")
 }
 
 // ListMetadataBackups GET /api/v1/ops/metadata-backups?repo_key=
@@ -306,14 +303,4 @@ func writeJSON(snap *metadataSnapshot, dir, name string, v any) {
 	snap.Files = append(snap.Files, name)
 }
 
-// sanitizePathToken 路径段安全化(防穿越)。
-func sanitizePathToken(s string) string {
-	s = strings.ReplaceAll(s, "/", "_")
-	s = strings.ReplaceAll(s, "\\", "_")
-	s = strings.ReplaceAll(s, "..", "_")
-	s = strings.ReplaceAll(s, " ", "_")
-	if s == "" {
-		return "unnamed"
-	}
-	return s
-}
+
