@@ -1,6 +1,7 @@
 package git_sync
 
 import (
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"encoding/json"
 	"errors"
@@ -102,7 +103,7 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 			publish(agent.Event{Type: "done"})
 			return
 		}
-		publish(agent.Event{Type: "tool_end", Tool: req.ConfirmedToolCall.Tool, Result: truncateRunes(out, 600)})
+		publish(agent.Event{Type: "tool_end", Tool: req.ConfirmedToolCall.Tool, Result: textutil.TruncateRunes(out, 600)})
 		publish(agent.Event{Type: "done"})
 		return
 	}
@@ -137,10 +138,3 @@ func confirmErrText(err error) string {
 	}
 }
 
-func truncateRunes(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n]) + "…"
-}

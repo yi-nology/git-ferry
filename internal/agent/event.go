@@ -21,9 +21,3 @@ type Usage struct {
 // resultCap SSE tool_end 里工具结果的最大长度。
 const resultCap = 600
 
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "…"
-}

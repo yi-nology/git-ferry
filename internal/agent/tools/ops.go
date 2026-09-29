@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"encoding/json"
 	"time"
@@ -37,12 +38,12 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 	}
 	items := []row{}
 	for _, t := range tasks {
-		facts := health.Facts{"has_name": boolFact(t.Name != ""), "has_cron": boolFact(t.Cron != "")}
+		facts := health.Facts{"has_name": textutil.BoolFact(t.Name != ""), "has_cron": textutil.BoolFact(t.Cron != "")}
 		runs, _, herr := r.svc.ListHistory(ctx, t.Key, 0, 3)
 		if herr == nil && len(runs) > 0 {
 			facts["has_history"] = "true"
-			facts["recent_success"] = boolFact(runs[0].Status == "success")
-			facts["error_free"] = boolFact(runs[0].ErrorMessage == "")
+			facts["recent_success"] = textutil.BoolFact(runs[0].Status == "success")
+			facts["error_free"] = textutil.BoolFact(runs[0].ErrorMessage == "")
 		}
 		res := rules.Evaluate(facts)
 		items = append(items, row{Key: t.Key, Name: t.Name, Score: res.Score, Level: res.Level, Issues: res.Issues})
@@ -119,9 +120,3 @@ func (r *Registry) retrySyncRun(ctx context.Context, in retryRunInput) (string, 
 	})
 }
 
-func boolFact(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}

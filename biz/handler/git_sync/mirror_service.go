@@ -1,6 +1,7 @@
 package git_sync
 
 import (
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
 	"strconv"
@@ -246,7 +247,7 @@ func MirrorRunList(ctx context.Context, c *app.RequestContext) {
 			"kind": r.Kind, "tags": r.Tags, "status": r.Status,
 			"allowOverwrite": r.AllowOverwrite,
 			"startedAt":      r.StartedAt, "finishedAt": r.FinishedAt,
-			"error": truncateRunes(r.Error, 300),
+			"error": textutil.TruncateRunes(r.Error, 300),
 		})
 	}
 	response.Success(c, map[string]any{"list": light, "total": total})

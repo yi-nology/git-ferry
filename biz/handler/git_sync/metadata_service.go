@@ -86,20 +86,20 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 	}
 
 	collectLabelsMilestones(ctx, prov, repo, snap)
-	if optOn(req.WithIssues) {
+	if optBoolDefault(req.WithIssues) {
 		collectIssues(ctx, prov, repo, maxItems, snap)
 	}
-	if optOn(req.WithPRs) {
+	if optBoolDefault(req.WithPRs) {
 		collectPullRequests(ctx, prov, repo, maxItems, snap)
 	}
 	releases := collectReleases(ctx, prov, repo, req, maxItems, snap)
-	if optOn(req.WithArchives) {
+	if optBoolDefault(req.WithArchives) {
 		downloadSourceArchives(ctx, prov, repo, releases, snapDir, snap)
 	}
-	if optOn(req.WithAssets) && githubapi.IsGitHub(plat.Type) {
+	if optBoolDefault(req.WithAssets) && githubapi.IsGitHub(plat.Type) {
 		downloadReleaseAssets(ctx, plat, repo, snapDir, snap)
 	}
-	if optOn(req.WithGists) && githubapi.IsGitHub(plat.Type) {
+	if optBoolDefault(req.WithGists) && githubapi.IsGitHub(plat.Type) {
 		backupGists(ctx, plat, snapDir, snap)
 	}
 
@@ -210,7 +210,7 @@ func collectPullRequests(ctx context.Context, prov sdkprov.Provider, repo *coreb
 
 func collectReleases(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo,
 	req ops.MetadataBackupReq, maxItems int, snap *ops.MetadataSnapshot) []*sdkprov.ReleaseInfo {
-	if !optOn(req.WithReleases) {
+	if !optBoolDefault(req.WithReleases) {
 		return nil
 	}
 	rm, ok := prov.(sdkprov.ReleaseManager)
@@ -307,7 +307,3 @@ func writeSnapshotJSON(snap *ops.MetadataSnapshot, snapDir string) {
 	writeSnapshotPart(snap, "manifest.json", snap)
 }
 
-// optOn optional bool: nil/true=开(默认全开语义)。
-func optOn(p *bool) bool {
-	return p == nil || *p
-}

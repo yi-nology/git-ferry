@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"errors"
 	"sync"
@@ -163,21 +164,9 @@ func (st *SessionStore) Compact(s *Session, max int) int {
 	dropped := len(s.Messages) - keep
 	summary := Message{
 		Role:    "system",
-		Content: "[上下文已压缩] 更早 " + itoa(dropped) + " 条对话已省略,仅保留关键结论。",
+		Content: "[上下文已压缩] 更早 " + textutil.Itoa(dropped) + " 条对话已省略,仅保留关键结论。",
 	}
 	tail := append([]Message{summary}, s.Messages[len(s.Messages)-keep:]...)
 	s.Messages = tail
 	return dropped
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var b []byte
-	for n > 0 {
-		b = append([]byte{byte('0' + n%10)}, b...)
-		n /= 10
-	}
-	return string(b)
 }

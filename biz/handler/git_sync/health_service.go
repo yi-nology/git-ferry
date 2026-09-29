@@ -1,6 +1,7 @@
 package git_sync
 
 import (
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"time"
 
@@ -93,15 +94,15 @@ func computeHealthScores(ctx context.Context, svc *corebridge.Service, limit int
 	items := make([]HealthScoreItem, 0, len(tasks))
 	for _, t := range tasks {
 		facts := health.Facts{
-			"has_name": boolFact(t.Name != ""),
-			"has_cron": boolFact(t.Cron != ""),
+			"has_name": textutil.BoolFact(t.Name != ""),
+			"has_cron": textutil.BoolFact(t.Cron != ""),
 		}
 		runs, _, rerr := svc.ListHistory(ctx, t.Key, 0, 5)
 		if rerr == nil && len(runs) > 0 {
 			facts["has_history"] = "true"
 			last := runs[0]
-			facts["recent_success"] = boolFact(last.Status == "success")
-			facts["error_free"] = boolFact(last.ErrorMessage == "")
+			facts["recent_success"] = textutil.BoolFact(last.Status == "success")
+			facts["error_free"] = textutil.BoolFact(last.ErrorMessage == "")
 		} else {
 			facts["has_history"] = "false"
 		}
@@ -114,9 +115,3 @@ func computeHealthScores(ctx context.Context, svc *corebridge.Service, limit int
 	return items, nil
 }
 
-func boolFact(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}

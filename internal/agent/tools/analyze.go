@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"encoding/json"
 	"strings"
@@ -43,7 +44,7 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 		recent = append(recent, map[string]any{
 			"task_key": t.Key,
 			"status":   last.Status,
-			"error":    truncateStr(last.ErrorMessage, 120),
+			"error":    textutil.Truncate(last.ErrorMessage, 120),
 		})
 		if last.Status != "failed" {
 			continue
@@ -59,7 +60,7 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 			TaskKey:  t.Key,
 			Status:   last.Status,
 			ErrType:  last.ErrorType,
-			ErrMsg:   truncateStr(last.ErrorMessage, 200),
+			ErrMsg:   textutil.Truncate(last.ErrorMessage, 200),
 			Severity: fmtStr(d["severity"]),
 		})
 	}
@@ -103,7 +104,7 @@ func summarizeAnalyze(question string, failures []analyzeHit) string {
 		}
 	}
 	var b strings.Builder
-	b.WriteString("共 " + itoa(len(failures)) + " 条失败;主因类型=" + dominant + "。")
+	b.WriteString("共 " + textutil.Itoa(len(failures)) + " 条失败;主因类型=" + dominant + "。")
 	if question != "" {
 		b.WriteString("针对问题「" + question + "」:优先按 playbook 中 " + dominant + " 条目处置。")
 	}
@@ -114,7 +115,7 @@ func nextActions(failures []analyzeHit) []string {
 	if len(failures) == 0 {
 		return []string{"无需处理"}
 	}
-	acts := []string{"diagnose_run(run_id=" + itoa(int(failures[0].RunID)) + ") 拿详细建议"}
+	acts := []string{"diagnose_run(run_id=" + textutil.Itoa(int(failures[0].RunID)) + ") 拿详细建议"}
 	if failures[0].ErrType == "auth" {
 		acts = append(acts, "更新平台 token 后 retry_sync_run")
 	}
@@ -132,24 +133,7 @@ func fmtStr(v any) string {
 	return ""
 }
 
-func truncateStr(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}
 
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var b []byte
-	for n > 0 {
-		b = append([]byte{byte('0' + n%10)}, b...)
-		n /= 10
-	}
-	return string(b)
-}
 
 // rebuildInput 全量重建。
 type rebuildInput struct {

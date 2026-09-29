@@ -31,8 +31,8 @@ func TestCSVEscape(t *testing.T) {
 }
 
 func TestBoolFact(t *testing.T) {
-	assert.Equal(t, "true", boolFact(true))
-	assert.Equal(t, "false", boolFact(false))
+	assert.Equal(t, "true", textutil.BoolFact(true))
+	assert.Equal(t, "false", textutil.BoolFact(false))
 }
 
 func TestMatchToFilter(t *testing.T) {
