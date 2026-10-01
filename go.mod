@@ -14,8 +14,8 @@ require (
 	github.com/oklog/run v1.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.7.1
-	github.com/yi-nology/go-git-platform v0.64.0
+	github.com/yi-nology/git-ferry-core v0.7.2
+	github.com/yi-nology/go-git-platform v0.68.2
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 )

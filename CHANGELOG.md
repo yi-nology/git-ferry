@@ -4,11 +4,26 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+## [v1.20.2] - 2026-10-01
+
+> 依赖 git-ferry-core **v0.7.2**（认证路径重构）+ go-git-platform v0.68.2。
+
 ### Changed
 
 - **认证路径重构**（依赖 go-git-platform credential helper 改造 + core `executor/auth.go`）：
   HTTPS 令牌经临时 credential helper / GIT_ASKPASS 注入 git，**不进 argv / environ 明文**；
   临时凭证目录 RAII 清理。SSH 密钥内容同样经 0600 临时文件 + `GIT_SSH_COMMAND`。
+- **README 改版**：安装/快速开始重写为 npm 分发优先，补 Prerequisites 与
+  AI Agent Quick Start，中英文同步。
+
+### Fixed
+
+- **服务启动必现 panic**：`conf/config.yaml` 缺省 `notify` 段时 `shellCfg.Notify`
+  为 nil，取 `Heartbeat` 字段前未判空（`notify.New`/`NewHeartbeat` 本身已 nil-safe）。
+- **CLI 全部命令 panic**：`opsMetadataRestoreCmd` 重复定义 `sc()` 已挂的
+  `target-repo`，pflag `flag redefined` 使 `config init`/`auth status` 等全不可用。
+- **gosec G703 误报**：gitserve 取仓路径处 taint 分析未识别前缀校验（该处已有
+  `path.Clean` + 拒 `..` + `absRoot` 前缀三层防护）。
 
 ## [v1.20.1] - 2026-10-01
 
