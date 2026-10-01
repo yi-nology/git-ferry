@@ -446,7 +446,7 @@ onActivated(loadDashboard)
 }
 .wizard-desc {
   color: $text-secondary;
-  font-size: $fs-sm;
+  font-size: $fs-caption;
   flex: 1;
 }
 
