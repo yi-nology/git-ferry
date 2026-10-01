@@ -73,7 +73,10 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		SyncMode: req.SyncMode, Cron: req.Cron, GitTags: req.GitTags,
 		GitForce: req.GitForce, GitPrune: req.GitPrune,
 		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
-		KeepDivergent: req.KeepDivergent,
+		KeepDivergent:      req.KeepDivergent,
+		ForcePushPolicy:    optStr(req.ForcePushPolicy),
+		IncludeBranches:    optStr(req.IncludeBranches),
+		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
 	})
 	if err != nil {
 		response.InternalError(c, fmt.Sprintf("create task failed: %v", err))
@@ -102,7 +105,10 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		Enabled: &req.Enabled, GitTags: &req.GitTags, GitForce: &req.GitForce,
 		GitPrune: &req.GitPrune,
 		GitLFS:   &req.GitLfs, SyncWiki: &req.SyncWiki, GitBundle: &req.GitBundle, Submodules: &req.Submodules, GitPushPrune: &req.GitPushPrune,
-		KeepDivergent: req.KeepDivergent,
+		KeepDivergent:      req.KeepDivergent,
+		ForcePushPolicy:    optStr(req.ForcePushPolicy),
+		IncludeBranches:    optStr(req.IncludeBranches),
+		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
 	})
 	if err != nil {
 		if errors.Is(err, corebridge.ErrTaskNotFound) {

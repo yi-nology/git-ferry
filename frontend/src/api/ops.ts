@@ -18,6 +18,7 @@ export interface HealthScoreItem {
   level: 'gold' | 'silver' | 'bronze' | 'basic'
   issues?: string[]
   actions?: string[]
+  action_items?: OpsTodoAction[]
   dimensions?: HealthDimension[]
 }
 
@@ -214,6 +215,15 @@ export const opsApi = {
     http.post<unknown, MetadataSnapshot>('/ops/metadata-backup', { repo_key, ...opts }),
   listMetadataBackups: (repo_key?: string) =>
     http.get<unknown, { items: MetadataSnapshot[]; total: number }>('/ops/metadata-backups', { params: { repo_key } }),
+  metadataRestore: (body: {
+    repo_key: string
+    snapshot_dir?: string
+    kinds?: string[]
+    dry_run?: boolean
+    overwrite?: boolean
+    target_owner?: string
+    target_repo?: string
+  }) => http.post<unknown, MetadataRestoreResult>('/ops/metadata-restore', body),
   backupGists: (platform_key: string, max_gists = 200) =>
     http.post<unknown, { platform_key: string; count: number; dir: string; warnings?: string[] }>(
       '/ops/gists-backup', { platform_key, max_gists },
@@ -314,6 +324,16 @@ export interface MetadataSnapshot {
   files: string[]
   archives?: string[]
   warnings?: string[]
+}
+
+export interface MetadataRestoreResult {
+  snapshot_dir: string
+  target: string
+  stats: Record<string, { planned: number; created: number; skipped: number; failed: number }>
+  warnings?: string[]
+  dry_run: boolean
+  started_at?: string
+  finished_at?: string
 }
 
 export interface DiscoveryReport {

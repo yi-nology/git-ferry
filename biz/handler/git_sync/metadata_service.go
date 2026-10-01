@@ -87,12 +87,12 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 
 	collectLabelsMilestones(ctx, prov, repo, snap)
 	if optBoolDefault(req.WithIssues) {
-		collectIssues(ctx, prov, repo, maxItems, snap)
+		collectIssues(ctx, prov, repo, maxItems, req.GetSince(), snap)
 	}
 	if optBoolDefault(req.WithPRs) {
 		collectPullRequests(ctx, prov, repo, maxItems, snap)
 	}
-	releases := collectReleases(ctx, prov, repo, req, maxItems, snap)
+	releases := collectReleases(ctx, prov, repo, &req, maxItems, snap)
 	if optBoolDefault(req.WithArchives) {
 		downloadSourceArchives(ctx, prov, repo, releases, snapDir, snap)
 	}
@@ -169,7 +169,7 @@ func collectLabelsMilestones(ctx context.Context, prov sdkprov.Provider, repo *c
 	}
 }
 
-func collectIssues(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo, maxItems int, snap *ops.MetadataSnapshot) {
+func collectIssues(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo, maxItems int, since string, snap *ops.MetadataSnapshot) {
 	im, ok := prov.(sdkprov.IssueManager)
 	if !ok {
 		return
@@ -179,6 +179,9 @@ func collectIssues(ctx context.Context, prov sdkprov.Provider, repo *corebridge.
 		snap.Warnings = append(snap.Warnings, "issues: "+ierr.Error())
 		return
 	}
+	if since != "" {
+		issues = filterIssuesSince(issues, since)
+	}
 	for _, iss := range issues {
 		comments, cerr := im.ListIssueComments(ctx, repo.PlatformOwner, repo.PlatformRepo, iss.Number)
 		if cerr == nil {
@@ -187,6 +190,25 @@ func collectIssues(ctx context.Context, prov sdkprov.Provider, repo *corebridge.
 	}
 	writeSnapshotPart(snap, "issues.json", issues)
 	snap.Counts["issues"] = int32(len(issues))
+}
+
+// filterIssuesSince 仅保留 UpdatedAt >= since(RFC3339) 的 issue。
+func filterIssuesSince(issues []*issueRow, since string) []*issueRow {
+	cut, err := time.Parse(time.RFC3339, since)
+	if err != nil {
+		return issues
+	}
+	out := issues[:0]
+	for _, iss := range issues {
+		if iss == nil {
+			continue
+		}
+		if t, perr := time.Parse(time.RFC3339, iss.UpdatedAt); perr == nil && t.Before(cut) {
+			continue
+		}
+		out = append(out, iss)
+	}
+	return out
 }
 
 func collectPullRequests(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo, maxItems int, snap *ops.MetadataSnapshot) {
@@ -209,7 +231,7 @@ func collectPullRequests(ctx context.Context, prov sdkprov.Provider, repo *coreb
 }
 
 func collectReleases(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo,
-	req ops.MetadataBackupReq, maxItems int, snap *ops.MetadataSnapshot) []*sdkprov.ReleaseInfo {
+	req *ops.MetadataBackupReq, maxItems int, snap *ops.MetadataSnapshot) []*sdkprov.ReleaseInfo {
 	if !optBoolDefault(req.WithReleases) {
 		return nil
 	}
@@ -306,4 +328,3 @@ func writeSnapshotPart(snap *ops.MetadataSnapshot, name string, v any) {
 func writeSnapshotJSON(snap *ops.MetadataSnapshot, snapDir string) {
 	writeSnapshotPart(snap, "manifest.json", snap)
 }
-

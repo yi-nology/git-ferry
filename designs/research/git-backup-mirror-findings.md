@@ -112,8 +112,103 @@
 - 明确不迁移 issues/PR/权限等元数据 (边界清晰)
 
 ---
-## 交叉结论 (面向 GitFerry)
+## 交叉结论 (面向 GitFerry) — 初版
 GitFerry 现有: 多平台同步、cron、webhook、镜像中心发布、AI 助手。
 缺口机会: 备份形态(mirror/zip/keep)、过滤链、事件+周期双驱动、失败重试与补偿、
 成功/失败分路通知、Prometheus 指标、SSH host key/密钥治理、分支过滤与 prune、
 keep divergent refs、LFS、wiki/issues 附带备份、stats 审计、secrets manager 集成。
+
+> 上述「缺口机会」在 v1.18–v1.19 批次已大部分落地（force_push_policy / keep_divergent /
+> git_push_prune / backup_keep / metadata-backup / gists / multi-destination /
+> auto-discover / drift / GitHub App / token_cmd / 健康分维度 / CLI+Skills）。
+> 下面是 2026-10 全网复扫后的真实余量。
+
+---
+
+## 2026-10 全网复扫 (Browser Use · Bing + GitHub)
+
+### 竞品格局（活跃开源）
+
+| 项目 | Star | 形态 | 最强面 |
+|------|------|------|--------|
+| [gabrie30/ghorg](https://github.com/gabrie30/ghorg) | ~2.2k | Go CLI | org 全量克隆、filter hook、reclone、stats CSV、HTTP/cron 触发 |
+| [cooperspencer/gickup](https://github.com/cooperspencer/gickup) | ~1.5k | Go CLI | 源/目标最广、zip+keep、S3/Azure/WebDAV、Prometheus+heartbeat 分路 |
+| [RayLabsHQ/gitea-mirror](https://github.com/RayLabsHQ/gitea-mirror) | ~1.5k | Web 服务 | 多源→Gitea、org 映射策略、LFS+元数据镜像、force-push 防护、OIDC/SSO |
+| [josegonzalez/python-github-backup](https://github.com/josegonzalez/python-github-backup) | ~1.6k | CLI | GitHub 账号级备份元老 |
+| [AkashRajpurohit/git-sync](https://github.com/AkashRajpurohit/git-sync) | — | CLI | 多平台本地 bare 备份、通知，极简 |
+| [tomtom215/github-backup-rust](https://tomtom215.github.io/github-backup-rust/) | — | Rust CLI | 元数据最全 + **可 restore** + S3/AES-256-GCM + TUI + GHES |
+| [sky22333/git-mirror-sync](https://github.com/sky22333/git-mirror-sync) | — | Go CLI | CI 定时驱动、纯 go-git、目标端自动解保护/force |
+| [cicbyte/forks](https://github.com/cicbyte/forks) | — | Web+CLI | **MCP 暴露**、局域网 Git Smart HTTP 加速、在线浏览 |
+| [Tanq16/backhub](https://github.com/Tanq16/backhub) | — | Go CLI | 本地完整 mirror + 易恢复路径 |
+| [Onicc/gitsync](https://github.com/Onicc/gitsync) | — | FastAPI Web | 自托管备份台（多 SSH key、调度、诊断页） |
+
+商业侧对照（GitProtect / BackHub / Rewind 等）主打：SLA、合规报告、一键恢复 UI、
+多租户——自托管开源侧很少做满，GitFerry 的 DR 演练 + RPO/RTO + 审计链已在此方向领先。
+
+### 仍然存在的差距（按优先级）
+
+#### P0 — 备份「能恢复元数据」闭环
+- **元数据 restore**：我们有 `metadata-backup`（issues/PR/labels/milestones/releases/gists），
+  但缺回灌到目标 forge。Rust `github-backup` 已实现 restore labels/milestones/issues；
+  `gitea-mirror` 直接把元数据镜像进 Gitea。DR 演练目前只验 bundle/fsck/refs，不验 issue 等。
+- **API 限流退避可见化**：config 有 `rate_limit`（并发），未见 GitHub API 403/secondary
+  rate limit 的指数退避 + `reason` 记录；gickup/Rust 工具都有。
+
+#### P1 — 生态接入面
+- **MCP Server**：已有 Agent Skills，但无 MCP 协议端点。`cicbyte/forks` 用 Streamable HTTP
+  暴露 `list_repos/get_repo/read_repo_file...`，Claude Code / Cursor 零配置接入。
+  与 Skills 是互补（MCP 进程内工具发现，Skills 提示词工作流）。
+- **Org 映射策略**：`gitea-mirror` 的 Preserve Structure / Single Org / Flat User / Mixed
+  ——批量镜像组织时决定仓库落点，我们偏「任务一对一」。
+- **Starred 仓库 / 星标清单**：gickup、gitea-mirror 都有；个人备份场景常见。
+- **无 token 公共组织镜像**：gitea-mirror public mode（匿名 clone + 降级说明）。
+- **分支过滤 glob / 忽略 `refs/pull`**：Forgejo push-mirror、Enteee/git-sync-mirror。
+  避免 PR refs 污染目标；按 `main, feature/*` 白名单。
+
+#### P2 — 形态与分发
+- **Git Smart HTTP 暴露本地镜像**：`forks` / `backhub` 模式——局域网 `git clone` 直接从
+  GitFerry 拉冷备，灾备时不必先推到另一 forge。与 `ops/bundles/restore` 互补。
+- **推到 GitHub / GitLab 目标**：`gitea-mirror` PUSH_TARGETS（beta）；我们强在内网/开源发布，
+  但「备份到 GitHub 私有仓」是高频诉求。
+- **源/目标广度**：OneDev、SourceHut、Opengist、Gogs、Radicle、Any URL、Bitbucket Server。
+- **本地 zip + keep 归档形态**：gickup local destination；bundle 更偏 git 语义，zip 便于人工取件。
+- **分发包**：gickup 有 Arch/Homebrew/Fedora/Scoop/Winget；`gitea-mirror` 有 Nix + Proxmox LXC
+  一键装。我们有 Docker/goreleaser/npm CLI，缺 Homebrew/Scoop 与 Nix module。
+
+#### P3 — 体验与工程细节
+- **post-exec_script / per-task hook**（ghorg）——`notify.webhook` 之外的脚本扩展点。
+- **增量元数据拉取 `--since`**（Rust backup）——大账号 issues/PR 全量太贵。
+- **credential helper 传 git 凭证**（gickup 近期改造）——避免 token 进进程参数/环境。
+- **Web 内文件浏览**（forks）——救援时看 bare 仓内容，不必 ssh。
+- **CI 模板包**（sky22333）——不部署服务、只用 GitHub Actions 定时镜像的轻路径获客。
+- **交互 TUI**（Rust backup / agmh）——无 Web 场景；CLI table 已够用，优先级低。
+- **多映射单配置**（gickup multi-config）——一个 YAML 多对 source→destination。
+
+### 值得直接借鉴的交互/契约
+
+| 来源 | 做法 | GitFerry 落点 |
+|------|------|---------------|
+| gitea-mirror | force-push：backup-on-demand / block-and-approve | 已有 `force_push_policy`，可补 **block 时人工审批流**（现在是策略字段） |
+| gitea-mirror | 自动发现 + 上游删除自动清理 | 已有 auto-discover；可补 **cleanup deleted upstream** |
+| gitea-mirror | Better Auth（OIDC/SSO/header）+ 首用户即 admin | 我们有 OIDC JWT；可补 **首启引导向导** |
+| ghorg | `repo-filter-hook`（JSON stdin→stdout 自定义过滤） | 过滤链可插件化 |
+| ghorg | `stats` 趋势 CSV | 已有 audit CSV；可补 **趋势时间序列**（每次 run 的成功率/耗时） |
+| gickup | 成功/失败分路 heartbeat + Prometheus | 已有；核对是否暴露 **按任务标签** 的 metrics |
+| gickup | `gickup_spec.json` IDE schema | 已有 OpenAPI；可补 **config.yaml JSON Schema** |
+| Rust backup | restore 三件套 + Operations Runbook | 元数据 restore + 运维手册 |
+| forks | MCP Streamable HTTP | `POST /mcp` 或 sidecar |
+| gitlink-cli | Envelope + Skills | 已落地 |
+
+### 不建议跟风
+- hesokuri 式 P2P peer 网状同步（与「中枢摆渡」冲突）
+- 整包 Renovate / Scorecard 扫描器
+- 重型多租户 SaaS 控制面（除非明确 toB）
+- 为追星而堆源端：先做深 GitHub/GitLab/Gitee/Gitea 四端
+
+### 建议迭代切片
+1. **元数据 restore + 演练覆盖**（P0）——`ops/metadata-restore`，DR drill 扩展 issue 抽样比对
+2. **MCP 端点**（P1）——复用 `internal/agent/tools` 的工具表
+3. **分支过滤 + ignore PR refs**（P1）——任务级 `include_branches`/`exclude_ref_patterns`
+4. **Git Smart HTTP 只读服务**（P2）——`/git/:host/:owner/:repo.git` 指到 workdir/bundle
+5. **Homebrew/Scoop + Nix**（P2）——分发面
+6. **公共 org 匿名镜像 + starred**（P3）

@@ -53,6 +53,9 @@ func sc(name, short string, fn runFunc) *cobra.Command {
 	f.Bool("git-prune", false, "git prune")
 	f.Bool("git-lfs", false, "同步 LFS")
 	f.Bool("git-push-prune", false, "push --prune")
+	f.String("include-branches", "", "分支 glob 白名单，逗号分隔（如 main,release/*）")
+	f.String("exclude-ref-patterns", "", "忽略的 ref glob，逗号分隔（默认 refs/pull/* 等）")
+	f.String("force-push-policy", "", "allow|block|backup_on_demand")
 	return cmd
 }
 

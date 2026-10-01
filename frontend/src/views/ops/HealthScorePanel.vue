@@ -68,9 +68,26 @@
               <BulbOutlined /> {{ d.action }}
             </div>
           </div>
-          <div v-if="record.actions?.length" class="row-actions">
-            <a-typography-text strong>建议：</a-typography-text>
-            <div v-for="(a, i) in record.actions" :key="i" class="dim-action">{{ a }}</div>
+          <div v-if="(record.action_items || record.actions || []).length" class="row-actions">
+            <a-typography-text strong>建议动作：</a-typography-text>
+            <template v-if="record.action_items?.length">
+              <div v-for="(a, i) in record.action_items" :key="i" class="act-line">
+                <a-tag :color="a.priority === 1 ? 'red' : 'default'">P{{ a.priority ?? 3 }}</a-tag>
+                <span class="act-title">{{ a.title }}</span>
+                <a-button
+                  v-if="a.command"
+                  size="small"
+                  type="link"
+                  :danger="!!a.danger"
+                  @click="copyCommand(a.command || '')"
+                >
+                  <CopyOutlined /> 复制命令
+                </a-button>
+              </div>
+            </template>
+            <template v-else>
+              <div v-for="(a, i) in record.actions" :key="i" class="dim-action">{{ a }}</div>
+            </template>
           </div>
         </div>
       </template>
@@ -101,9 +118,10 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { BulbOutlined, SafetyOutlined } from '@ant-design/icons-vue'
+import { BulbOutlined, CopyOutlined, SafetyOutlined } from '@ant-design/icons-vue'
 import { opsApi, type HealthScoreItem } from '@/api/ops'
-import { notifyError } from '@/utils/notify'
+import { copyToClipboard } from '@/utils'
+import { notifyError, notifySuccess } from '@/utils/notify'
 
 defineOptions({ name: 'HealthScorePanel' })
 
@@ -127,12 +145,23 @@ function levelLabel(l: string) {
   return { gold: 'Gold', silver: 'Silver', bronze: 'Bronze', basic: 'Basic' }[l] || l
 }
 
+async function copyCommand(cmd: string) {
+  try {
+    await copyToClipboard(cmd)
+    notifySuccess('命令已复制')
+  } catch {
+    notifyError('复制失败')
+  }
+}
+
 async function load(withDrift: boolean) {
   loading.value = true
   try {
     const data = await opsApi.healthScore(50, { withDrift })
     items.value = data.items || []
-    attention.value = data.attention || items.value.filter((i) => i.score < 60)
+    attention.value = (data.attention || items.value.filter((i) => i.score < 60))
+      .slice()
+      .sort((a, b) => a.score - b.score)
     topActions.value = data.summary?.top_actions || []
   } catch (e) {
     notifyError(e, '加载健康评分失败')
@@ -144,52 +173,63 @@ async function load(withDrift: boolean) {
 onMounted(() => load(false))
 </script>
 
-<style scoped>
-.toolbar { margin-bottom: 12px; }
+<style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+
+.toolbar {
+  margin-bottom: $spacing-md;
+}
 
 .attention-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 12px;
+  background: $bg-primary;
+  border: 1px solid $border-light;
+  border-radius: $radius-lg;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-md;
 }
 
 .attention-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 16px;
+  gap: $spacing-lg;
 }
 
 @media (max-width: 900px) {
-  .attention-grid { grid-template-columns: 1fr; }
+  .attention-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .block-title {
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: $spacing-sm;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
+  color: $text-primary;
 }
 
 .block-empty {
-  color: #9ca3af;
-  font-size: 12px;
+  color: $text-tertiary;
+  font-size: $fs-caption;
 }
 
 .attention-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $spacing-sm;
   padding: 4px 0;
-  border-bottom: 1px dashed #f0f0f0;
-  font-size: 12px;
+  border-bottom: 1px dashed $border-muted;
+  font-size: $fs-caption;
 }
 
-.att-name { font-weight: 500; }
+.att-name {
+  font-weight: 500;
+  color: $text-primary;
+}
+
 .att-issues {
-  color: #d97706;
+  color: $warning;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -197,15 +237,15 @@ onMounted(() => load(false))
 }
 
 .action-row {
-  font-size: 12px;
+  font-size: $fs-caption;
   padding: 3px 0;
-  color: #374151;
+  color: $text-secondary;
 }
 
 .dim-list {
-  padding: 8px 16px;
-  background: #fafafa;
-  border-radius: 6px;
+  padding: $spacing-sm $spacing-lg;
+  background: $bg-canvas;
+  border-radius: $radius-md;
 }
 
 .dim-item {
@@ -215,39 +255,54 @@ onMounted(() => load(false))
 .dim-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: $spacing-md;
 }
 
 .dim-name {
   width: 110px;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-family: $font-mono;
+  font-size: $fs-caption;
   font-weight: 600;
-  color: #2563eb;
+  color: $primary;
 }
 
 .dim-reason {
-  color: #6b7280;
-  font-size: 12px;
+  color: $text-secondary;
+  font-size: $fs-caption;
 }
 
 .dim-detail {
   margin: 2px 0 0 122px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
+  gap: $spacing-sm;
+  font-size: $fs-caption;
+  color: $text-tertiary;
 }
 
 .dim-action {
   margin: 2px 0 0 122px;
-  color: #b45309;
-  font-size: 12px;
+  color: $warning;
+  font-size: $fs-caption;
 }
 
 .row-actions {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed #e5e7eb;
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1px dashed $border-muted;
+}
+
+.act-line {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: 4px;
+  font-size: $fs-caption;
+}
+
+.act-title {
+  color: $text-secondary;
+  flex: 1;
+  min-width: 0;
 }
 </style>

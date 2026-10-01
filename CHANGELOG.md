@@ -2,6 +2,52 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+> 对标开源（gickup / ghorg / gitea-mirror / github-backup-rust）缺口批次。
+> 规划：`docs/superpowers/plans/2026-10-01-competitor-gap-roadmap.md`。
+
+### Added
+
+- **元数据 Restore（P0）**：`POST /api/v1/ops/metadata-restore`（Admin，**默认 dry-run**）
+  - labels → milestones → issues（含评论/关闭）→ PRs（issue 形态标注）→ releases
+  - CLI `ops +metadata-restore --key <repo> [--kinds …] [--execute] [--overwrite]`
+  - 前端冷备页「回灌」入口；历史写 `backup_dir/metadata-restore/<repo>/`
+- **平台 API 限流退避（P0.2）**：403/429 + Retry-After / X-RateLimit 指数退避
+  （1s→60s，最多 5 次）；指标 `gitferry_api_ratelimit_total`
+- **分支过滤 + 忽略 PR refs（P1.3）**：任务字段 `include_branches` / `exclude_ref_patterns`
+  （默认排除 `refs/pull/*`、`refs/merge-requests/*`）；CLI 对应 flags
+- **MCP Server（P1.1）**：`POST /mcp` Streamable HTTP，与 eino 工具同表
+  （initialize / tools/list / tools/call）；`GET /mcp` 探测
+- **Git Smart HTTP 只读（P2.1）**：`git_serve` 配置段，局域网/灾备 `git clone`
+- **元数据增量（P3）**：`metadata-backup?since=RFC3339`
+
+## [v1.19.1] - 2026-10-01
+
+### Added
+
+- **只读 Git Smart HTTP**（`internal/gitserve`）：内网/灾备场景 `git clone` 冷备或 workdir 的 bare 仓。
+- **MCP 端点**（`internal/mcp`）：把 agent 工具表暴露给 Claude Code / Cursor 等外部客户端。
+- **GitHub API 节流**（`internal/githubapi/throttle`）：速率控制 + metrics。
+- Playwright 截图回归脚本 `scripts/e2e-screenshots.js`（`make e2e-shots`）+ 关键页截图
+  （login/dashboard/ops/devhub/health/templates）。
+- 测试补齐：`OpsTodo`/`HealthScore` 响应结构与空态、模板 `extends` 链、
+  CLI client 分页、config 读写与 env 覆盖、批量 CSV 转义。
+
+### Fixed
+
+- 批量结果 CSV 对含逗号/引号的 error 字段做转义（原先可能破坏 CSV 结构）。
+- `prBody` 改用 `fmt.Fprintf`，清掉 staticcheck QF1012。
+- 前端统一走 `notify*` toast（静态 `message` 在 AntD 4 不可靠）：仪表盘复制、DeveloperHub。
+- HealthScorePanel 样式对齐设计 token；待办/建议动作支持复制命令、危险标记。
+- 健康 attention 按分升序；模板 `extends` 成环错误信息带上完整链路。
+- DeveloperHub Release 安装命令改为变量版本号 + Releases 链接，不再写死旧版本。
+
+### Changed
+
+- `goreleaser` 明确为可选路径（默认发版仍走 `release.yml`）；Makefile 增加
+  `e2e-shots` / `goreleaser-snapshot`。
+
 ## [v1.19.0] - 2026-09-30
 
 > 对照 gitlink-cli 的 Agent-Native / 开源工程化批次 + Scorecards/Renovate 业务深化。

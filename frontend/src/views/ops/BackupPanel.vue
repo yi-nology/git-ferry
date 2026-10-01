@@ -39,6 +39,9 @@
         <template v-else-if="column.key === 'time'">
           {{ (record.created_at || '').replace('T', ' ').slice(0, 19) }}
         </template>
+        <template v-else-if="column.key === 'action'">
+          <a-button size="small" @click="openMetaRestore(record)">回灌</a-button>
+        </template>
       </template>
     </a-table>
 
@@ -53,6 +56,47 @@
 
     <a-modal v-model:open="verifyOpen" title="校验结果" :footer="null">
       <pre style="max-height: 320px; overflow: auto">{{ verifyResult }}</pre>
+    </a-modal>
+
+    <a-modal
+      v-model:open="metaRestoreOpen"
+      title="元数据回灌"
+      :confirm-loading="metaRestoreLoading"
+      ok-text="预览（dry-run）"
+      cancel-text="取消"
+      @ok="doMetaRestore(true)"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="快照">{{ metaRestore.dir }}</a-form-item>
+        <a-form-item label="仓库 key">
+          <a-input v-model:value="metaRestore.repo_key" disabled />
+        </a-form-item>
+        <a-form-item label="目标 owner（空=同源）">
+          <a-input v-model:value="metaRestore.target_owner" placeholder="默认同源 owner" />
+        </a-form-item>
+        <a-form-item label="目标仓库名（空=同源）">
+          <a-input v-model:value="metaRestore.target_repo" placeholder="默认同源仓库" />
+        </a-form-item>
+        <a-form-item label="内容 kinds（空=全部）">
+          <a-input v-model:value="metaRestore.kinds" placeholder="labels,milestones,issues,prs,releases" />
+        </a-form-item>
+        <a-form-item>
+          <a-checkbox v-model:checked="metaRestore.overwrite">同名 label 覆盖更新</a-checkbox>
+        </a-form-item>
+      </a-form>
+      <a-alert
+        type="warning"
+        show-icon
+        message="默认 dry-run 只预览计划；确认后点「真正写入」才会写入目标仓。"
+        style="margin-top: 8px"
+      />
+      <template #footer>
+        <a-button @click="metaRestoreOpen = false">取消</a-button>
+        <a-button @click="doMetaRestore(true)">预览（dry-run）</a-button>
+        <a-button danger type="primary" :loading="metaRestoreLoading" @click="confirmMetaRestore">
+          真正写入
+        </a-button>
+      </template>
     </a-modal>
 
     <a-modal v-model:open="metaOpen" title="元数据 / 资产快照" :confirm-loading="metaLoading" @ok="doMetaBackup">
@@ -99,6 +143,16 @@ const metaRepoKey = ref('')
 const metaOpts = ref({ with_archives: true, with_assets: true, with_gists: true })
 const metaItems = ref<MetadataSnapshot[]>([])
 const metaListLoading = ref(false)
+const metaRestoreOpen = ref(false)
+const metaRestoreLoading = ref(false)
+const metaRestore = ref({
+  repo_key: '',
+  dir: '',
+  target_owner: '',
+  target_repo: '',
+  kinds: '',
+  overwrite: false,
+})
 
 const metaColumns = [
   { title: '仓库', dataIndex: 'repo_key', ellipsis: true },
@@ -106,6 +160,7 @@ const metaColumns = [
   { title: '时间', key: 'time', width: 170 },
   { title: '内容', key: 'counts' },
   { title: '目录', dataIndex: 'dir', ellipsis: true },
+  { title: '操作', key: 'action', width: 100 },
 ]
 
 const columns = [
@@ -189,6 +244,66 @@ async function loadMetaList() {
   } finally {
     metaListLoading.value = false
   }
+}
+
+function openMetaRestore(record: MetadataSnapshot) {
+  metaRestore.value = {
+    repo_key: record.repo_key,
+    dir: record.dir,
+    target_owner: '',
+    target_repo: '',
+    kinds: '',
+    overwrite: false,
+  }
+  metaRestoreOpen.value = true
+}
+
+async function doMetaRestore(dryRun: boolean) {
+  const r = metaRestore.value
+  if (!r.repo_key) return
+  metaRestoreLoading.value = true
+  try {
+    const kinds = r.kinds
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const res = await opsApi.metadataRestore({
+      repo_key: r.repo_key,
+      snapshot_dir: r.dir || undefined,
+      kinds: kinds.length ? kinds : undefined,
+      dry_run: dryRun,
+      overwrite: r.overwrite || undefined,
+      target_owner: r.target_owner || undefined,
+      target_repo: r.target_repo || undefined,
+    })
+    const stats = Object.entries(res.stats || {})
+      .map(([k, v]) => `${k}: +${v.created}/~${v.skipped}/!${v.failed}`)
+      .join('  ')
+    if (dryRun) {
+      notifySuccess(`预览完成（未写入） target=${res.target}  ${stats}`)
+    } else {
+      notifySuccess(`回灌完成 target=${res.target}  ${stats}`)
+      metaRestoreOpen.value = false
+    }
+    if (res.warnings?.length) {
+      message.warning(res.warnings.slice(0, 3).join('；'))
+    }
+  } catch (e) {
+    notifyError(e, dryRun ? '回灌预览失败' : '回灌失败')
+  } finally {
+    metaRestoreLoading.value = false
+  }
+}
+
+function confirmMetaRestore() {
+  Modal.confirm({
+    title: '确认真正写入目标仓？',
+    content: '将创建 labels / milestones / issues / PRs(as issue) / releases，不可自动回滚。',
+    okText: '写入',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: () => doMetaRestore(false),
+  })
 }
 
 onMounted(() => {

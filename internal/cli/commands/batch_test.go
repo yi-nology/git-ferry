@@ -3,6 +3,8 @@ package commands
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/yi-nology/git-ferry/internal/cli/cmdutil"
 )
 
@@ -92,4 +94,12 @@ func TestScBatchFlags(t *testing.T) {
 			t.Fatalf("missing --%s", name)
 		}
 	}
+}
+
+func TestBatchResultsCSV_Escapes(t *testing.T) {
+	csv := batchResultsCSV([]batchRow{
+		{TaskKey: "t1", Action: "run", Status: "failed", Error: `msg, with "quote"`},
+	})
+	assert.Contains(t, csv, `"msg, with ""quote"""`)
+	assert.Contains(t, csv, "task_key,action,status,error\n")
 }

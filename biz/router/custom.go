@@ -5,10 +5,14 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/adaptor"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	handler "github.com/yi-nology/git-ferry/biz/handler"
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	routergitsync "github.com/yi-nology/git-ferry/biz/router/git_sync"
+	"github.com/yi-nology/git-ferry/internal/agent/tools"
+	"github.com/yi-nology/git-ferry/internal/gitserve"
+	"github.com/yi-nology/git-ferry/internal/mcp"
 	"github.com/yi-nology/git-ferry/internal/metrics"
 	"github.com/yi-nology/git-ferry/internal/pkg/swagger"
 )
@@ -36,6 +40,28 @@ func CustomizedRegister(r *server.Hertz) {
 	ai.POST("/config", git_sync.AIUpdateConfig)
 	ai.POST("/config/test", git_sync.AITestConfig)
 	ai.GET("/models", git_sync.AIListModels)
+
+	// MCP Streamable HTTP：与 eino 工具同表，供 Claude Code / Cursor 直连
+	mcpGroup := r.Group("/mcp", routergitsync.AuthMiddleware())
+	mcpReg := tools.NewRegistry(git_sync.GetSyncService())
+	mcpGroup.GET("", mcp.Status(mcpReg))
+	mcpGroup.POST("", mcp.Handler(mcpReg))
+
+	// Git Smart HTTP 只读（配置 git_serve.enabled 后开启）
+	if git_sync.GitServeEnabled() {
+		base := git_sync.GitServeBasePath()
+		if base == "" {
+			if svc := git_sync.GetSyncService(); svc != nil && svc.BackupDir() != "" {
+				base = svc.BackupDir() + "/git-serve"
+			}
+		}
+		h := gitserve.Handler(gitserve.Options{BasePath: base, PublicRead: git_sync.GitServePublic()})
+		if git_sync.GitServePublic() {
+			r.Any("/git/*filepath", adaptor.HertzHandler(h))
+		} else {
+			r.Any("/git/*filepath", routergitsync.AuthMiddleware(), adaptor.HertzHandler(h))
+		}
+	}
 
 	// 失败补偿与治理(鉴权 + 写操作 RBAC)
 	ops := r.Group("/api/v1/ops", routergitsync.AuthMiddleware())
@@ -75,6 +101,7 @@ func CustomizedRegister(r *server.Hertz) {
 	// P1 元数据资产:issues/PR/releases 快照 + source archive + Release 附件 + gists
 	ops.POST("/metadata-backup", git_sync.WriteGuard(), git_sync.MetadataBackup)
 	ops.GET("/metadata-backups", git_sync.ListMetadataBackups)
+	ops.POST("/metadata-restore", git_sync.AdminGuard(), git_sync.MetadataRestore)
 	ops.POST("/gists-backup", git_sync.WriteGuard(), git_sync.BackupGists)
 
 	// P3 生命周期:自动发现 / 漂移检测 / 冷备清理

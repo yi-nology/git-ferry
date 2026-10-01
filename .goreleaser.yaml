@@ -1,6 +1,9 @@
-# .goreleaser.yaml — 可选的多平台发布（与手写 release.yml 二选一）
-# 用法: goreleaser release --snapshot --clean   # 本地验证
-#       git tag v1.x.y && goreleaser release    # 正式发布（需 GITHUB_TOKEN）
+# .goreleaser.yaml — 可选的多平台发布（与手写 release.yml 二选一，默认走 release.yml）
+#
+# 收敛策略：
+#   - 正式发版：git tag v* → .github/workflows/release.yml（默认，已含 server+CLI）
+#   - 本地验证 / 迁移到 goreleaser：goreleaser release --snapshot --clean
+# 切换到 goreleaser 时：删除 release.yml 的 matrix build，改为 goreleaser job。
 version: 2
 
 project_name: git-ferry

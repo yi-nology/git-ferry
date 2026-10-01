@@ -1,4 +1,4 @@
-.PHONY: build build-cli run restart clean clean-data test lint fmt vet tidy generate apidoc docker-build install-skills pack-npm build-npm
+.PHONY: build build-cli run restart clean clean-data test lint fmt vet tidy generate apidoc docker-build install-skills pack-npm build-npm e2e-shots goreleaser-snapshot
 
 APP_NAME := git-ferry
 CLI_NAME := gitferry
@@ -29,6 +29,14 @@ pack-npm:
 # 只组装 npm 发布目录（不含本地二进制；发布流水线用）
 build-npm:
 	@bash scripts/build-npm.sh
+
+# 截图回归（需先起 vite dev + API/mock 8890）
+e2e-shots:
+	@"$${MIMO_NODE:-node}" scripts/e2e-screenshots.js
+
+# 可选 goreleaser 本地快照（默认发版走 .github/workflows/release.yml）
+goreleaser-snapshot:
+	@goreleaser release --snapshot --clean
 
 # 本地开发启动:自动加载 .env(ENCRYPTION_KEY 等本地密钥,已被 gitignore)。
 # 注意必须 `go run .` 整包编译,不能 `go run main.go`(后者只编译单文件,会报 undefined: register)

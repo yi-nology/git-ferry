@@ -51,9 +51,10 @@
           <div class="todo-actions">
             <template v-for="(a, i) in (item.actions || []).slice(0, 2)" :key="i">
               <a-tooltip :title="a.command || a.title">
-                <a-button size="small" @click="copyAction(a)">
+                <a-button size="small" :danger="!!a.danger" @click="copyAction(a)">
                   <template #icon><CopyOutlined /></template>
                   {{ a.title }}
+                  <span v-if="a.danger" class="danger-dot" title="危险命令，执行需确认">⚠</span>
                 </a-button>
               </a-tooltip>
             </template>
@@ -221,8 +222,8 @@ import { useRouter } from 'vue-router'
 import { syncTaskApi, systemApi, repoApi, opsApi } from '@/api'
 import type { SystemStatusData } from '@/types/api'
 import type { Repo, SyncTask } from '@/types'
-import type { HealthScoreItem } from '@/api/ops'
-import { notifyError } from '@/utils/notify'
+import type { HealthScoreItem, OpsTodoAction, OpsTodoItem } from '@/api/ops'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { STATUS } from '@/constants/status'
 import { platformLabel } from '@/utils/platform'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -237,9 +238,7 @@ import {
   CopyOutlined,
   OrderedListOutlined,
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 import { copyToClipboard } from '@/utils'
-import type { OpsTodoAction, OpsTodoItem } from '@/api/ops'
 
 const router = useRouter()
 
@@ -270,9 +269,9 @@ async function copyAction(a: OpsTodoAction) {
   const text = a.command || a.title
   try {
     await copyToClipboard(text)
-    message.success(a.command ? '命令已复制' : '已复制')
+    notifySuccess(a.command ? '命令已复制' : '已复制')
   } catch {
-    message.error('复制失败')
+    notifyError('复制失败')
   }
 }
 
@@ -504,6 +503,12 @@ onActivated(loadDashboard)
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+
+  .danger-dot {
+    margin-left: 2px;
+    color: $warning;
+    font-size: 11px;
+  }
 }
 
 .attention-item :deep(.ant-btn-link) {

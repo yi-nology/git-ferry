@@ -18,6 +18,12 @@ struct SyncTaskInfo {
     20: bool gitLfs (api.json="git_lfs")
     21: bool gitPushPrune (api.json="git_push_prune")
     22: bool keepDivergent (api.json="keep_divergent")
+    23: string forcePushPolicy (api.json="force_push_policy")
+    24: string includeBranches (api.json="include_branches")
+    25: string excludeRefPatterns (api.json="exclude_ref_patterns")
+    26: bool syncWiki (api.json="sync_wiki")
+    27: bool gitBundle (api.json="git_bundle")
+    28: bool submodules (api.json="submodules")
     16: string lastRunAt (api.json="last_run_at")
     17: string lastStatus (api.json="last_status")
     18: string createdAt (api.json="created_at")
@@ -56,6 +62,12 @@ struct CreateTaskReq {
     15: bool gitLfs (api.json="git_lfs")
     16: bool gitPushPrune (api.json="git_push_prune")
     17: optional bool keepDivergent (api.json="keep_divergent")
+    18: optional string forcePushPolicy (api.json="force_push_policy")
+    19: optional string includeBranches (api.json="include_branches")
+    20: optional string excludeRefPatterns (api.json="exclude_ref_patterns")
+    21: bool syncWiki (api.json="sync_wiki")
+    22: bool gitBundle (api.json="git_bundle")
+    23: bool submodules (api.json="submodules")
 }
 
 struct CreateTaskResp {
@@ -76,6 +88,12 @@ struct UpdateTaskReq {
     15: bool gitLfs (api.json="git_lfs")
     16: bool gitPushPrune (api.json="git_push_prune")
     17: optional bool keepDivergent (api.json="keep_divergent")
+    18: optional string forcePushPolicy (api.json="force_push_policy")
+    19: optional string includeBranches (api.json="include_branches")
+    20: optional string excludeRefPatterns (api.json="exclude_ref_patterns")
+    21: bool syncWiki (api.json="sync_wiki")
+    22: bool gitBundle (api.json="git_bundle")
+    23: bool submodules (api.json="submodules")
 }
 
 struct UpdateTaskResp {

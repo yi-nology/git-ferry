@@ -68,7 +68,8 @@ func DownloadReleaseAssets(ctx context.Context, apiURL, token, owner, repo, dest
 	if base == "" {
 		base = "https://api.github.com"
 	}
-	client := &http.Client{Timeout: 60 * time.Second}
+	th := NewThrottler()
+	client := th.Client
 
 	listURL := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=30", base, owner, repo)
 	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, listURL, http.NoBody)
@@ -76,7 +77,7 @@ func DownloadReleaseAssets(ctx context.Context, apiURL, token, owner, repo, dest
 		return nil, nil, rerr
 	}
 	setHeaders(req, token)
-	resp, err := client.Do(req)
+	resp, err := th.Do(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,7 +129,9 @@ func downloadAsset(ctx context.Context, client *http.Client, token string, asset
 	if strings.Contains(url, "/releases/assets/") {
 		req.Header.Set("Accept", "application/octet-stream")
 	}
-	resp, err := client.Do(req)
+	th := NewThrottler()
+	th.Client = client
+	resp, err := th.Do(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -154,13 +157,13 @@ func BackupGists(ctx context.Context, apiURL, token, destDir string, maxGists in
 	if base == "" {
 		base = "https://api.github.com"
 	}
-	client := &http.Client{Timeout: 60 * time.Second}
+	th := NewThrottler()
 	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, base+"/gists?per_page=100", http.NoBody)
 	if rerr != nil {
 		return 0, nil, rerr
 	}
 	setHeaders(req, token)
-	resp, err := client.Do(req)
+	resp, err := th.Do(ctx, req)
 	if err != nil {
 		return 0, nil, err
 	}

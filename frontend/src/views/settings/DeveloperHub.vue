@@ -240,10 +240,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { message } from 'ant-design-vue'
 import { BookOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { copyToClipboard } from '@/utils'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { systemApi, ApiError } from '@/api'
 import type { SystemStatusData } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
@@ -263,11 +263,21 @@ const envSnippet = `export GITFERRY_BASE_URL="${baseUrl}"
 export GITFERRY_TOKEN="<YOUR_API_KEY>"`
 const loginSnippet = `gitferry auth login --base-url ${baseUrl} --token <YOUR_API_KEY>`
 
-const installCmds = [
+const installCmds = computed(() => [
   { label: 'npm（推荐）', cmd: 'npm install -g gitferry-cli' },
   { label: '源码构建', cmd: 'make build-cli && sudo cp output/gitferry /usr/local/bin/' },
-  { label: 'Release 二进制', cmd: 'curl -fsSL https://github.com/yi-nology/git-ferry/releases/latest/download/gitferry.tgz | tar -xz' },
-]
+  {
+    label: 'Release 二进制（按平台改文件名）',
+    cmd: [
+      '# https://github.com/yi-nology/git-ferry/releases/latest',
+      `# 版本: ${sysStatus.value?.version || '见 Releases'}，示例 darwin_arm64:`,
+      'VER=${VER:-1.19.0}   # 替换为最新版本号',
+      'curl -fsSL -o gitferry.tgz \\',
+      '  "https://github.com/yi-nology/git-ferry/releases/download/v${VER}/gitferry_${VER}_darwin_arm64.tar.gz"',
+      'tar -xzf gitferry.tgz && sudo mv gitferry /usr/local/bin/',
+    ].join('\n'),
+  },
+])
 
 const skills = [
   { name: 'gitferry-shared', desc: '认证、Envelope、安全规则（必读）' },
@@ -314,9 +324,9 @@ const currentCmds = computed(() => cmdGroups[cmdTab.value] ?? [])
 async function copy(text: string) {
   try {
     await copyToClipboard(text)
-    message.success('已复制')
+    notifySuccess('已复制')
   } catch {
-    message.error('复制失败，请手动选择')
+    notifyError('复制失败，请手动选择')
   }
 }
 
@@ -334,7 +344,7 @@ async function probe() {
   try {
     sysStatus.value = await systemApi.status()
     reachable.value = true
-    message.success('服务可达')
+    notifySuccess('服务可达')
   } catch (e) {
     reachable.value = false
     sysStatus.value = null

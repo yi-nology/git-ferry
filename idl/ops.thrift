@@ -12,6 +12,7 @@ struct MetadataBackupReq {
     6: optional bool withAssets (api.json="with_assets")
     7: optional bool withGists (api.json="with_gists")
     8: i32 maxItems (api.json="max_items")
+    9: optional string since (api.json="since") // RFC3339 增量:仅保留 updatedAt>=since 的 issue/PR
 }
 
 struct MetadataSnapshot {
@@ -51,6 +52,38 @@ struct BackupGistsResp {
     2: i32 count (api.json="count")
     3: string dir (api.json="dir")
     4: list<string> warnings (api.json="warnings")
+}
+
+// ===== 元数据回灌 Restore =====
+// kinds: labels,milestones,issues,prs,releases（空=全部可用分片）
+// dry_run 缺省 true；overwrite=false 时同名跳过。
+
+struct MetadataRestoreReq {
+    1: string repoKey (api.json="repo_key")
+    2: optional string snapshotDir (api.json="snapshot_dir")
+    3: optional string targetPlatform (api.json="target_platform")
+    4: optional string targetOwner (api.json="target_owner")
+    5: optional string targetRepo (api.json="target_repo")
+    6: list<string> kinds (api.json="kinds")
+    7: optional bool dryRun (api.json="dry_run")
+    8: optional bool overwrite (api.json="overwrite")
+}
+
+struct RestoreKindStat {
+    1: i32 planned (api.json="planned")
+    2: i32 created (api.json="created")
+    3: i32 skipped (api.json="skipped")
+    4: i32 failed (api.json="failed")
+}
+
+struct MetadataRestoreResult {
+    1: string snapshotDir (api.json="snapshot_dir")
+    2: string target (api.json="target")
+    3: map<string, RestoreKindStat> stats (api.json="stats")
+    4: list<string> warnings (api.json="warnings")
+    5: bool dryRun (api.json="dry_run")
+    6: string startedAt (api.json="started_at")
+    7: string finishedAt (api.json="finished_at")
 }
 
 // ===== 灾备演练 =====

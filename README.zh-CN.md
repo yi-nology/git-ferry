@@ -76,6 +76,10 @@ Vue 3 + Ant Design Vue 自托管控制台,视觉锚点为 GitHub Enterprise / Li
 | 治理 | RBAC 三角色、OIDC JWT、审计哈希链 `/ops/audit-chain/verify`、legal_hold |
 | 一键重建 | `POST /api/v1/ops/rebuild` 清 workdir 全量重拉 |
 | 过滤导入 | `POST /api/v1/ops/sync-platform` 排除 archived/fork、按 star/语言/glob |
+| 元数据回灌 | `POST /ops/metadata-restore`（默认 dry-run）labels/milestones/issues/PRs/releases |
+| MCP 接入 | `POST /mcp` Streamable HTTP，与 AI 工具同表 |
+| Git Smart HTTP | `git_serve` 配置段，局域网 `git clone` 冷备 |
+| 分支过滤 | 任务 `include_branches` / `exclude_ref_patterns`（忽略 PR refs） |
 | GitHub 全量归档 | `POST /api/v1/ops/migration` Migration API tar.gz |
 | 部分克隆/子模块 | `sync.partial_clone`、任务 `submodules` |
 | S3 冷备 | `sync.backup_s3` bundle 异地上传 |

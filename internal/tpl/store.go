@@ -102,7 +102,7 @@ func resolveLocked(list []Template, id string) (Spec, []string, error) {
 	cur := id
 	for cur != "" {
 		if seen[cur] {
-			return Spec{}, nil, ErrCycle
+			return Spec{}, append(chain, cur), ErrCycle
 		}
 		t, ok := byID[cur]
 		if !ok {

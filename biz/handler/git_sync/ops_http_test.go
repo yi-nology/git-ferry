@@ -377,3 +377,106 @@ func TestExportDrillHistory_CSV(t *testing.T) {
 	// 未配置 backup_dir 时 500;配置后应 200 + csv
 	assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError, "code=%d", w.Code)
 }
+
+func TestOpsTodo_OK(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/todo", OpsTodo)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/todo", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "items")
+	assert.Contains(t, body, "by_kind")
+	assert.Contains(t, body, "generated_at")
+}
+
+func TestOpsHealthScore_HasDimensions(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/health-score?limit=10", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	// 空任务集时仍有 summary/attention 结构
+	assert.Contains(t, body, "summary")
+	assert.Contains(t, body, "attention")
+}
+
+func TestTemplates_ExtendsChain(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine() // 已含 templates create/apply
+
+	reqBody := `{"name":"base","spec":{"cron":"0 1 * * *"}}`
+	w1 := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/templates",
+		&ut.Body{Body: strings.NewReader(reqBody), Len: len(reqBody)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	require.Equal(t, http.StatusCreated, w1.Code)
+	var created struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w1.Body.Bytes(), &created))
+	baseID := created.Data.ID
+	require.NotEmpty(t, baseID)
+
+	childBody := `{"name":"child","extends":"` + baseID + `","spec":{"cron":"0 5 * * *"}}`
+	w2 := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/templates",
+		&ut.Body{Body: strings.NewReader(childBody), Len: len(childBody)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	require.Equal(t, http.StatusCreated, w2.Code)
+	var child struct {
+		Data struct {
+			ID      string `json:"id"`
+			Extends string `json:"extends"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &child))
+	assert.Equal(t, baseID, child.Data.Extends)
+
+	applyBody := `{"template_id":"` + child.Data.ID + `","dry_run":true}`
+	w3 := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/templates/apply",
+		&ut.Body{Body: strings.NewReader(applyBody), Len: len(applyBody)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	require.Equal(t, http.StatusOK, w3.Code)
+	out := w3.Body.String()
+	assert.Contains(t, out, "extends_chain")
+	assert.Contains(t, out, "effective_spec")
+}
+
+func TestOpsTodo_EmptyIsOK(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/todo", OpsTodo)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/todo", nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	var body struct {
+		Data struct {
+			Items  []any          `json:"items"`
+			Total  int            `json:"total"`
+			ByKind map[string]int `json:"by_kind"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.NotNil(t, body.Data.Items)
+	assert.GreaterOrEqual(t, body.Data.Total, 0)
+	assert.NotNil(t, body.Data.ByKind)
+}
+
+func TestHealthScore_EmptyAttentionShape(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/health-score", nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	var body struct {
+		Data struct {
+			Items       []map[string]any `json:"items"`
+			Attention   []map[string]any `json:"attention"`
+			Summary     map[string]any   `json:"summary"`
+			GeneratedAt string           `json:"generated_at"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.NotNil(t, body.Data.Attention)
+	assert.NotNil(t, body.Data.Summary)
+	assert.NotEmpty(t, body.Data.GeneratedAt)
+}

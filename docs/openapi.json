@@ -391,6 +391,15 @@
           "cron": {
             "type": "string"
           },
+          "exclude_ref_patterns": {
+            "type": "string"
+          },
+          "force_push_policy": {
+            "type": "string"
+          },
+          "git_bundle": {
+            "type": "boolean"
+          },
           "git_force": {
             "type": "boolean"
           },
@@ -406,6 +415,9 @@
           "git_tags": {
             "type": "boolean"
           },
+          "include_branches": {
+            "type": "string"
+          },
           "keep_divergent": {
             "type": "string"
           },
@@ -418,8 +430,14 @@
           "source_repo_key": {
             "type": "string"
           },
+          "submodules": {
+            "type": "boolean"
+          },
           "sync_mode": {
             "type": "string"
+          },
+          "sync_wiki": {
+            "type": "boolean"
           },
           "target_branch": {
             "type": "string"
@@ -1069,6 +1087,9 @@
           "repo_key": {
             "type": "string"
           },
+          "since": {
+            "type": "string"
+          },
           "with_archives": {
             "type": "string"
           },
@@ -1094,6 +1115,70 @@
         "properties": {
           "snapshot": {
             "$ref": "#/components/schemas/MetadataSnapshot"
+          }
+        },
+        "type": "object"
+      },
+      "MetadataRestoreReq": {
+        "properties": {
+          "dry_run": {
+            "type": "string"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "overwrite": {
+            "type": "string"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "snapshot_dir": {
+            "type": "string"
+          },
+          "target_owner": {
+            "type": "string"
+          },
+          "target_platform": {
+            "type": "string"
+          },
+          "target_repo": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MetadataRestoreResult": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "finished_at": {
+            "type": "string"
+          },
+          "snapshot_dir": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "target": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -1599,6 +1684,27 @@
         },
         "type": "object"
       },
+      "RestoreKindStat": {
+        "properties": {
+          "created": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "planned": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "skipped": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "RetryEventReq": {
         "properties": {
           "id": {
@@ -1847,6 +1953,15 @@
           "enabled": {
             "type": "boolean"
           },
+          "exclude_ref_patterns": {
+            "type": "string"
+          },
+          "force_push_policy": {
+            "type": "string"
+          },
+          "git_bundle": {
+            "type": "boolean"
+          },
           "git_force": {
             "type": "boolean"
           },
@@ -1865,6 +1980,9 @@
           "id": {
             "format": "int64",
             "type": "integer"
+          },
+          "include_branches": {
+            "type": "string"
           },
           "keep_divergent": {
             "type": "boolean"
@@ -1887,8 +2005,14 @@
           "source_repo_key": {
             "type": "string"
           },
+          "submodules": {
+            "type": "boolean"
+          },
           "sync_mode": {
             "type": "string"
+          },
+          "sync_wiki": {
+            "type": "boolean"
           },
           "target_branch": {
             "type": "string"
@@ -2118,6 +2242,15 @@
           "enabled": {
             "type": "boolean"
           },
+          "exclude_ref_patterns": {
+            "type": "string"
+          },
+          "force_push_policy": {
+            "type": "string"
+          },
+          "git_bundle": {
+            "type": "boolean"
+          },
           "git_force": {
             "type": "boolean"
           },
@@ -2133,6 +2266,9 @@
           "git_tags": {
             "type": "boolean"
           },
+          "include_branches": {
+            "type": "string"
+          },
           "keep_divergent": {
             "type": "string"
           },
@@ -2145,8 +2281,14 @@
           "source_branch": {
             "type": "string"
           },
+          "submodules": {
+            "type": "boolean"
+          },
           "sync_mode": {
             "type": "string"
+          },
+          "sync_wiki": {
+            "type": "boolean"
           },
           "target_branch": {
             "type": "string"
@@ -2842,6 +2984,28 @@
           }
         },
         "summary": "元数据快照列表",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/metadata-restore": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "元数据回灌(admin,默认 dry-run)",
         "tags": [
           "Ops"
         ]

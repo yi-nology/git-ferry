@@ -23,6 +23,7 @@ func ToTaskInfo(t *model.SyncTask) *taskmodel.SyncTaskInfo {
 		Enabled: t.Enabled, GitTags: t.GitTags, GitForce: t.GitForce,
 		GitPrune: t.GitPrune,
 		GitLfs:   t.GitLFS, SyncWiki: t.SyncWiki, GitBundle: t.GitBundle, Submodules: t.Submodules, GitPushPrune: t.GitPushPrune, KeepDivergent: t.KeepDivergent,
+		ForcePushPolicy: t.ForcePushPolicy, IncludeBranches: t.IncludeBranches, ExcludeRefPatterns: t.ExcludeRefPatterns,
 		LastRunAt: lastRunAt, LastStatus: t.LastStatus,
 		CreatedAt: t.CreatedAt.Format("2006-01-02 15:04:05"),
 	}

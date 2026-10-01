@@ -28,6 +28,7 @@ metadata:
 | `ops +drill` | 灾备演练（恢复+fsck+refs） | **是** |
 | `ops +rebuild` | 清 workdir 全量重建 | **是** |
 | `ops +retry-batch` | 批量重试失败任务 | **是** |
+| `ops +metadata-restore` | 元数据回灌（默认 dry-run） | **是**（`--execute`） |
 
 ## 使用示例
 
@@ -56,6 +57,10 @@ gitferry ops +drill --name nightly.bundle --yes
 
 # 危险：任务重建
 gitferry ops +rebuild --task daily-mirror --yes
+
+# 元数据回灌：先 dry-run 看计划，再 --execute --yes 真正写入
+gitferry ops +metadata-restore --key my-repo --format json
+gitferry ops +metadata-restore --key my-repo --kinds labels,milestones --execute --yes
 ```
 
 ## 参数
@@ -68,6 +73,11 @@ gitferry ops +rebuild --task daily-mirror --yes
 | `ops +drill` | `--name` | bundle 名称 |
 | `ops +rebuild` | `--task` | 任务 key |
 | `ops +retry-batch` | `--task-keys` | 逗号分隔任务 key |
+| `ops +metadata-restore` | `--key` | 仓库 key（必填） |
+| `ops +metadata-restore` | `--name` | snapshot_dir（空=最新） |
+| `ops +metadata-restore` | `--kinds` | labels,milestones,issues,prs,releases |
+| `ops +metadata-restore` | `--execute` | 真正写入（缺省 dry-run） |
+| `ops +metadata-restore` | `--overwrite` | 同名 label 覆盖 |
 
 ## API 映射
 
@@ -84,6 +94,7 @@ gitferry ops +rebuild --task daily-mirror --yes
 | `ops +drill` | `POST /api/v1/ops/dr-drill` |
 | `ops +rebuild` | `POST /api/v1/ops/rebuild` |
 | `ops +retry-batch` | `POST /api/v1/ops/retry-batch` |
+| `ops +metadata-restore` | `POST /api/v1/ops/metadata-restore` |
 
 ## 返回关键字段
 

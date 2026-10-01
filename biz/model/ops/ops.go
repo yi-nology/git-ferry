@@ -19,6 +19,8 @@ type MetadataBackupReq struct {
 	WithAssets   *bool  `thrift:"withAssets,6,optional" form:"with_assets" json:"with_assets,omitempty" query:"with_assets"`
 	WithGists    *bool  `thrift:"withGists,7,optional" form:"with_gists" json:"with_gists,omitempty" query:"with_gists"`
 	MaxItems     int32  `thrift:"maxItems,8" form:"max_items" json:"max_items" query:"max_items"`
+	// RFC3339 增量:仅保留 updatedAt>=since 的 issue/PR
+	Since *string `thrift:"since,9,optional" form:"since" json:"since,omitempty" query:"since"`
 }
 
 func NewMetadataBackupReq() *MetadataBackupReq {
@@ -90,6 +92,15 @@ func (p *MetadataBackupReq) GetMaxItems() (v int32) {
 	return p.MaxItems
 }
 
+var MetadataBackupReq_Since_DEFAULT string
+
+func (p *MetadataBackupReq) GetSince() (v string) {
+	if !p.IsSetSince() {
+		return MetadataBackupReq_Since_DEFAULT
+	}
+	return *p.Since
+}
+
 var fieldIDToName_MetadataBackupReq = map[int16]string{
 	1: "repoKey",
 	2: "withIssues",
@@ -99,6 +110,7 @@ var fieldIDToName_MetadataBackupReq = map[int16]string{
 	6: "withAssets",
 	7: "withGists",
 	8: "maxItems",
+	9: "since",
 }
 
 func (p *MetadataBackupReq) IsSetWithIssues() bool {
@@ -123,6 +135,10 @@ func (p *MetadataBackupReq) IsSetWithAssets() bool {
 
 func (p *MetadataBackupReq) IsSetWithGists() bool {
 	return p.WithGists != nil
+}
+
+func (p *MetadataBackupReq) IsSetSince() bool {
+	return p.Since != nil
 }
 
 func (p *MetadataBackupReq) Read(iprot thrift.TProtocol) (err error) {
@@ -203,6 +219,14 @@ func (p *MetadataBackupReq) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -325,6 +349,17 @@ func (p *MetadataBackupReq) ReadField8(iprot thrift.TProtocol) error {
 	p.MaxItems = _field
 	return nil
 }
+func (p *MetadataBackupReq) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Since = _field
+	return nil
+}
 
 func (p *MetadataBackupReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -362,6 +397,10 @@ func (p *MetadataBackupReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -528,6 +567,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *MetadataBackupReq) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSince() {
+		if err = oprot.WriteFieldBegin("since", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Since); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
 func (p *MetadataBackupReq) String() string {
@@ -2231,6 +2289,1300 @@ func (p *BackupGistsResp) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("BackupGistsResp(%+v)", *p)
+
+}
+
+// ===== 元数据回灌 Restore =====
+// kinds: labels,milestones,issues,prs,releases（空=全部可用分片）
+// dry_run 缺省 true；overwrite=false 时同名跳过。
+type MetadataRestoreReq struct {
+	RepoKey        string   `thrift:"repoKey,1" form:"repo_key" json:"repo_key" query:"repo_key"`
+	SnapshotDir    *string  `thrift:"snapshotDir,2,optional" form:"snapshot_dir" json:"snapshot_dir,omitempty" query:"snapshot_dir"`
+	TargetPlatform *string  `thrift:"targetPlatform,3,optional" form:"target_platform" json:"target_platform,omitempty" query:"target_platform"`
+	TargetOwner    *string  `thrift:"targetOwner,4,optional" form:"target_owner" json:"target_owner,omitempty" query:"target_owner"`
+	TargetRepo     *string  `thrift:"targetRepo,5,optional" form:"target_repo" json:"target_repo,omitempty" query:"target_repo"`
+	Kinds          []string `thrift:"kinds,6,default,list<string>" form:"kinds" json:"kinds" query:"kinds"`
+	DryRun         *bool    `thrift:"dryRun,7,optional" form:"dry_run" json:"dry_run,omitempty" query:"dry_run"`
+	Overwrite      *bool    `thrift:"overwrite,8,optional" form:"overwrite" json:"overwrite,omitempty" query:"overwrite"`
+}
+
+func NewMetadataRestoreReq() *MetadataRestoreReq {
+	return &MetadataRestoreReq{}
+}
+
+func (p *MetadataRestoreReq) InitDefault() {
+}
+
+func (p *MetadataRestoreReq) GetRepoKey() (v string) {
+	return p.RepoKey
+}
+
+var MetadataRestoreReq_SnapshotDir_DEFAULT string
+
+func (p *MetadataRestoreReq) GetSnapshotDir() (v string) {
+	if !p.IsSetSnapshotDir() {
+		return MetadataRestoreReq_SnapshotDir_DEFAULT
+	}
+	return *p.SnapshotDir
+}
+
+var MetadataRestoreReq_TargetPlatform_DEFAULT string
+
+func (p *MetadataRestoreReq) GetTargetPlatform() (v string) {
+	if !p.IsSetTargetPlatform() {
+		return MetadataRestoreReq_TargetPlatform_DEFAULT
+	}
+	return *p.TargetPlatform
+}
+
+var MetadataRestoreReq_TargetOwner_DEFAULT string
+
+func (p *MetadataRestoreReq) GetTargetOwner() (v string) {
+	if !p.IsSetTargetOwner() {
+		return MetadataRestoreReq_TargetOwner_DEFAULT
+	}
+	return *p.TargetOwner
+}
+
+var MetadataRestoreReq_TargetRepo_DEFAULT string
+
+func (p *MetadataRestoreReq) GetTargetRepo() (v string) {
+	if !p.IsSetTargetRepo() {
+		return MetadataRestoreReq_TargetRepo_DEFAULT
+	}
+	return *p.TargetRepo
+}
+
+func (p *MetadataRestoreReq) GetKinds() (v []string) {
+	return p.Kinds
+}
+
+var MetadataRestoreReq_DryRun_DEFAULT bool
+
+func (p *MetadataRestoreReq) GetDryRun() (v bool) {
+	if !p.IsSetDryRun() {
+		return MetadataRestoreReq_DryRun_DEFAULT
+	}
+	return *p.DryRun
+}
+
+var MetadataRestoreReq_Overwrite_DEFAULT bool
+
+func (p *MetadataRestoreReq) GetOverwrite() (v bool) {
+	if !p.IsSetOverwrite() {
+		return MetadataRestoreReq_Overwrite_DEFAULT
+	}
+	return *p.Overwrite
+}
+
+var fieldIDToName_MetadataRestoreReq = map[int16]string{
+	1: "repoKey",
+	2: "snapshotDir",
+	3: "targetPlatform",
+	4: "targetOwner",
+	5: "targetRepo",
+	6: "kinds",
+	7: "dryRun",
+	8: "overwrite",
+}
+
+func (p *MetadataRestoreReq) IsSetSnapshotDir() bool {
+	return p.SnapshotDir != nil
+}
+
+func (p *MetadataRestoreReq) IsSetTargetPlatform() bool {
+	return p.TargetPlatform != nil
+}
+
+func (p *MetadataRestoreReq) IsSetTargetOwner() bool {
+	return p.TargetOwner != nil
+}
+
+func (p *MetadataRestoreReq) IsSetTargetRepo() bool {
+	return p.TargetRepo != nil
+}
+
+func (p *MetadataRestoreReq) IsSetDryRun() bool {
+	return p.DryRun != nil
+}
+
+func (p *MetadataRestoreReq) IsSetOverwrite() bool {
+	return p.Overwrite != nil
+}
+
+func (p *MetadataRestoreReq) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetadataRestoreReq[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RepoKey = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SnapshotDir = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetPlatform = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetOwner = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetRepo = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Kinds = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DryRun = _field
+	return nil
+}
+func (p *MetadataRestoreReq) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Overwrite = _field
+	return nil
+}
+
+func (p *MetadataRestoreReq) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MetadataRestoreReq"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("repoKey", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.RepoKey); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSnapshotDir() {
+		if err = oprot.WriteFieldBegin("snapshotDir", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SnapshotDir); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetPlatform() {
+		if err = oprot.WriteFieldBegin("targetPlatform", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TargetPlatform); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetOwner() {
+		if err = oprot.WriteFieldBegin("targetOwner", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TargetOwner); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetRepo() {
+		if err = oprot.WriteFieldBegin("targetRepo", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TargetRepo); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("kinds", thrift.LIST, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.Kinds)); err != nil {
+		return err
+	}
+	for _, v := range p.Kinds {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDryRun() {
+		if err = oprot.WriteFieldBegin("dryRun", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.DryRun); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOverwrite() {
+		if err = oprot.WriteFieldBegin("overwrite", thrift.BOOL, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Overwrite); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *MetadataRestoreReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MetadataRestoreReq(%+v)", *p)
+
+}
+
+type RestoreKindStat struct {
+	Planned int32 `thrift:"planned,1" form:"planned" json:"planned" query:"planned"`
+	Created int32 `thrift:"created,2" form:"created" json:"created" query:"created"`
+	Skipped int32 `thrift:"skipped,3" form:"skipped" json:"skipped" query:"skipped"`
+	Failed  int32 `thrift:"failed,4" form:"failed" json:"failed" query:"failed"`
+}
+
+func NewRestoreKindStat() *RestoreKindStat {
+	return &RestoreKindStat{}
+}
+
+func (p *RestoreKindStat) InitDefault() {
+}
+
+func (p *RestoreKindStat) GetPlanned() (v int32) {
+	return p.Planned
+}
+
+func (p *RestoreKindStat) GetCreated() (v int32) {
+	return p.Created
+}
+
+func (p *RestoreKindStat) GetSkipped() (v int32) {
+	return p.Skipped
+}
+
+func (p *RestoreKindStat) GetFailed() (v int32) {
+	return p.Failed
+}
+
+var fieldIDToName_RestoreKindStat = map[int16]string{
+	1: "planned",
+	2: "created",
+	3: "skipped",
+	4: "failed",
+}
+
+func (p *RestoreKindStat) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RestoreKindStat[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RestoreKindStat) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Planned = _field
+	return nil
+}
+func (p *RestoreKindStat) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Created = _field
+	return nil
+}
+func (p *RestoreKindStat) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Skipped = _field
+	return nil
+}
+func (p *RestoreKindStat) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Failed = _field
+	return nil
+}
+
+func (p *RestoreKindStat) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RestoreKindStat"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RestoreKindStat) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("planned", thrift.I32, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.Planned); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *RestoreKindStat) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("created", thrift.I32, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.Created); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *RestoreKindStat) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("skipped", thrift.I32, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.Skipped); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *RestoreKindStat) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("failed", thrift.I32, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.Failed); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *RestoreKindStat) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RestoreKindStat(%+v)", *p)
+
+}
+
+type MetadataRestoreResult struct {
+	SnapshotDir string                      `thrift:"snapshotDir,1" form:"snapshot_dir" json:"snapshot_dir" query:"snapshot_dir"`
+	Target      string                      `thrift:"target,2" form:"target" json:"target" query:"target"`
+	Stats       map[string]*RestoreKindStat `thrift:"stats,3" form:"stats" json:"stats" query:"stats"`
+	Warnings    []string                    `thrift:"warnings,4,default,list<string>" form:"warnings" json:"warnings" query:"warnings"`
+	DryRun      bool                        `thrift:"dryRun,5" form:"dry_run" json:"dry_run" query:"dry_run"`
+	StartedAt   string                      `thrift:"startedAt,6" form:"started_at" json:"started_at" query:"started_at"`
+	FinishedAt  string                      `thrift:"finishedAt,7" form:"finished_at" json:"finished_at" query:"finished_at"`
+}
+
+func NewMetadataRestoreResult() *MetadataRestoreResult {
+	return &MetadataRestoreResult{}
+}
+
+func (p *MetadataRestoreResult) InitDefault() {
+}
+
+func (p *MetadataRestoreResult) GetSnapshotDir() (v string) {
+	return p.SnapshotDir
+}
+
+func (p *MetadataRestoreResult) GetTarget() (v string) {
+	return p.Target
+}
+
+func (p *MetadataRestoreResult) GetStats() (v map[string]*RestoreKindStat) {
+	return p.Stats
+}
+
+func (p *MetadataRestoreResult) GetWarnings() (v []string) {
+	return p.Warnings
+}
+
+func (p *MetadataRestoreResult) GetDryRun() (v bool) {
+	return p.DryRun
+}
+
+func (p *MetadataRestoreResult) GetStartedAt() (v string) {
+	return p.StartedAt
+}
+
+func (p *MetadataRestoreResult) GetFinishedAt() (v string) {
+	return p.FinishedAt
+}
+
+var fieldIDToName_MetadataRestoreResult = map[int16]string{
+	1: "snapshotDir",
+	2: "target",
+	3: "stats",
+	4: "warnings",
+	5: "dryRun",
+	6: "startedAt",
+	7: "finishedAt",
+}
+
+func (p *MetadataRestoreResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetadataRestoreResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SnapshotDir = _field
+	return nil
+}
+func (p *MetadataRestoreResult) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Target = _field
+	return nil
+}
+func (p *MetadataRestoreResult) ReadField3(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]*RestoreKindStat, size)
+	values := make([]RestoreKindStat, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Stats = _field
+	return nil
+}
+func (p *MetadataRestoreResult) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Warnings = _field
+	return nil
+}
+func (p *MetadataRestoreResult) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.DryRun = _field
+	return nil
+}
+func (p *MetadataRestoreResult) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.StartedAt = _field
+	return nil
+}
+func (p *MetadataRestoreResult) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.FinishedAt = _field
+	return nil
+}
+
+func (p *MetadataRestoreResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MetadataRestoreResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("snapshotDir", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.SnapshotDir); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("target", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Target); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("stats", thrift.MAP, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.Stats)); err != nil {
+		return err
+	}
+	for k, v := range p.Stats {
+		if err := oprot.WriteString(k); err != nil {
+			return err
+		}
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteMapEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("warnings", thrift.LIST, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.Warnings)); err != nil {
+		return err
+	}
+	for _, v := range p.Warnings {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("dryRun", thrift.BOOL, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.DryRun); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("startedAt", thrift.STRING, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.StartedAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("finishedAt", thrift.STRING, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.FinishedAt); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *MetadataRestoreResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MetadataRestoreResult(%+v)", *p)
 
 }
 

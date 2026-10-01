@@ -235,11 +235,6 @@ onMounted(load)
 
 <style scoped>
 .toolbar { margin-bottom: 12px; }
-.form-tip {
-  color: #9ca3af;
-  font-size: 12px;
-  margin-top: 4px;
-}
 .chain-row {
   margin-bottom: 8px;
   font-size: 12px;

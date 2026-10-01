@@ -41,6 +41,9 @@ func main() {
 	})
 	git_sync.SetAPIKey(shellCfg.APIKey)
 	git_sync.SetAPIKeyRole(shellCfg.APIKeyRole)
+	if shellCfg.GitServe != nil {
+		git_sync.SetGitServe(shellCfg.GitServe.Enabled, shellCfg.GitServe.BasePath, shellCfg.GitServe.PublicRead)
+	}
 	if shellCfg.OIDC != nil && shellCfg.OIDC.Enabled {
 		git_sync.SetOIDCConfig(&git_sync.OIDCConfig{
 			Enabled:     shellCfg.OIDC.Enabled,

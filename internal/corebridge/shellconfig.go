@@ -22,6 +22,17 @@ type ShellConfig struct {
 	// RunWatch 运行观察与失败自动补偿设置。
 	// 独立 struct 而非 runwatch.Config:corebridge 不依赖 runwatch,避免 import 环。
 	RunWatch *RunWatchSettings
+	// GitServe 只读 Git Smart HTTP（局域网/灾备 clone）。
+	GitServe *GitServeSettings
+}
+
+// GitServeSettings 对应 yaml git_serve 段。
+type GitServeSettings struct {
+	Enabled bool `yaml:"enabled"`
+	// BasePath bare 仓库根目录；默认 <backup_dir>/git-serve
+	BasePath string `yaml:"base_path"`
+	// PublicRead true=无需鉴权（仅内网）；默认 false
+	PublicRead bool `yaml:"public_read"`
 }
 
 // OIDCSettings 对应 yaml auth.oidc 段。
@@ -56,6 +67,7 @@ type shellOverlay struct {
 	} `yaml:"auth"`
 	Notify   *notify.Config    `yaml:"notify"`
 	RunWatch *RunWatchSettings `yaml:"runwatch"`
+	GitServe *GitServeSettings `yaml:"git_serve"`
 }
 
 // LoadShellConfig 加载 core 配置，并叠加壳层 server.api_key / auth.oidc / notify / runwatch。
@@ -90,6 +102,7 @@ func LoadShellConfig(path string) (*ShellConfig, error) {
 		OIDC:       overlay.Auth.OIDC,
 		Notify:     overlay.Notify,
 		RunWatch:   overlay.RunWatch,
+		GitServe:   overlay.GitServe,
 	}, nil
 }
 

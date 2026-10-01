@@ -637,6 +637,7 @@ func addCustomPaths(paths map[string]any) {
 		{"/api/v1/ops/dr-drill", "灾备演练(单/批)"},
 		{"/api/v1/ops/backup-manifest", "生成 Merkle 完整性清单"},
 		{"/api/v1/ops/metadata-backup", "元数据/资产快照"},
+		{"/api/v1/ops/metadata-restore", "元数据回灌(admin,默认 dry-run)"},
 		{"/api/v1/ops/gists-backup", "Gists 备份"},
 		{"/api/v1/ops/auto-discover", "平台自动发现"},
 		{"/api/v1/ops/drift", "漂移检测"},

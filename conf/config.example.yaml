@@ -122,3 +122,11 @@ runwatch:
 # 平台令牌可用环境变量注入(不进配置/请求体):
 #   GIT_SYNC_TOKEN_<PLATFORM_NAME 大写,非字母数字换 _>
 #   例:platform name=my-github → GIT_SYNC_TOKEN_MY_GITHUB=ghp_xxx
+
+# 只读 Git Smart HTTP(局域网/灾备 clone):
+#   git clone http://<host>:<port>/git/<host>/<owner>/<repo>.git
+# bare 仓库放在 base_path 下,路径形如 <base_path>/github/octocat/hello.git
+# git_serve:
+#   enabled: false
+#   base_path: ""            # 空= <sync.backup_dir>/git-serve
+#   public_read: false       # true=免鉴权(仅内网!)

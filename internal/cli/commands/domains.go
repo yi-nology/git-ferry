@@ -178,6 +178,15 @@ func taskCreate(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []stri
 		"git_lfs":         flagBool(cmd, "git-lfs"),
 		"git_push_prune":  flagBool(cmd, "git-push-prune"),
 	}
+	if v := flagStr(cmd, "include-branches"); v != "" {
+		body["include_branches"] = v
+	}
+	if v := flagStr(cmd, "exclude-ref-patterns"); v != "" {
+		body["exclude_ref_patterns"] = v
+	}
+	if v := flagStr(cmd, "force-push-policy"); v != "" {
+		body["force_push_policy"] = v
+	}
 	return c.Post("/api/v1/sync/task/create", body)
 }
 
@@ -284,10 +293,17 @@ func taskBatchRun(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []st
 }
 
 func batchResultsCSV(rows []batchRow) string {
+	esc := func(s string) string {
+		// 最小 CSV 转义：引号/逗号/换行
+		if strings.ContainsAny(s, ",\"\n\r") {
+			return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+		}
+		return s
+	}
 	var b strings.Builder
 	b.WriteString("task_key,action,status,error\n")
 	for _, r := range rows {
-		b.WriteString(r.TaskKey + "," + r.Action + "," + r.Status + "," + r.Error + "\n")
+		b.WriteString(esc(r.TaskKey) + "," + esc(r.Action) + "," + esc(r.Status) + "," + esc(r.Error) + "\n")
 	}
 	return b.String()
 }
@@ -390,8 +406,20 @@ func newOpsCmd() *cobra.Command {
 		sc("+retry-batch", "批量重试失败任务（危险）", opsRetryBatch),
 		sc("+drill", "灾备演练（危险）", opsDrill),
 		sc("+rebuild", "任务全量重建（危险）", opsRebuild),
+		opsMetadataRestoreCmd(),
 	)
 	return cmd
+}
+
+func opsMetadataRestoreCmd() *cobra.Command {
+	c := sc("+metadata-restore", "元数据回灌（默认 dry-run；--execute 才写入）", opsMetadataRestore)
+	f := c.Flags()
+	f.String("kinds", "", "逗号分隔：labels,milestones,issues,prs,releases")
+	f.String("target-owner", "", "目标 owner（默认同源）")
+	f.String("target-repo", "", "目标仓库名（默认同源）")
+	f.Bool("execute", false, "真正写入（缺省 dry-run 预览）")
+	f.Bool("overwrite", false, "同名 label 覆盖更新")
+	return c
 }
 
 func opsGet(path string) runFunc {
@@ -498,6 +526,42 @@ func opsRebuild(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []stri
 		return denied, nil
 	}
 	return c.Post("/api/v1/ops/rebuild", map[string]any{"task_key": task})
+}
+
+// opsMetadataRestore 元数据回灌：--key 仓库；--name 作 snapshot_dir；
+// 默认 dry-run，真正写入需去掉 --dry-run 的反义（--execute）且加 --yes。
+func opsMetadataRestore(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	repoKey, err := requireFlag(cmd, "key")
+	if err != nil {
+		return nil, err
+	}
+	body := map[string]any{"repo_key": repoKey}
+	if v := flagStr(cmd, "name"); v != "" {
+		body["snapshot_dir"] = v
+	}
+	if v := flagStr(cmd, "kinds"); v != "" {
+		body["kinds"] = splitCSV(v)
+	}
+	if v := flagStr(cmd, "target-owner"); v != "" {
+		body["target_owner"] = v
+	}
+	if v := flagStr(cmd, "target-repo"); v != "" {
+		body["target_repo"] = v
+	}
+	// dry-run 是默认安全路径；--execute 才写入
+	if !flagBool(cmd, "execute") {
+		body["dry_run"] = true
+		body["note"] = "dry-run：未写入目标；确认后加 --execute --yes"
+		return c.Post("/api/v1/ops/metadata-restore", body)
+	}
+	body["dry_run"] = false
+	if flagBool(cmd, "overwrite") {
+		body["overwrite"] = true
+	}
+	if denied := confirmDanger("元数据回灌 repo=" + repoKey); denied != nil {
+		return denied, nil
+	}
+	return c.Post("/api/v1/ops/metadata-restore", body)
 }
 
 // ---------- platform ----------
