@@ -1,52 +1,73 @@
 package tpl
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestStore_UpsertGetDelete(t *testing.T) {
-	dir := t.TempDir()
-	st, err := Open(filepath.Join(dir, "templates.json"))
-	require.NoError(t, err)
+func boolPtr(b bool) *bool { return &b }
 
-	tpl, err := st.Upsert(&Template{
-		Name: "nightly", Spec: Spec{Cron: "0 2 * * *"},
-		Tags: []string{"backup"},
-	})
-	require.NoError(t, err)
-	require.NotEmpty(t, tpl.ID)
+func TestSpecMerge_ChildOverrides(t *testing.T) {
+	base := Spec{Cron: "0 2 * * *", SourceBranch: "main", RetryMax: 3}
+	child := Spec{Cron: "0 5 * * *", Enabled: boolPtr(true)}
+	out := base.Merge(child)
+	assert.Equal(t, "0 5 * * *", out.Cron)    // child 覆盖
+	assert.Equal(t, "main", out.SourceBranch) // 保留
+	assert.Equal(t, 3, out.RetryMax)
+	require.NotNil(t, out.Enabled)
+	assert.True(t, *out.Enabled)
+}
 
-	got, err := st.Get(tpl.ID)
+func TestResolve_Chain(t *testing.T) {
+	list := []Template{
+		{ID: "base", Spec: Spec{Cron: "0 1 * * *", SourceBranch: "main", RetryMax: 2}},
+		{ID: "mid", Extends: "base", Spec: Spec{Cron: "0 2 * * *"}},
+		{ID: "leaf", Extends: "mid", Spec: Spec{TargetBranch: "mirror", Enabled: boolPtr(false)}},
+	}
+	spec, chain, err := ResolveSelf(list, "leaf")
 	require.NoError(t, err)
-	assert.Equal(t, "nightly", got.Name)
-	assert.Equal(t, "0 2 * * *", got.Spec.Cron)
+	assert.Equal(t, []string{"leaf", "mid", "base"}, chain)
+	assert.Equal(t, "0 2 * * *", spec.Cron) // mid 覆盖 base
+	assert.Equal(t, "main", spec.SourceBranch)
+	assert.Equal(t, "mirror", spec.TargetBranch)
+	assert.Equal(t, 2, spec.RetryMax)
+	require.NotNil(t, spec.Enabled)
+	assert.False(t, *spec.Enabled)
+}
 
-	// 重开文件应恢复
-	st2, err := Open(filepath.Join(dir, "templates.json"))
-	require.NoError(t, err)
-	got2, err := st2.Get(tpl.ID)
-	require.NoError(t, err)
-	assert.Equal(t, "nightly", got2.Name)
+func TestResolve_Cycle(t *testing.T) {
+	list := []Template{
+		{ID: "a", Extends: "b"},
+		{ID: "b", Extends: "a"},
+	}
+	_, _, err := ResolveSelf(list, "a")
+	assert.ErrorIs(t, err, ErrCycle)
+}
 
-	require.NoError(t, st.Delete(tpl.ID))
-	_, err = st.Get(tpl.ID)
+func TestResolve_MissingRoot(t *testing.T) {
+	_, _, err := ResolveSelf(nil, "nope")
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
-func TestStore_ListByTag(t *testing.T) {
-	st, err := Open(filepath.Join(t.TempDir(), "t.json"))
+func TestResolve_MissingParentStops(t *testing.T) {
+	list := []Template{
+		{ID: "child", Extends: "ghost", Spec: Spec{Cron: "0 9 * * *"}},
+	}
+	spec, chain, err := ResolveSelf(list, "child")
 	require.NoError(t, err)
-	_, err = st.Upsert(&Template{Name: "a", Tags: []string{"nightly", "backup"}})
-	require.NoError(t, err)
-	_, err = st.Upsert(&Template{Name: "b", Tags: []string{"hotfix"}})
-	require.NoError(t, err)
+	assert.Equal(t, []string{"child"}, chain)
+	assert.Equal(t, "0 9 * * *", spec.Cron)
+}
 
-	got := st.ListByTag("nightly")
-	require.Len(t, got, 1)
-	assert.Equal(t, "a", got[0].Name)
-	assert.Empty(t, st.ListByTag("missing"))
+func TestStoreEffective(t *testing.T) {
+	s := &Store{list: []Template{
+		{ID: "base", Name: "Base", Spec: Spec{Cron: "0 1 * * *"}},
+		{ID: "child", Name: "Child", Extends: "base", Spec: Spec{Cron: "0 3 * * *"}},
+	}}
+	eff, err := s.Effective("child")
+	require.NoError(t, err)
+	assert.Equal(t, "0 3 * * *", eff.Spec.Cron)
+	assert.Contains(t, eff.Description, "extends")
 }

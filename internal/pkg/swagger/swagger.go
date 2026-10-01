@@ -28,3 +28,9 @@ func OpenAPISpec(ctx context.Context, c *app.RequestContext) {
 	data, _ := specFS.ReadFile("openapi.json")
 	c.Data(consts.StatusOK, "application/json; charset=utf-8", data)
 }
+
+// Spec 返回内嵌的 OpenAPI 3.0 JSON 原文，供 CLI schema 自省等复用。
+func Spec() []byte {
+	data, _ := specFS.ReadFile("openapi.json")
+	return data
+}

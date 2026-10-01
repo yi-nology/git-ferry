@@ -38,6 +38,7 @@ func NewRegistry(svc SyncService) *Registry {
 	r.add(must(utils.InferTool("get_system_overview", "系统概览(仓库数/任务状态/健康检查)", r.getSystemOverview)))
 	r.add(must(utils.InferTool("get_sync_health", "同步任务健康评分(等级/问题列表,便于诊断)", r.getSyncHealth)))
 	r.add(must(utils.InferTool("get_repo_inventory", "仓库资产盘点:哪些仓库没有同步任务覆盖(孤儿仓库)", r.getRepoInventory)))
+	r.add(must(utils.InferTool("get_ops_todo", "统一待办队列:健康偏低/孤儿仓库/RPO超标,按优先级", r.getOpsTodo)))
 	r.add(must(utils.InferTool("get_rpo_report", "RPO/RTO 观测:各任务最近备份时长与超标标记", r.getRPOReport)))
 	r.add(must(utils.InferTool("get_backup_integrity", "冷备完整性校验(Merkle Root 比对)", r.getBackupIntegrity)))
 	r.add(must(utils.InferTool("get_drift_report", "漂移检测:本地与目标远端分支是否一致", r.getDriftReport)))

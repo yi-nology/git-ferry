@@ -1,0 +1,59 @@
+# .goreleaser.yaml — 可选的多平台发布（与手写 release.yml 二选一）
+# 用法: goreleaser release --snapshot --clean   # 本地验证
+#       git tag v1.x.y && goreleaser release    # 正式发布（需 GITHUB_TOKEN）
+version: 2
+
+project_name: git-ferry
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: server
+    main: .
+    binary: git-ferry
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X github.com/yi-nology/git-ferry/internal/version.Version={{.Version}}
+
+  - id: cli
+    main: ./cmd/gitferry
+    binary: gitferry
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+archives:
+  - id: server
+    builds: [server]
+    name_template: "git-ferry_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  - id: cli
+    builds: [cli]
+    # npm postinstall 期望: gitferry_{ver}_{os}_{arch}.tar.gz
+    name_template: "gitferry_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:", "^chore:"]
+
+release:
+  draft: false
+  prerelease: auto

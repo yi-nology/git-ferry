@@ -37,6 +37,12 @@
               {{ form.has_api_key ? form.api_key_masked || '已配置' : '未配置' }}
             </span>
           </div>
+          <div class="status-item">
+            <span class="status-label">外部 Agent</span>
+            <span class="status-value">
+              <router-link to="/settings/dev">CLI / Agent Skills →</router-link>
+            </span>
+          </div>
         </div>
       </div>
     </div>

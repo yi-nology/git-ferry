@@ -40,6 +40,7 @@ func CustomizedRegister(r *server.Hertz) {
 	// 失败补偿与治理(鉴权 + 写操作 RBAC)
 	ops := r.Group("/api/v1/ops", routergitsync.AuthMiddleware())
 	ops.GET("/health-score", git_sync.HealthScore)
+	ops.GET("/todo", git_sync.OpsTodo)
 	ops.GET("/overview", git_sync.SyncOverview)
 	ops.GET("/audit-report", git_sync.AuditReport)
 	ops.GET("/audit-chain/verify", git_sync.VerifyAuditChain)

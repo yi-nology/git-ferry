@@ -1,6 +1,202 @@
 {
   "components": {
     "schemas": {
+      "AIChatRequest": {
+        "properties": {
+          "confirmed_tool_call": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AIConfigRequest": {
+        "properties": {
+          "api_key": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "max_concurrent_chats": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_tokens": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "temperature": {
+            "format": "double",
+            "type": "number"
+          },
+          "timeout_seconds": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "AIConfirmCall": {
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AITestRequest": {
+        "properties": {
+          "api_key": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ApplyTemplateReq": {
+        "properties": {
+          "dry_run": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AuditReportReq": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "start_date": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AutoDiscoverReq": {
+        "properties": {
+          "exclude_archived": {
+            "type": "string"
+          },
+          "exclude_forks": {
+            "type": "string"
+          },
+          "import_new": {
+            "type": "string"
+          },
+          "include_language": {
+            "type": "string"
+          },
+          "min_stars": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "platform_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AutoDiscoverResp": {
+        "properties": {
+          "existing": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "found": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "imported": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "new_repos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "platform_key": {
+            "type": "string"
+          },
+          "scanned_at": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "BackupGistsReq": {
+        "properties": {
+          "max_gists": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "platform_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "BackupGistsResp": {
+        "properties": {
+          "count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "dir": {
+            "type": "string"
+          },
+          "platform_key": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "BatchReposReq": {
         "properties": {
           "action": {
@@ -38,6 +234,46 @@
         },
         "type": "object"
       },
+      "BatchRetryReq": {
+        "properties": {
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "task_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CleanupBackupsReq": {
+        "properties": {
+          "confirm": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreateMirrorChannelReq": {
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repoKey": {
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/MirrorTargetReq"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "CreatePlatformReq": {
         "properties": {
           "access_token": {
@@ -47,6 +283,15 @@
             "type": "string"
           },
           "ca_cert_path": {
+            "type": "string"
+          },
+          "github_app_id": {
+            "type": "string"
+          },
+          "github_installation_id": {
+            "type": "string"
+          },
+          "github_private_key": {
             "type": "string"
           },
           "instance_url": {
@@ -314,9 +559,137 @@
         },
         "type": "object"
       },
+      "DetectDriftReq": {
+        "properties": {
+          "task_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "DiagnoseReq": {
+        "properties": {
+          "run_id": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DrillReport": {
+        "properties": {
+          "bundle_name": {
+            "type": "string"
+          },
+          "bundle_size": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "commit_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "est_rto": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string"
+          },
+          "fsck_ok": {
+            "type": "boolean"
+          },
+          "missing_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ref_specs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "EmptyResp": {
         "properties": {
           "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExportDrillHistoryReq": {
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ExportIssuesReq": {
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "max": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "with_comments": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExportMigrationReq": {
+        "properties": {
+          "org": {
+            "type": "string"
+          },
+          "platform_key": {
+            "type": "string"
+          },
+          "wait": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GenerateDeployKeyReq": {
+        "properties": {
+          "comment": {
             "type": "string"
           }
         },
@@ -387,6 +760,15 @@
         },
         "type": "object"
       },
+      "HealthScoreReq": {
+        "properties": {
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "ListBranchesReq": {
         "properties": {
           "key": {
@@ -402,6 +784,14 @@
               "type": "string"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListBundlesReq": {
+        "properties": {
+          "task_key": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -448,6 +838,29 @@
               "$ref": "#/components/schemas/SyncRunInfo"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListMetadataBackupsReq": {
+        "properties": {
+          "repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListMetadataBackupsResp": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataSnapshot"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -647,6 +1060,162 @@
         },
         "type": "object"
       },
+      "MetadataBackupReq": {
+        "properties": {
+          "max_items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "with_archives": {
+            "type": "string"
+          },
+          "with_assets": {
+            "type": "string"
+          },
+          "with_gists": {
+            "type": "string"
+          },
+          "with_issues": {
+            "type": "string"
+          },
+          "with_prs": {
+            "type": "string"
+          },
+          "with_releases": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MetadataBackupResp": {
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/MetadataSnapshot"
+          }
+        },
+        "type": "object"
+      },
+      "MetadataSnapshot": {
+        "properties": {
+          "archives": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "assets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "dir": {
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "repo_key": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorPreviewReq": {
+        "properties": {
+          "tag": {
+            "type": "string"
+          },
+          "targetId": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorRunReq": {
+        "properties": {
+          "allowOverwrite": {
+            "type": "boolean"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "targetId": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorTargetReq": {
+        "properties": {
+          "credType": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "repoUrl": {
+            "type": "string"
+          },
+          "targetModule": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorVerifyReq": {
+        "properties": {
+          "tag": {
+            "type": "string"
+          },
+          "targetId": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "OperationLogInfo": {
         "properties": {
           "action": {
@@ -753,6 +1322,12 @@
           "created_at": {
             "type": "string"
           },
+          "github_app_id": {
+            "type": "string"
+          },
+          "has_github_app": {
+            "type": "boolean"
+          },
           "has_token": {
             "type": "boolean"
           },
@@ -852,6 +1427,100 @@
         },
         "type": "object"
       },
+      "PreviewTemplateReq": {
+        "properties": {
+          "template_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RPOMetric": {
+        "properties": {
+          "bundle_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "est_rto": {
+            "type": "string"
+          },
+          "last_backup_at": {
+            "type": "string"
+          },
+          "latest_bundle": {
+            "type": "string"
+          },
+          "rpo_human": {
+            "type": "string"
+          },
+          "rpo_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rpo_violated": {
+            "type": "boolean"
+          },
+          "task_key": {
+            "type": "string"
+          },
+          "total_size": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "RPOReport": {
+        "properties": {
+          "backup_dir": {
+            "type": "string"
+          },
+          "generated": {
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/RPOMetric"
+            },
+            "type": "array"
+          },
+          "overall_rpo_human": {
+            "type": "string"
+          },
+          "overall_rpo_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rpo_max_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "violations": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "worst_task": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RPOReportReq": {
+        "properties": {
+          "max_seconds": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RebuildReq": {
+        "properties": {
+          "task_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RegisterPlatformWebhookReq": {
         "properties": {
           "callback_url": {
@@ -919,6 +1588,17 @@
         },
         "type": "object"
       },
+      "RestoreBundleReq": {
+        "properties": {
+          "dest_dir": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RetryEventReq": {
         "properties": {
           "id": {
@@ -935,6 +1615,50 @@
           },
           "success": {
             "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "RetryRunReq": {
+        "properties": {
+          "run_id": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "RunDRDrillReq": {
+        "properties": {
+          "all": {
+            "type": "string"
+          },
+          "max": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RunDRDrillResp": {
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/DrillReport"
+            },
+            "type": "array"
+          },
+          "summary": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
           }
         },
         "type": "object"
@@ -970,6 +1694,33 @@
         "properties": {
           "message": {
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SyncPlatformFilteredReq": {
+        "properties": {
+          "exclude_archived": {
+            "type": "string"
+          },
+          "exclude_forks": {
+            "type": "string"
+          },
+          "exclude_globs": {
+            "type": "string"
+          },
+          "include_globs": {
+            "type": "string"
+          },
+          "include_language": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "min_stars": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1223,6 +1974,29 @@
         },
         "type": "object"
       },
+      "UpdateMirrorTargetReq": {
+        "properties": {
+          "credType": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "repoUrl": {
+            "type": "string"
+          },
+          "targetModule": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdatePlatformReq": {
         "properties": {
           "access_token": {
@@ -1232,6 +2006,15 @@
             "type": "string"
           },
           "ca_cert_path": {
+            "type": "string"
+          },
+          "github_app_id": {
+            "type": "string"
+          },
+          "github_installation_id": {
+            "type": "string"
+          },
+          "github_private_key": {
             "type": "string"
           },
           "instance_url": {
@@ -1375,6 +2158,14 @@
         "properties": {
           "task": {
             "$ref": "#/components/schemas/SyncTaskInfo"
+          }
+        },
+        "type": "object"
+      },
+      "VerifyBundleReq": {
+        "properties": {
+          "name": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -2244,6 +3035,19 @@
           }
         },
         "summary": "应用策略模板(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/todo": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "统一待办队列",
         "tags": [
           "Ops"
         ]

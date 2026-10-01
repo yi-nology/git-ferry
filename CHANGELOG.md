@@ -2,29 +2,43 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.19.0] - 2026-09-30
 
-### Changed
-
-- **代码内聚重构**:
-  - `internal/githubapi`: GitHub 附件/gists 客户端独立包,与 handler 解耦。
-  - `internal/pkg/textutil`: 路径安全化 + CSV 转义统一实现,消除重复。
-  - `ops_service` 拆为 `retry_service` / `health_service` / `audit_report`。
-  - `newIssueProvider` 抽到 `provider_access`,issues/metadata 共用。
+> 对照 gitlink-cli 的 Agent-Native / 开源工程化批次 + Scorecards/Renovate 业务深化。
+> 依赖 `git-ferry-core v0.6.1`。新增 `github.com/spf13/cobra v1.10.2`（CLI）。
 
 ### Added
 
-- **任务策略变更预览**: 编辑时改 `force_push_policy` 显示 原值→新值 diff、风险说明与放宽警告。
-- **DR 演练报告导出**: `GET /ops/dr-drill/export?format=json|csv`,前端一键下载。
-- **GitHub App 全链路联调测试**: JWT 签发 → installation token → 缓存 → provider 配置。
-- **GitHub App 配置贯通**: 平台表单/IDL/接口支持 `github_app_id/installation_id/private_key`,
-  与 PAT 二选一;PlatformInfo 回传 `has_github_app`。
-- **任务编辑 `force_push_policy`**: 创建/编辑统一三策略,兼容 `keep_divergent`。
-- **AI 工具扩展**: `get_rpo_report` / `get_backup_integrity` / `get_drift_report` /
-  `get_audit_chain` / `run_dr_drill`(确认门),共 29 个工具。
-- **生命周期后台**: `sync.auto_discover_interval_minutes` 周期自动发现 +
-  冷备 retention 自动清理(legal_hold 时跳过)。
-- **OpenAPI/ARCHITECTURE 对齐** Ops 接口(77 paths);冷备页元数据快照列表。
+- **`gitferry` CLI**（`cmd/gitferry` + `internal/cli`）：
+  - Shortcuts：`repo/task/history/ops/platform/webhook` 域（`+list/+info/+run/+batch-run/...`）
+  - Raw API `gitferry api METHOD PATH`、Schema 自省 `schema list/show`（内嵌 OpenAPI）
+  - 统一 Envelope `{ok,data,error,meta}`，`--format json|table|yaml`
+  - `--all` 全量分页、`--dry-run` 批量预览、`--with-drift` 健康折入漂移、`--csv` 导出
+  - 危险操作 409 确认门（脚本 `--yes`）；`config init/get/set/list/path`
+  - macOS Keychain 存 API Key（文件 0600 回退）
+- **Agent Skills**（`skills/gitferry-*`）：shared/repo/task/history/ops/workflow，
+  含 troubleshooting、flags 参考；`make install-skills` / npm `gitferry-install-skills`
+- **Web「CLI / Agent 入口」**（`/settings/dev`）：安装/认证/命令速查/实时连通
+- **健康评分维度化（Scorecards）**：reliability/freshness/schedule/safety/completeness
+  五维 + reason + 可复制动作（`health.RouteActions`）；`/ops/health-score` 返回
+  `dimensions/action_items/attention/top_actions`；`with_drift` 折入实测漂移
+- **统一待办**：`GET /api/v1/ops/todo` + CLI `ops +todo` + AI `get_ops_todo`；
+  仪表盘运维待办卡片（P1/P2 + 动作一键复制）
+- **策略模板继承**：`Template.Extends` 链式合并（子覆盖父）、环检测，
+  apply 返回 `effective_spec`/`extends_chain`；Templates UI 可选继承
+- **token_cmd 密钥注入**：`GIT_SYNC_TOKEN_CMD_<KEY>`（secrets manager）→ env → 配置
+- **审计 CSV**：`ops +audit-report --csv`、`task +batch-run --csv`
+- **开源工程化**：双语 README、CONTRIBUTING/SECURITY/Issue&PR 模板、
+  npm 分发包（`gitferry-cli`）、`.goreleaser.yaml`、Release 产出 CLI 六平台压缩包、
+  验收清单与相邻工具调研（`designs/research/ops-ux-patterns.md`）
+- **AI 工具**：`get_ops_todo`；`deep_analyze` 输出 `weak_dims` 与维度驱动 next_action
+  （工具总数 30）
+
+### Changed
+
+- 健康/历史采集：成功率、连续失败、步骤级失败、重试次数、主导错误类型
+- 健康计算并行拉历史（消除 N+1）；仪表盘露出薄弱维度
+- OpenAPI 收录 `/ops/todo` 等（78 paths）；lint/tidy/gofmt 收口
 
 ## [v1.18.0] - 2026-09-29
 

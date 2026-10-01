@@ -20,6 +20,10 @@
         <template v-if="column.key === 'tags'">
           <a-tag v-for="t in record.tags || []" :key="t">{{ t }}</a-tag>
         </template>
+        <template v-else-if="column.key === 'extends'">
+          <a-tag v-if="record.extends" color="blue">→ {{ record.extends }}</a-tag>
+          <a-typography-text v-else type="secondary">—</a-typography-text>
+        </template>
         <template v-else-if="column.key === 'cron'">
           <code>{{ record.spec?.cron || '—' }}</code>
         </template>
@@ -38,6 +42,15 @@
       <a-form layout="vertical">
         <a-form-item label="名称" required>
           <a-input v-model:value="form.name" placeholder="如 nightly-backup" />
+        </a-form-item>
+        <a-form-item label="继承基础模板">
+          <a-select
+            v-model:value="form.extends"
+            allow-clear
+            placeholder="可选：从已有模板继承 Spec"
+            :options="inheritOptions"
+          />
+          <div class="form-tip">子模板非空字段覆盖父模板（Renovate preset 模式）</div>
         </a-form-item>
         <a-form-item label="Cron">
           <a-input v-model:value="form.spec.cron" placeholder="0 2 * * *" />
@@ -61,13 +74,41 @@
         </template>
       </a-list>
     </a-modal>
+
+    <a-modal v-model:open="applyOpen" title="套用结果" :footer="null">
+      <div v-if="applyResult">
+        <div v-if="applyResult.extends_chain?.length" class="chain-row">
+          继承链：
+          <a-tag v-for="(id, i) in applyResult.extends_chain" :key="id" :color="i === 0 ? 'blue' : 'default'">
+            {{ id }}
+          </a-tag>
+        </div>
+        <div v-if="applyResult.effective_spec" class="chain-row">
+          生效 Spec：
+          <code>{{ JSON.stringify(applyResult.effective_spec) }}</code>
+        </div>
+        <a-typography-text>
+          {{ applyResult.dry_run ? 'Dry-run' : '已写库' }}：变更 {{ applyResult.total }} 条
+        </a-typography-text>
+        <a-list :data-source="applyResult.changed" size="small" :pagination="{ pageSize: 5 }">
+          <template #renderItem="{ item }">
+            <a-list-item>
+              {{ item.name }}
+              <a-typography-text type="secondary">
+                {{ JSON.stringify(item.before) }} → {{ JSON.stringify(item.after) }}
+              </a-typography-text>
+            </a-list-item>
+          </template>
+        </a-list>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { Modal } from 'ant-design-vue'
-import { opsApi, type SyncTemplate } from '@/api/ops'
+import { opsApi, type SyncTemplate, type TemplateApplyResult } from '@/api/ops'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 defineOptions({ name: 'TemplatesPanel' })
@@ -76,10 +117,13 @@ const items = ref<SyncTemplate[]>([])
 const loading = ref(false)
 const createOpen = ref(false)
 const previewOpen = ref(false)
+const applyOpen = ref(false)
 const previewResult = ref<{ matched: Array<{ key: string; name: string }>; total: number }>({ matched: [], total: 0 })
+const applyResult = ref<TemplateApplyResult | null>(null)
 
-const form = reactive<{ name: string; spec: SyncTemplate['spec'] }>({
+const form = reactive<{ name: string; extends?: string; spec: SyncTemplate['spec'] }>({
   name: '',
+  extends: undefined,
   spec: { cron: '' },
 })
 const includeGlobs = ref('')
@@ -88,14 +132,20 @@ const tags = ref('')
 
 const columns = [
   { title: '名称', dataIndex: 'name', ellipsis: true },
-  { title: 'ID', dataIndex: 'id', width: 180, ellipsis: true },
-  { title: 'Cron', key: 'cron', width: 130 },
+  { title: 'ID', dataIndex: 'id', width: 160, ellipsis: true },
+  { title: '继承', key: 'extends', width: 140 },
+  { title: 'Cron', key: 'cron', width: 120 },
   { title: '标签', key: 'tags' },
   { title: '操作', key: 'action', width: 280 },
 ]
 
+const inheritOptions = computed(() =>
+  items.value.map((t) => ({ label: `${t.name} (${t.id})`, value: t.id })),
+)
+
 function openCreate() {
   form.name = ''
+  form.extends = undefined
   form.spec = { cron: '' }
   includeGlobs.value = ''
   exclude.value = ''
@@ -110,6 +160,7 @@ async function submitCreate() {
     if (exclude.value) match.exclude = exclude.value.split(',').map((s) => s.trim()).filter(Boolean)
     await opsApi.createTemplate({
       name: form.name,
+      extends: form.extends || undefined,
       spec: form.spec,
       match: Object.keys(match).length ? match : undefined,
       tags: tags.value ? tags.value.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
@@ -140,6 +191,8 @@ async function apply(t: SyncTemplate, dryRun: boolean) {
     onOk: async () => {
       try {
         const r = await opsApi.applyTemplate(t.id, dryRun)
+        applyResult.value = r
+        applyOpen.value = true
         notifySuccess(`${dryRun ? 'Dry-run' : '套用'}完成: ${r.total} 条`)
         if (!dryRun) await load()
       } catch (e) {
@@ -182,4 +235,17 @@ onMounted(load)
 
 <style scoped>
 .toolbar { margin-bottom: 12px; }
+.form-tip {
+  color: #9ca3af;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.chain-row {
+  margin-bottom: 8px;
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
 </style>

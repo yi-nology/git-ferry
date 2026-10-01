@@ -34,6 +34,34 @@
       </ul>
     </div>
 
+    <!-- 运维待办队列：可复制动作 -->
+    <div v-if="todoItems.length" class="attention-card todo-card">
+      <div class="attention-head">
+        <OrderedListOutlined class="attention-icon" />
+        <span>运维待办</span>
+        <a-tag color="orange" class="attention-count">{{ todoItems.length }}</a-tag>
+        <a-button type="link" size="small" @click="router.push('/ops')">运维中心</a-button>
+      </div>
+      <ul class="todo-list">
+        <li v-for="item in todoItems" :key="item.id" class="todo-item">
+          <a-tag :color="item.priority === 1 ? 'red' : 'orange'">P{{ item.priority }}</a-tag>
+          <a-tag>{{ kindLabel(item.kind) }}</a-tag>
+          <span class="todo-title">{{ item.title }}</span>
+          <span v-if="item.reason" class="todo-reason">{{ item.reason }}</span>
+          <div class="todo-actions">
+            <template v-for="(a, i) in (item.actions || []).slice(0, 2)" :key="i">
+              <a-tooltip :title="a.command || a.title">
+                <a-button size="small" @click="copyAction(a)">
+                  <template #icon><CopyOutlined /></template>
+                  {{ a.title }}
+                </a-button>
+              </a-tooltip>
+            </template>
+          </div>
+        </li>
+      </ul>
+    </div>
+
     <!-- 运维健康：一眼看清整体水位 -->
     <section v-if="healthSummary" class="content-card health-card">
       <div class="card-header">
@@ -67,6 +95,13 @@
             </template>
             <span v-else class="health-ok">未发现明显问题</span>
           </div>
+        </div>
+        <div v-if="healthSummary.weakDims.length" class="weak-dims">
+          <span class="weak-label">薄弱维度</span>
+          <a-tag v-for="w in healthSummary.weakDims" :key="w.name" :color="w.count > 1 ? 'red' : 'orange'">
+            {{ w.name }} ×{{ w.count }}
+          </a-tag>
+          <router-link to="/ops" class="weak-link">去运维中心处理 →</router-link>
         </div>
       </div>
     </section>
@@ -199,7 +234,12 @@ import {
   ArrowRightOutlined,
   AlertOutlined,
   WarningOutlined,
+  CopyOutlined,
+  OrderedListOutlined,
 } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { copyToClipboard } from '@/utils'
+import type { OpsTodoAction, OpsTodoItem } from '@/api/ops'
 
 const router = useRouter()
 
@@ -220,6 +260,21 @@ const recentTasks = computed(() => dashTasks.value.slice(0, 5))
 const recentRepos = computed(() => dashRepos.value.slice(0, 5))
 
 const healthItems = ref<HealthScoreItem[]>([])
+const todoItems = ref<OpsTodoItem[]>([])
+
+function kindLabel(k: string) {
+  return { health: '健康', orphan: '孤儿仓', rpo: 'RPO', drift: '漂移' }[k] || k
+}
+
+async function copyAction(a: OpsTodoAction) {
+  const text = a.command || a.title
+  try {
+    await copyToClipboard(text)
+    message.success(a.command ? '命令已复制' : '已复制')
+  } catch {
+    message.error('复制失败')
+  }
+}
 
 const healthSummary = computed(() => {
   if (!healthItems.value.length) return null
@@ -232,15 +287,26 @@ const healthSummary = computed(() => {
   const counts: Record<string, number> = { gold: 0, silver: 0, bronze: 0, basic: 0 }
   let sum = 0
   let issueCount = 0
+  const dimCount: Record<string, number> = {}
   for (const it of healthItems.value) {
     counts[it.level] = (counts[it.level] || 0) + 1
     sum += it.score || 0
     if (it.issues?.length) issueCount += it.issues.length
+    for (const d of it.dimensions || []) {
+      if ((d.score ?? 100) < 60) {
+        dimCount[d.name] = (dimCount[d.name] || 0) + 1
+      }
+    }
   }
+  const weakDims = Object.entries(dimCount)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 5)
   return {
     avg: Math.round(sum / healthItems.value.length),
     levels: levels.map((l) => ({ ...l, count: counts[l.key] || 0 })),
     issueCount,
+    weakDims,
   }
 })
 
@@ -310,6 +376,14 @@ async function loadDashboard() {
     healthItems.value = data.items || []
   } catch {
     healthItems.value = []
+  }
+
+  // 运维待办队列
+  try {
+    const todo = await opsApi.opsTodo()
+    todoItems.value = (todo.items || []).slice(0, 8)
+  } catch {
+    todoItems.value = []
   }
 }
 
@@ -384,6 +458,52 @@ onActivated(loadDashboard)
 .attention-arrow {
   color: $text-tertiary;
   font-size: 11px;
+}
+
+/* 运维待办 */
+.todo-card {
+  margin-top: $spacing-md;
+}
+
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.todo-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px dashed $border-muted;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.todo-title {
+  font-weight: 500;
+  color: $text-primary;
+  font-size: $fs-body;
+}
+
+.todo-reason {
+  color: $text-tertiary;
+  font-size: $fs-caption;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.todo-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .attention-item :deep(.ant-btn-link) {
@@ -489,6 +609,26 @@ onActivated(loadDashboard)
 
   .health-ok {
     color: $success;
+  }
+}
+
+.weak-dims {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed $border-muted;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  .weak-label {
+    font-size: $fs-caption;
+    color: $text-tertiary;
+  }
+
+  .weak-link {
+    margin-left: auto;
+    font-size: $fs-caption;
   }
 }
 

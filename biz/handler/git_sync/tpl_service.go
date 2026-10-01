@@ -2,11 +2,13 @@ package git_sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"log/slog"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/health"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -237,7 +239,17 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	t, err := st.Get(req.TemplateId)
+	// 沿 Extends 链合并 Spec（子覆盖父），避免只应用叶子字段
+	eff, chain, err := st.Resolve(req.TemplateId)
+	if err != nil {
+		if errors.Is(err, tpl.ErrCycle) {
+			response.BadRequest(c, "template extends cycle: "+strings.Join(chain, " → "))
+			return
+		}
+		response.NotFound(c, "template not found")
+		return
+	}
+	baseTpl, err := st.Get(req.TemplateId)
 	if err != nil {
 		response.NotFound(c, "template not found")
 		return
@@ -251,7 +263,7 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, err.Error())
 		return
 	}
-	filter := matchToFilter(t.Match)
+	filter := matchToFilter(baseTpl.Match)
 	type change struct {
 		Key    string         `json:"key"`
 		Name   string         `json:"name"`
@@ -266,12 +278,12 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 		before := map[string]any{"cron": task.Cron, "enabled": task.Enabled}
 		after := map[string]any{"cron": task.Cron, "enabled": task.Enabled}
 		need := false
-		if t.Spec.Cron != "" && t.Spec.Cron != task.Cron {
-			after["cron"] = t.Spec.Cron
+		if eff.Cron != "" && eff.Cron != task.Cron {
+			after["cron"] = eff.Cron
 			need = true
 		}
-		if t.Spec.Enabled != nil && *t.Spec.Enabled != task.Enabled {
-			after["enabled"] = *t.Spec.Enabled
+		if eff.Enabled != nil && *eff.Enabled != task.Enabled {
+			after["enabled"] = *eff.Enabled
 			need = true
 		}
 		if !need {
@@ -280,11 +292,11 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 		if !optBoolDefault(req.DryRun) {
 			// UpdateTaskRequest:空字符串=不改;Enabled 指针 nil=不改
 			upd := corebridge.UpdateTaskRequest{Key: task.Key, Name: task.Name}
-			if t.Spec.Cron != "" {
-				upd.Cron = t.Spec.Cron
+			if eff.Cron != "" {
+				upd.Cron = eff.Cron
 			}
-			if t.Spec.Enabled != nil {
-				upd.Enabled = t.Spec.Enabled
+			if eff.Enabled != nil {
+				upd.Enabled = eff.Enabled
 			}
 			if _, err := svc.UpdateTask(ctx, &upd); err != nil {
 				slog.Warn("apply template update task failed", "task", task.Key, "error", err)
@@ -293,12 +305,15 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 		}
 		changed = append(changed, change{Key: task.Key, Name: task.Name, Before: before, After: after})
 	}
-	recordAudit(ctx, c, "apply_template", "template", t.ID,
-		fmt.Sprintf("套用模板 %s,变更 %d 条 (dry_run=%v)", t.Name, len(changed), optBoolDefault(req.DryRun)))
+	recordAudit(ctx, c, "apply_template", "template", baseTpl.ID,
+		fmt.Sprintf("套用模板 %s (extends %s),变更 %d 条 (dry_run=%v)",
+			baseTpl.Name, strings.Join(chain, "→"), len(changed), optBoolDefault(req.DryRun)))
 	response.Success(c, map[string]any{
-		"template": t,
-		"changed":  changed,
-		"total":    len(changed),
-		"dry_run":  optBoolDefault(req.DryRun),
+		"template":       baseTpl,
+		"effective_spec": eff,
+		"extends_chain":  chain,
+		"changed":        changed,
+		"total":          len(changed),
+		"dry_run":        optBoolDefault(req.DryRun),
 	})
 }

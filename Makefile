@@ -1,6 +1,7 @@
-.PHONY: build run restart clean clean-data test lint fmt vet tidy generate apidoc docker-build
+.PHONY: build build-cli run restart clean clean-data test lint fmt vet tidy generate apidoc docker-build install-skills pack-npm build-npm
 
 APP_NAME := git-ferry
+CLI_NAME := gitferry
 BUILD_DIR := ./output
 VERSION_PKG := github.com/yi-nology/git-ferry/internal/version
 # 版本号编译时注入:默认取 git describe(tag 或 commit),可用 `make build VERSION=v1.7.1` 覆盖
@@ -10,6 +11,24 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	@go build -ldflags "-X $(VERSION_PKG).Version=$(VERSION)" -o $(BUILD_DIR)/$(APP_NAME) .
 	@echo ">> built $(BUILD_DIR)/$(APP_NAME) (version $(VERSION))"
+
+# CLI（人 + Agent 入口），见 skills/ 与 docs/superpowers/plans/2026-09-30-agent-native-cli-skills.md
+build-cli:
+	@mkdir -p $(BUILD_DIR)
+	@go build -ldflags "-X main.Version=$(VERSION)" -o $(BUILD_DIR)/$(CLI_NAME) ./cmd/gitferry
+	@echo ">> built $(BUILD_DIR)/$(CLI_NAME) (version $(VERSION))"
+
+# 把 Agent Skills 装到全局（需 npx skills；无则只打印路径）
+install-skills:
+	@if command -v npx >/dev/null 2>&1; then npx skills add ./skills -y -g; else echo "skills/ 已就绪，请手动复制到 Agent skills 目录"; fi
+
+# 本地 npm 打包自测（二进制塞进 npm-pkg 并 npm pack）
+pack-npm:
+	@bash scripts/pack-local.sh
+
+# 只组装 npm 发布目录（不含本地二进制；发布流水线用）
+build-npm:
+	@bash scripts/build-npm.sh
 
 # 本地开发启动:自动加载 .env(ENCRYPTION_KEY 等本地密钥,已被 gitignore)。
 # 注意必须 `go run .` 整包编译,不能 `go run main.go`(后者只编译单文件,会报 undefined: register)

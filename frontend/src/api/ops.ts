@@ -1,5 +1,15 @@
 import http from './http'
 
+/** 健康维度（Scorecards 风格） */
+export interface HealthDimension {
+  name: 'reliability' | 'freshness' | 'schedule' | 'safety' | 'completeness' | string
+  weight: number
+  score: number
+  reason?: string
+  detail?: string[]
+  action?: string
+}
+
 /** 健康评分单项 */
 export interface HealthScoreItem {
   key: string
@@ -7,11 +17,49 @@ export interface HealthScoreItem {
   score: number
   level: 'gold' | 'silver' | 'bronze' | 'basic'
   issues?: string[]
+  actions?: string[]
+  dimensions?: HealthDimension[]
 }
 
 export interface HealthScoreData {
   items: HealthScoreItem[]
   total: number
+  attention?: HealthScoreItem[]
+  summary?: {
+    levels?: Record<string, number>
+    below_silver?: number
+    top_actions?: string[]
+  }
+  generated_at?: string
+}
+
+/** 统一待办动作（可复制命令） */
+export interface OpsTodoAction {
+  kind: 'cli' | 'manual' | string
+  dimension?: string
+  priority?: number
+  title: string
+  command?: string
+  danger?: boolean
+  reason?: string
+}
+
+export interface OpsTodoItem {
+  id: string
+  kind: 'health' | 'orphan' | 'rpo' | 'drift' | string
+  priority: number // 1=紧急
+  task_key?: string
+  repo_key?: string
+  title: string
+  reason?: string
+  actions?: OpsTodoAction[]
+}
+
+export interface OpsTodoData {
+  items: OpsTodoItem[]
+  total: number
+  by_kind?: Record<string, number>
+  generated_at?: string
 }
 
 /** 仓库资产盘点项 */
@@ -40,6 +88,8 @@ export interface SyncTemplate {
   id: string
   name: string
   description?: string
+  /** 继承的基础模板 ID（Renovate preset 模式） */
+  extends?: string
   match?: Record<string, string[]>
   spec: {
     cron?: string
@@ -60,6 +110,8 @@ export interface TemplateListData {
 
 export interface TemplateApplyResult {
   template: SyncTemplate
+  effective_spec?: SyncTemplate['spec']
+  extends_chain?: string[]
   changed: Array<{ key: string; name: string; before: Record<string, unknown>; after: Record<string, unknown> }>
   total: number
   dry_run: boolean
@@ -98,8 +150,11 @@ export interface BundleInfo {
 
 export const opsApi = {
   overview: () => http.get<unknown, OverviewData>('/ops/overview'),
-  healthScore: (limit?: number) =>
-    http.get<unknown, HealthScoreData>('/ops/health-score', { params: { limit } }),
+  opsTodo: () => http.get<unknown, OpsTodoData>('/ops/todo'),
+  healthScore: (limit?: number, opts?: { withDrift?: boolean }) =>
+    http.get<unknown, HealthScoreData>('/ops/health-score', {
+      params: { limit, with_drift: opts?.withDrift ? 1 : undefined },
+    }),
   inventory: () => http.get<unknown, InventoryData>('/ops/inventory'),
   listTemplates: () => http.get<unknown, TemplateListData>('/ops/templates'),
   createTemplate: (data: Partial<SyncTemplate>) =>

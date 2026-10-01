@@ -90,6 +90,10 @@
           <template #icon><RobotOutlined /></template>
           <span>AI 助手</span>
         </a-menu-item>
+        <a-menu-item key="/settings/dev">
+          <template #icon><CodeOutlined /></template>
+          <span>CLI / Agent</span>
+        </a-menu-item>
         <a-menu-item key="/settings/platforms">
           <template #icon><SettingOutlined /></template>
           <span>平台管理</span>
@@ -114,6 +118,7 @@ import {
   HistoryOutlined,
   ThunderboltOutlined,
   RobotOutlined,
+  CodeOutlined,
 } from '@ant-design/icons-vue'
 
 defineProps<{ collapsed: boolean }>()

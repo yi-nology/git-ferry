@@ -1,0 +1,52 @@
+{
+  "name": "gitferry-cli",
+  "version": "1.18.0",
+  "description": "GitFerry CLI — Git multi-platform sync/mirror/backup hub for humans and AI Agents",
+  "bin": {
+    "gitferry": "bin/cli.js",
+    "gitferry-install-skills": "bin/install-skills.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "test": "node test/install.test.js && node test/cli.test.js"
+  },
+  "keywords": [
+    "gitferry",
+    "cli",
+    "git",
+    "mirror",
+    "backup",
+    "sync",
+    "devops",
+    "ai-agent"
+  ],
+  "author": "yi-nology",
+  "license": "MIT",
+  "homepage": "https://github.com/yi-nology/git-ferry",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yi-nology/git-ferry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yi-nology/git-ferry/issues"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "files": [
+    "bin/cli.js",
+    "bin/install-skills.js",
+    "scripts/",
+    "skills/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=14"
+  }
+}

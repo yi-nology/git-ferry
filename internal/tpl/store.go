@@ -18,9 +18,11 @@ type Template struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
+	// Extends 继承的基础模板 ID（Renovate preset 模式）。可链式，须无环。
+	Extends string `json:"extends,omitempty"`
 	// Match 任务/仓库匹配条件(与 health.Filter 同语义)
 	Match map[string][]string `json:"match,omitempty"`
-	// Spec 套用到任务的默认值(cron/分支/启用)
+	// Spec 套用到任务的默认值(cron/分支/启用)；继承时子覆盖父（非空字段）。
 	Spec Spec `json:"spec"`
 	// Tags 便于检索
 	Tags      []string  `json:"tags,omitempty"`
@@ -28,7 +30,7 @@ type Template struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Spec 策略默认值。
+// Spec 策略默认值。非零/非空字段才参与覆盖。
 type Spec struct {
 	Cron           string `json:"cron,omitempty"`
 	SourceBranch   string `json:"source_branch,omitempty"`
@@ -39,6 +41,31 @@ type Spec struct {
 	RetryMax int `json:"retry_max,omitempty"`
 }
 
+// Merge 将 child 覆盖到 base（child 非空字段优先）。
+func (base Spec) Merge(child Spec) Spec {
+	out := base
+	if child.Cron != "" {
+		out.Cron = child.Cron
+	}
+	if child.SourceBranch != "" {
+		out.SourceBranch = child.SourceBranch
+	}
+	if child.TargetBranch != "" {
+		out.TargetBranch = child.TargetBranch
+	}
+	if child.Enabled != nil {
+		e := *child.Enabled
+		out.Enabled = &e
+	}
+	if child.TimeoutSeconds > 0 {
+		out.TimeoutSeconds = child.TimeoutSeconds
+	}
+	if child.RetryMax > 0 {
+		out.RetryMax = child.RetryMax
+	}
+	return out
+}
+
 // Store 文件型模板库。
 type Store struct {
 	mu   sync.RWMutex
@@ -47,6 +74,97 @@ type Store struct {
 }
 
 var ErrNotFound = errors.New("template not found")
+
+// ErrCycle 继承链成环。
+var ErrCycle = errors.New("template extends cycle detected")
+
+// Resolve 沿 Extends 链合并 Spec：祖先在前，子覆盖父。
+// 返回 effective Spec 与链路 ID（含自身）。成环返回 ErrCycle。
+func (s *Store) Resolve(id string) (Spec, []string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return resolveLocked(s.list, id)
+}
+
+// ResolveSelf 不依赖 Store 的纯解析（测试用）。
+func ResolveSelf(list []Template, id string) (Spec, []string, error) {
+	return resolveLocked(list, id)
+}
+
+func resolveLocked(list []Template, id string) (Spec, []string, error) {
+	byID := make(map[string]Template, len(list))
+	for i := range list {
+		byID[list[i].ID] = list[i]
+	}
+	// 收集链路：自身 → 父 → 祖父…
+	chain := []string{}
+	seen := map[string]bool{}
+	cur := id
+	for cur != "" {
+		if seen[cur] {
+			return Spec{}, nil, ErrCycle
+		}
+		t, ok := byID[cur]
+		if !ok {
+			if len(chain) == 0 {
+				return Spec{}, nil, ErrNotFound
+			}
+			// 中间父缺失：停止继承，用已合并的
+			break
+		}
+		seen[cur] = true
+		chain = append(chain, cur)
+		cur = t.Extends
+	}
+	// 从祖先往子合并
+	eff := Spec{}
+	for i := len(chain) - 1; i >= 0; i-- {
+		eff = eff.Merge(byID[chain[i]].Spec)
+	}
+	return eff, chain, nil
+}
+
+// Effective 返回合并后的模板副本（Spec 已解析，Extends 保留便于展示）。
+func (s *Store) Effective(id string) (*Template, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var base *Template
+	for i := range s.list {
+		if s.list[i].ID == id {
+			t := s.list[i]
+			base = &t
+			break
+		}
+	}
+	if base == nil {
+		return nil, ErrNotFound
+	}
+	spec, chain, err := resolveLocked(s.list, id)
+	if err != nil {
+		return nil, err
+	}
+	out := *base
+	out.Spec = spec
+	// Description 标注继承链，便于 API 消费者理解
+	if len(chain) > 1 {
+		if out.Description != "" {
+			out.Description += " "
+		}
+		out.Description += "[extends: " + joinIDs(chain[1:]) + "]"
+	}
+	return &out, nil
+}
+
+func joinIDs(ids []string) string {
+	if len(ids) == 0 {
+		return ""
+	}
+	out := ids[0]
+	for _, x := range ids[1:] {
+		out += " → " + x
+	}
+	return out
+}
 
 // Open 打开(不存在则空库)。
 func Open(path string) (*Store, error) {
