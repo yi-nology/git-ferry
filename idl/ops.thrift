@@ -178,6 +178,71 @@ struct CleanupBackupsReq {
     1: string confirm (api.json="confirm")
 }
 
+// ===== Org 映射 / Starred / 公共 Org =====
+
+struct OrgMirrorReq {
+    1: string sourcePlatform (api.json="source_platform")
+    2: string sourceOrg (api.json="source_org")
+    3: string targetPlatform (api.json="target_platform")
+    4: string targetOrg (api.json="target_org")
+    5: string targetUser (api.json="target_user")
+    6: string strategy (api.json="strategy") // preserve|single|flat|mixed
+    7: optional bool dryRun (api.json="dry_run")
+    8: optional bool createTasks (api.json="create_tasks")
+    9: optional bool importNew (api.json="import_new")
+}
+
+struct OrgMirrorItem {
+    1: string source (api.json="source")
+    2: string target (api.json="target")
+    3: string action (api.json="action") // planned|imported|task_created|skipped|failed
+    4: string message (api.json="message")
+}
+
+struct OrgMirrorResp {
+    1: string strategy (api.json="strategy")
+    2: string sourceOrg (api.json="source_org")
+    3: string target (api.json="target")
+    4: bool dryRun (api.json="dry_run")
+    5: i32 planned (api.json="planned")
+    6: i32 imported (api.json="imported")
+    7: i32 tasksCreated (api.json="tasks_created")
+    8: list<OrgMirrorItem> items (api.json="items")
+    9: list<string> warnings (api.json="warnings")
+}
+
+struct ImportStarredReq {
+    1: string platformKey (api.json="platform_key")
+    2: optional bool dryRun (api.json="dry_run")
+    3: optional bool importNew (api.json="import_new")
+    4: i32 max (api.json="max")
+}
+
+struct ImportPublicOrgReq {
+    1: string platformKey (api.json="platform_key")
+    2: string org (api.json="org")
+    3: optional bool dryRun (api.json="dry_run")
+    4: optional bool importNew (api.json="import_new")
+    5: i32 max (api.json="max")
+}
+
+struct RepoImportPreview {
+    1: string fullName (api.json="full_name")
+    2: string cloneUrl (api.json="clone_url")
+    3: bool fork (api.json="fork")
+    4: bool archived (api.json="archived")
+    5: i32 stars (api.json="stars")
+}
+
+struct ImportListResp {
+    1: string source (api.json="source")
+    2: bool dryRun (api.json="dry_run")
+    3: i32 found (api.json="found")
+    4: i32 imported (api.json="imported")
+    5: list<RepoImportPreview> items (api.json="items")
+    6: list<string> warnings (api.json="warnings")
+}
+
 // ===== 冷备 =====
 
 struct ListBundlesReq {

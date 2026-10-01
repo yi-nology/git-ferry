@@ -38,6 +38,9 @@ func sc(name, short string, fn runFunc) *cobra.Command {
 	f.Bool("with-drift", false, "健康评分时并行做漂移检测并折入 safety 维度")
 	f.Bool("csv", false, "以 CSV 输出（审计导出/批量结果）")
 	f.String("action", "", "按 action 过滤（审计）")
+	f.String("org-mapping", "", "org 映射策略 preserve|single|flat|mixed")
+	f.String("target-org", "", "single/flat 映射的落点 org/user")
+	f.Bool("personal", false, "mixed 策略下视源仓为个人命名空间")
 	// 任务字段
 	f.String("source-repo", "", "源仓库 key")
 	f.String("target-repo", "", "目标仓库 key")

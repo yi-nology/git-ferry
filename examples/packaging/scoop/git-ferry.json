@@ -1,0 +1,30 @@
+{
+  "version": "1.19.1",
+  "description": "Self-hosted Git sync / mirror / backup hub",
+  "homepage": "https://github.com/yi-nology/git-ferry",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/yi-nology/git-ferry/releases/download/v1.19.1/git-ferry_windows_amd64.zip",
+      "hash": "REPLACE_ME"
+    },
+    "arm64": {
+      "url": "https://github.com/yi-nology/git-ferry/releases/download/v1.19.1/git-ferry_windows_arm64.zip",
+      "hash": "REPLACE_ME"
+    }
+  },
+  "bin": ["git-ferry.exe", "gitferry.exe"],
+  "checkver": {
+    "github": "https://github.com/yi-nology/git-ferry"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/yi-nology/git-ferry/releases/download/v$version/git-ferry_windows_amd64.zip"
+      },
+      "arm64": {
+        "url": "https://github.com/yi-nology/git-ferry/releases/download/v$version/git-ferry_windows_arm64.zip"
+      }
+    }
+  }
+}

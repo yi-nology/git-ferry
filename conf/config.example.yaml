@@ -101,6 +101,11 @@ runwatch:
     max_auto_retries: 2      # 0=不自动重跑
     cooldown_minutes: 5
 
+# 同步后置钩子 / 冷备形态(可选)
+# sync:
+#   post_exec_script: /opt/gitferry/hooks/on-sync.sh   # 注入 GITFERRY_TASK/RESULT/RUN_ID/TRIGGER
+#   backup_format: bundle   # bundle(默认) | zip
+
 # 通知矩阵(壳层):运行完成推送 + 成功/失败分路心跳(healthchecks.io)
 # notify:
 #   only_fail: true          # 只通知失败,降低噪声

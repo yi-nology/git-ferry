@@ -1,0 +1,51 @@
+# GitHub Actions：无 GitFerry 服务时的轻量镜像定时同步
+# 用法：拷到 .github/workflows/git-mirror.yml，配置 Secrets。
+# 对标 sky22333/git-mirror-sync 的「CI 即调度」获客路径。
+
+name: Git Mirror Sync
+
+on:
+  schedule:
+    - cron: "0 2 * * *"   # 每天 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gitferry
+        uses: actions/checkout@v4
+        with:
+          repository: yi-nology/git-ferry
+          path: gitferry
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build CLI
+        run: |
+          cd gitferry
+          make build-cli
+          echo "$PWD/output" >> $GITHUB_PATH
+
+      - name: Sync repositories
+        env:
+          GITFERRY_BASE_URL: ${{ secrets.GITFERRY_BASE_URL }}
+          GITFERRY_TOKEN: ${{ secrets.GITFERRY_TOKEN }}
+          # 或直接用 git 命令镜像（无服务）：
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_TOKEN: ${{ secrets.TARGET_TOKEN }}
+        run: |
+          # 路径 A：有 GitFerry 服务
+          if [ -n "$GITFERRY_BASE_URL" ]; then
+            gitferry ops +todo --format json || true
+            gitferry task +batch-run --task-keys "${{ secrets.TASK_KEYS }}" --yes --csv || true
+            exit 0
+          fi
+          # 路径 B：纯 git 镜像
+          git clone --mirror "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" src.git
+          cd src.git
+          git remote add target "https://x-access-token:${TARGET_TOKEN}@github.com/${{ secrets.TARGET_REPO }}.git"
+          git push --mirror target

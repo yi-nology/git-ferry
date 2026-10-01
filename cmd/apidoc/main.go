@@ -609,6 +609,8 @@ func addCustomPaths(paths map[string]any) {
 	opsGET := []struct{ path, summary string }{
 		{"/api/v1/ops/health-score", "健康评分"},
 		{"/api/v1/ops/todo", "统一待办队列"},
+		{"/api/v1/ops/resolve-org-target", "org 映射目标解析"},
+		{"/api/v1/ops/import-public-org", "导入公共组织公开仓"},
 		{"/api/v1/ops/overview", "系统概览"},
 		{"/api/v1/ops/audit-report", "审计导出"},
 		{"/api/v1/ops/audit-chain/verify", "审计哈希链校验"},

@@ -2,7 +2,17 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.19.3] - 2026-10-01
+
+### Added
+
+- **org 映射预览** `POST /ops/resolve-org-target` + CLI `ops +org-map`
+  （preserve/single/flat/mixed，`internal/orgmap` 纯逻辑+单测）。
+- **公共组织导入** `POST /ops/import-public-org`（可选建任务）；
+  与已有 `org-mirror` / `import-starred` 路由对齐。
+- OpenAPI 收录 org 相关端点（81 paths）。
+
+
 
 > 对标开源（gickup / ghorg / gitea-mirror / github-backup-rust）缺口批次。
 > 规划：`docs/superpowers/plans/2026-10-01-competitor-gap-roadmap.md`。

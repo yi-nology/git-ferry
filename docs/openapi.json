@@ -787,6 +787,76 @@
         },
         "type": "object"
       },
+      "ImportListResp": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "found": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "imported": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RepoImportPreview"
+            },
+            "type": "array"
+          },
+          "source": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ImportPublicOrgReq": {
+        "properties": {
+          "dry_run": {
+            "type": "string"
+          },
+          "import_new": {
+            "type": "string"
+          },
+          "max": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "org": {
+            "type": "string"
+          },
+          "platform_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ImportStarredReq": {
+        "properties": {
+          "dry_run": {
+            "type": "string"
+          },
+          "import_new": {
+            "type": "string"
+          },
+          "max": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "platform_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ListBranchesReq": {
         "properties": {
           "key": {
@@ -1366,6 +1436,96 @@
         },
         "type": "object"
       },
+      "OrgMirrorItem": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "OrgMirrorReq": {
+        "properties": {
+          "create_tasks": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "string"
+          },
+          "import_new": {
+            "type": "string"
+          },
+          "source_org": {
+            "type": "string"
+          },
+          "source_platform": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "target_org": {
+            "type": "string"
+          },
+          "target_platform": {
+            "type": "string"
+          },
+          "target_user": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "OrgMirrorResp": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "imported": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrgMirrorItem"
+            },
+            "type": "array"
+          },
+          "planned": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "source_org": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "tasks_created": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "PaginationReq": {
         "properties": {
           "page": {
@@ -1630,6 +1790,27 @@
         "properties": {
           "webhook": {
             "$ref": "#/components/schemas/PlatformWebhookInfo"
+          }
+        },
+        "type": "object"
+      },
+      "RepoImportPreview": {
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "clone_url": {
+            "type": "string"
+          },
+          "fork": {
+            "type": "boolean"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "stars": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -2928,6 +3109,19 @@
         ]
       }
     },
+    "/api/v1/ops/import-public-org": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "导入公共组织公开仓",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/inventory": {
       "get": {
         "responses": {
@@ -3076,6 +3270,19 @@
           }
         },
         "summary": "一键重建(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/resolve-org-target": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "org 映射目标解析",
         "tags": [
           "Ops"
         ]

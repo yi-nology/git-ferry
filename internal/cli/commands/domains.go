@@ -396,6 +396,7 @@ func newOpsCmd() *cobra.Command {
 	cmd.AddCommand(
 		sc("+overview", "系统概览", opsGet("/api/v1/ops/overview")),
 		sc("+todo", "统一待办队列（健康/孤儿/RPO）", opsGet("/api/v1/ops/todo")),
+		sc("+org-map", "按策略解析目标仓 key（preserve/single/flat/mixed）", opsOrgMap),
 		sc("+health", "健康评分（--with-drift 折入漂移）", opsHealth),
 		sc("+inventory", "资产盘点（孤儿仓库）", opsGet("/api/v1/ops/inventory")),
 		sc("+rpo", "RPO/RTO 观测", opsRPO),
@@ -637,3 +638,22 @@ func jsonRawArray(items []json.RawMessage) json.RawMessage {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// opsOrgMap 调用 /ops/resolve-org-target 做 org 映射预览。
+func opsOrgMap(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	src := flagStr(cmd, "source-repo")
+	if src == "" {
+		src = flagStr(cmd, "key")
+	}
+	if src == "" {
+		return nil, fmt.Errorf("缺少 --source-repo（或 --key）")
+	}
+	body := map[string]any{
+		"source_repo_key": src,
+		"org_mapping":     flagOr(cmd, "org-mapping", "preserve"),
+		"target_org":      flagStr(cmd, "target-org"),
+		"target_platform": flagStr(cmd, "platform"),
+		"is_personal":     flagBool(cmd, "personal"),
+	}
+	return c.Post("/api/v1/ops/resolve-org-target", body)
+}

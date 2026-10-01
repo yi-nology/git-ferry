@@ -480,3 +480,29 @@ func TestHealthScore_EmptyAttentionShape(t *testing.T) {
 	assert.NotNil(t, body.Data.Summary)
 	assert.NotEmpty(t, body.Data.GeneratedAt)
 }
+
+func TestResolveOrgTarget_HTTP(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/resolve-org-target", ResolveOrgTarget)
+
+	body := `{"source_repo_key":"github/acme/app","org_mapping":"single","target_org":"backup","target_platform":"gitlab"}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/resolve-org-target",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	require.Equal(t, http.StatusOK, w.Code)
+	out := w.Body.String()
+	assert.Contains(t, out, "backup")
+	assert.Contains(t, out, "target_key")
+}
+
+func TestResolveOrgTarget_BadPolicy(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/resolve-org-target", ResolveOrgTarget)
+	body := `{"source_repo_key":"a/b","org_mapping":"nope"}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/resolve-org-target",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
