@@ -22,6 +22,13 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 - **Git Smart HTTP 只读（P2.1）**：`git_serve` 配置段，局域网/灾备 `git clone`
 - **元数据增量（P3）**：`metadata-backup?since=RFC3339`
 
+## [v1.19.2] - 2026-10-01
+
+### Fixed
+
+- 去掉对未发布 `git-ferry-core` 字段（`IncludeBranches`/`ExcludeRefPatterns`）的引用，
+  恢复基于 `git-ferry-core v0.6.1` 的 CI 构建。
+
 ## [v1.19.1] - 2026-10-01
 
 ### Added
