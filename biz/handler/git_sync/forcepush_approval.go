@@ -18,13 +18,13 @@ import (
 // Admin 一次性放行后允许本次 force。持久化在 backup_dir/force-push-approvals.json。
 
 type forcePushApproval struct {
-	ID        string    `json:"id"`
-	TaskKey   string    `json:"task_key"`
-	Branch    string    `json:"branch"`
-	Reason    string    `json:"reason"`
-	CreatedAt time.Time `json:"created_at"`
-	Approved  bool      `json:"approved"`
-	ApprovedBy string   `json:"approved_by,omitempty"`
+	ID         string     `json:"id"`
+	TaskKey    string     `json:"task_key"`
+	Branch     string     `json:"branch"`
+	Reason     string     `json:"reason"`
+	CreatedAt  time.Time  `json:"created_at"`
+	Approved   bool       `json:"approved"`
+	ApprovedBy string     `json:"approved_by,omitempty"`
 	ApprovedAt *time.Time `json:"approved_at,omitempty"`
 }
 

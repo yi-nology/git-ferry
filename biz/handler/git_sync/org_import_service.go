@@ -106,7 +106,7 @@ func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 			return
 		}
 		for i := range repos {
-				r := &repos[i]
+			r := &repos[i]
 			items = append(items, map[string]any{
 				"full_name": r.FullName, "clone_url": r.CloneURL,
 				"fork": r.Fork, "archived": r.Archived, "stars": r.Stars,

@@ -2,6 +2,12 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.19.4] - 2026-10-01
+
+### Fixed
+
+- 再次移除 `org-mirror` 路径中对未发布 core 字段 `IncludeBranches` 的引用，修复 CI。
+
 ## [v1.19.3] - 2026-10-01
 
 ### Added
@@ -10,6 +16,12 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   （preserve/single/flat/mixed，`internal/orgmap` 纯逻辑+单测）。
 - **公共组织导入** `POST /ops/import-public-org`（可选建任务）；
   与已有 `org-mirror` / `import-starred` 路由对齐。
+- **force-push 审批流** `ops/force-push-approvals`（申请/列表/Admin 放行）。
+- **post-exec 钩子** `sync.post_exec_script`（GITFERRY_TASK/RESULT/RUN_ID/TRIGGER）。
+- **冷备 zip 形态** `sync.backup_format: bundle|zip`（keep 轮转两者皆支持）。
+- **配置 JSON Schema** `conf/config.schema.json`。
+- **分发与 CI 模板** `examples/packaging/{homebrew,scoop,nix}`、
+  `examples/ci/github-actions-mirror.yml`。
 - OpenAPI 收录 org 相关端点（81 paths）。
 
 

@@ -65,12 +65,12 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 	}
 	orgLower := strings.ToLower(req.SourceOrg)
 	result := &ops.OrgMirrorResp{
-		Strategy:   strategy,
-		SourceOrg:  req.SourceOrg,
-		Target:     req.GetTargetOrg(),
-		DryRun:     dryRun,
-		Items:      []*ops.OrgMirrorItem{},
-		Warnings:   []string{},
+		Strategy:  strategy,
+		SourceOrg: req.SourceOrg,
+		Target:    req.GetTargetOrg(),
+		DryRun:    dryRun,
+		Items:     []*ops.OrgMirrorItem{},
+		Warnings:  []string{},
 	}
 	if result.Target == "" {
 		result.Target = req.GetTargetUser()
@@ -137,7 +137,6 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 			TargetBranch:  "*",
 			SyncMode:      "all",
 			GitTags:       true,
-			IncludeBranches: "",
 		})
 		if terr != nil {
 			item.Action = "failed"
