@@ -1,9 +1,9 @@
 package git_sync
 
 import (
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"strconv"
 	"strings"
 

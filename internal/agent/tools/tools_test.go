@@ -45,13 +45,14 @@ func (f *fakeScope) LastConfirm() (string, string, string) {
 
 func TestRegistry_AllToolsRegistered(t *testing.T) {
 	reg := NewRegistry(toolstest.NewMock())
-	// 30 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose + ops_todo
-	assert.Len(t, reg.Names(), 30)
+	// 31 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose + ops_todo + 元数据快照
+	assert.Len(t, reg.Names(), 31)
 	for _, name := range []string{
 		"list_repos", "get_repo", "list_branches", "list_tasks", "get_task",
 		"list_sync_history", "get_run_detail", "list_platforms", "list_webhook_rules",
 		"get_system_overview", "get_ops_todo", "run_task", "test_repo_connection", "test_platform_connection",
 		"get_rpo_report", "get_backup_integrity", "get_drift_report", "get_audit_chain", "run_dr_drill",
+		"get_metadata_snapshots",
 	} {
 		assert.NotNil(t, reg.ByName(name), "缺少工具 %s", name)
 	}

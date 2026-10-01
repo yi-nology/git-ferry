@@ -105,6 +105,12 @@ runwatch:
 # sync:
 #   post_exec_script: /opt/gitferry/hooks/on-sync.sh   # 注入 GITFERRY_TASK/RESULT/RUN_ID/TRIGGER
 #   backup_format: bundle   # bundle(默认) | zip
+#   # 备份远端：同步成功后 push 镜像副本（不改写 module 身份）
+#   backup_remotes:
+#     - name: github-backup
+#       url: "https://github.com/{owner}/{repo}.git"
+#       # token: "..."       # 或走 GIT_SYNC_TOKEN_GITHUB_BACKUP
+#       force: false
 
 # 通知矩阵(壳层):运行完成推送 + 成功/失败分路心跳(healthchecks.io)
 # notify:

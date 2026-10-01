@@ -93,6 +93,18 @@ func (r *Registry) ObserveSyncRun(status string) {
 		"Unix timestamp of last observed sync run", r.now().Unix())
 }
 
+// ObserveSyncRunWithTask 按任务+状态记录（任务数有界，不会打爆基数）。
+func (r *Registry) ObserveSyncRunWithTask(taskKey, status string) {
+	if taskKey == "" {
+		r.ObserveSyncRun(status)
+		return
+	}
+	r.AddLabeled("sync_runs_total", "Sync runs by status",
+		map[string]string{"status": status, "task": taskKey}, 1)
+	r.SetGauge("sync_last_run_timestamp_seconds",
+		"Unix timestamp of last observed sync run", r.now().Unix())
+}
+
 func labeledKey(name string, labels map[string]string) string {
 	if len(labels) == 0 {
 		return name
@@ -199,6 +211,11 @@ func ObserveHTTP(method, path string, status int) {
 // ObserveSyncRun 记录到默认注册表。
 func ObserveSyncRun(status string) {
 	defaultRegistry.ObserveSyncRun(status)
+}
+
+// ObserveSyncRunWithTask 记录到默认注册表（带 task 标签）。
+func ObserveSyncRunWithTask(taskKey, status string) {
+	defaultRegistry.ObserveSyncRunWithTask(taskKey, status)
 }
 
 // LowCardinalityPath 把路径中的纯数字段替换为 :id,避免 label 爆炸。

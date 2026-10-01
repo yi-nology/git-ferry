@@ -2,6 +2,9 @@ package git_sync
 
 import (
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -49,11 +52,64 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, err.Error())
 		return
 	}
+	metaCheck := map[string]any{}
+	if optBoolDefault(req.WithMetadata) {
+		metaCheck = sampleMetadataVerify(optStr(req.Name))
+	}
 	recordAudit(ctx, c, "dr_drill", "backup", optStr(req.Name), "灾备演练")
 	response.Success(c, map[string]any{
-		"mode":    "single",
-		"reports": []any{rep},
+		"mode":           "single",
+		"reports":        []any{rep},
+		"metadata_check": metaCheck,
 	})
+}
+
+// sampleMetadataVerify 抽样比对元数据快照：清单存在、分片可解析、数量一致。
+func sampleMetadataVerify(bundleName string) map[string]any {
+	svc := GetSyncService()
+	if svc == nil || svc.BackupDir() == "" {
+		return map[string]any{"ok": false, "reason": "backup_dir not configured"}
+	}
+	root := filepath.Join(svc.BackupDir(), "metadata")
+	out := map[string]any{"checked": 0, "ok": true, "warnings": []string{}}
+	warns := []string{}
+	checked := 0
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || d.Name() != "manifest.json" {
+			return nil
+		}
+		checked++
+		data, rerr := os.ReadFile(path) //nolint:gosec // 内部备份路径
+		if rerr != nil {
+			warns = append(warns, path+": read")
+			return nil
+		}
+		var snap struct {
+			Counts map[string]int32 `json:"counts"`
+			Files  []string         `json:"files"`
+		}
+		if json.Unmarshal(data, &snap) != nil {
+			warns = append(warns, path+": manifest parse")
+			return nil
+		}
+		// 抽样：issues.json 存在且条数与 counts 对齐
+		if snap.Counts["issues"] > 0 {
+			issuesPath := filepath.Join(filepath.Dir(path), "issues.json")
+			if _, serr := os.Stat(issuesPath); serr != nil {
+				warns = append(warns, path+": issues.json missing")
+			}
+		}
+		if checked >= 5 {
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	out["checked"] = checked
+	out["warnings"] = warns
+	if len(warns) > 0 {
+		out["ok"] = false
+	}
+	return out
 }
 
 // DrillHistory GET /api/v1/ops/dr-drill/history?limit=

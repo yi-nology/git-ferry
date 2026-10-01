@@ -43,6 +43,7 @@ func NewRegistry(svc SyncService) *Registry {
 	r.add(must(utils.InferTool("get_backup_integrity", "冷备完整性校验(Merkle Root 比对)", r.getBackupIntegrity)))
 	r.add(must(utils.InferTool("get_drift_report", "漂移检测:本地与目标远端分支是否一致", r.getDriftReport)))
 	r.add(must(utils.InferTool("get_audit_chain", "审计日志哈希链完整性校验", r.getAuditChain)))
+	r.add(must(utils.InferTool("get_metadata_snapshots", "列出冷备元数据快照(只读);回灌用 CLI ops +metadata-restore", r.getMetadataSnapshots)))
 	// 危险工具(需用户确认)
 	r.add(must(utils.InferTool("run_task", "立即执行一次同步任务(危险操作,需用户确认)", r.runTask)))
 	r.add(must(utils.InferTool("test_repo_connection", "测试仓库连通性(危险操作,需用户确认)", r.testRepoConnection)))

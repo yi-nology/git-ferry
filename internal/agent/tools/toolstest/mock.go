@@ -33,6 +33,9 @@ type Mock struct {
 
 	RunTaskErr error
 
+	// BackupDirPath 冷备目录（get_metadata_snapshots 用）
+	BackupDirPath string
+
 	// P0-P5 可注入结果
 	RPO       *corebridge.RPOReport
 	RPOErr    error
@@ -168,3 +171,5 @@ func (m *Mock) BatchDRDrill(context.Context, []string, int) ([]*corebridge.Drill
 	return []*corebridge.DrillReport{{Success: true}},
 		map[string]any{"total": 1, "success": 1, "failed": 0}, nil
 }
+
+func (m *Mock) BackupDir() string { return m.BackupDirPath }

@@ -396,6 +396,10 @@ func newOpsCmd() *cobra.Command {
 	cmd.AddCommand(
 		sc("+overview", "系统概览", opsGet("/api/v1/ops/overview")),
 		sc("+todo", "统一待办队列（健康/孤儿/RPO）", opsGet("/api/v1/ops/todo")),
+		sc("+push-backup", "推送到备份远端 github/gitlab", opsPushBackup),
+		sc("+repo-files", "浏览任务 workdir 文件", opsRepoFiles),
+		sc("+trends", "同步成功率/耗时趋势", opsTrends),
+		sc("+git-url", "打印 Git Smart HTTP clone URL", opsGitURL),
 		sc("+org-map", "按策略解析目标仓 key（preserve/single/flat/mixed）", opsOrgMap),
 		sc("+health", "健康评分（--with-drift 折入漂移）", opsHealth),
 		sc("+inventory", "资产盘点（孤儿仓库）", opsGet("/api/v1/ops/inventory")),
@@ -430,6 +434,34 @@ func opsGet(path string) runFunc {
 		setIf(cmd, q, "limit", "limit")
 		return c.Get(path, q)
 	}
+}
+
+// opsTrends 同步趋势（--limit 作 days）。
+func opsTrends(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	q := url.Values{}
+	if v := flagStr(cmd, "limit"); v != "" {
+		q.Set("days", v)
+	}
+	return c.Get("/api/v1/ops/trends", q)
+}
+
+// opsGitURL 打印 git clone URL（需服务端启用 git_serve）。
+func opsGitURL(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	key, err := requireFlag(cmd, "key")
+	if err != nil {
+		return nil, err
+	}
+	// key 形如 platform/owner/repo 或 owner/repo；统一转 /git/<key>.git
+	repoPath := strings.Trim(key, "/")
+	if !strings.HasSuffix(repoPath, ".git") {
+		repoPath += ".git"
+	}
+	clone := strings.TrimRight(c.BaseURL, "/") + "/git/" + repoPath
+	return output.Success(map[string]any{
+		"repo_key":  key,
+		"clone_url": clone,
+		"note":      "需服务端启用 git_serve.enabled；路径形如 /git/<host>/<owner>/<repo>.git",
+	}, nil), nil
 }
 
 func opsHealth(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
@@ -656,4 +688,40 @@ func opsOrgMap(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []strin
 		"is_personal":     flagBool(cmd, "personal"),
 	}
 	return c.Post("/api/v1/ops/resolve-org-target", body)
+}
+
+func opsPushBackup(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	task, err := requireFlag(cmd, "task")
+	if err != nil {
+		return nil, err
+	}
+	remote, err := requireFlag(cmd, "remote")
+	if err != nil {
+		return nil, err
+	}
+	if flagBool(cmd, "dry-run") {
+		return c.Post("/api/v1/ops/push-backup", map[string]any{
+			"task_key": task, "remote": remote, "dry_run": true,
+		})
+	}
+	if denied := confirmDanger("推送备份到 " + remote + " task=" + task); denied != nil {
+		return denied, nil
+	}
+	body := map[string]any{"task_key": task, "remote": remote, "force": flagBool(cmd, "git-force")}
+	if v := flagStr(cmd, "refspec"); v != "" {
+		body["refspec"] = v
+	}
+	return c.Post("/api/v1/ops/push-backup", body)
+}
+
+func opsRepoFiles(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	task, err := requireFlag(cmd, "task")
+	if err != nil {
+		return nil, err
+	}
+	q := url.Values{"task_key": {task}}
+	if p := flagStr(cmd, "path"); p != "" {
+		q.Set("path", p)
+	}
+	return c.Get("/api/v1/ops/repo-files", q)
 }

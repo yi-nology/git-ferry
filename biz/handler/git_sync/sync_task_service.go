@@ -75,7 +75,8 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		KeepDivergent:      req.KeepDivergent,
 		ForcePushPolicy:    optStr(req.ForcePushPolicy),
-		// IncludeBranches/ExcludeRefPatterns 待 core 发版后再传
+		IncludeBranches:    optStr(req.IncludeBranches),
+		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
 	})
 	if err != nil {
 		response.InternalError(c, fmt.Sprintf("create task failed: %v", err))
@@ -106,7 +107,8 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		GitLFS:   &req.GitLfs, SyncWiki: &req.SyncWiki, GitBundle: &req.GitBundle, Submodules: &req.Submodules, GitPushPrune: &req.GitPushPrune,
 		KeepDivergent:      req.KeepDivergent,
 		ForcePushPolicy:    optStr(req.ForcePushPolicy),
-		// IncludeBranches/ExcludeRefPatterns 待 core 发版后再传
+		IncludeBranches:    optStr(req.IncludeBranches),
+		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
 	})
 	if err != nil {
 		if errors.Is(err, corebridge.ErrTaskNotFound) {

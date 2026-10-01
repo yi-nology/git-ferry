@@ -3591,6 +3591,8 @@ type RunDRDrillReq struct {
 	Name *string `thrift:"name,1,optional" form:"name" json:"name,omitempty" query:"name"`
 	All  *bool   `thrift:"all,2,optional" form:"all" json:"all,omitempty" query:"all"`
 	Max  int32   `thrift:"max,3" form:"max" json:"max" query:"max"`
+	// 演练后抽样比对元数据快照
+	WithMetadata *bool `thrift:"withMetadata,4,optional" form:"with_metadata" json:"with_metadata,omitempty" query:"with_metadata"`
 }
 
 func NewRunDRDrillReq() *RunDRDrillReq {
@@ -3622,10 +3624,20 @@ func (p *RunDRDrillReq) GetMax() (v int32) {
 	return p.Max
 }
 
+var RunDRDrillReq_WithMetadata_DEFAULT bool
+
+func (p *RunDRDrillReq) GetWithMetadata() (v bool) {
+	if !p.IsSetWithMetadata() {
+		return RunDRDrillReq_WithMetadata_DEFAULT
+	}
+	return *p.WithMetadata
+}
+
 var fieldIDToName_RunDRDrillReq = map[int16]string{
 	1: "name",
 	2: "all",
 	3: "max",
+	4: "withMetadata",
 }
 
 func (p *RunDRDrillReq) IsSetName() bool {
@@ -3634,6 +3646,10 @@ func (p *RunDRDrillReq) IsSetName() bool {
 
 func (p *RunDRDrillReq) IsSetAll() bool {
 	return p.All != nil
+}
+
+func (p *RunDRDrillReq) IsSetWithMetadata() bool {
+	return p.WithMetadata != nil
 }
 
 func (p *RunDRDrillReq) Read(iprot thrift.TProtocol) (err error) {
@@ -3674,6 +3690,14 @@ func (p *RunDRDrillReq) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3741,6 +3765,17 @@ func (p *RunDRDrillReq) ReadField3(iprot thrift.TProtocol) error {
 	p.Max = _field
 	return nil
 }
+func (p *RunDRDrillReq) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WithMetadata = _field
+	return nil
+}
 
 func (p *RunDRDrillReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3758,6 +3793,10 @@ func (p *RunDRDrillReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -3831,6 +3870,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *RunDRDrillReq) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWithMetadata() {
+		if err = oprot.WriteFieldBegin("withMetadata", thrift.BOOL, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WithMetadata); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
 func (p *RunDRDrillReq) String() string {

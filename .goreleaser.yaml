@@ -60,3 +60,29 @@ changelog:
 release:
   draft: false
   prerelease: auto
+
+# 分发（可选，需 GITHUB_TOKEN 推 yi-nology/homebrew-tap）
+brews:
+  - id: gitferry
+    repository:
+      owner: yi-nology
+      name: homebrew-tap
+    homepage: https://github.com/yi-nology/git-ferry
+    description: Git multi-platform sync/mirror/backup hub CLI
+    directory: Formula
+    binary: gitferry
+    # 只发布 CLI archives
+    ids:
+      - cli
+    install: |
+      bin.install "gitferry"
+    test: |
+      system "#{bin}/gitferry", "version"
+
+scoops:
+  - repository:
+      owner: yi-nology
+      name: scoop-bucket
+    ids:
+      - cli
+    binary: gitferry

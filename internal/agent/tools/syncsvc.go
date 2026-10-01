@@ -44,6 +44,7 @@ type SyncService interface {
 	VerifyAuditChain() (*corebridge.AuditChainResult, error)
 	RunDRDrill(ctx context.Context, name string) (*corebridge.DrillReport, error)
 	BatchDRDrill(ctx context.Context, names []string, max int) ([]*corebridge.DrillReport, map[string]any, error)
+	BackupDir() string
 }
 
 // 编译期断言:corebridge.Service 必须满足 SyncService,签名漂移立即暴露。

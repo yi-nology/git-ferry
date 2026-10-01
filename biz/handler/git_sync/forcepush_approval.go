@@ -154,6 +154,31 @@ func IsForcePushApproved(taskKey, branch string) bool {
 	return false
 }
 
+// ShellForcePushApprover 实现 core executor.ForcePushApprover。
+type ShellForcePushApprover struct{}
+
+func (ShellForcePushApprover) IsForcePushApproved(taskKey, branch string) bool {
+	return IsForcePushApproved(taskKey, branch)
+}
+
+func (ShellForcePushApprover) RequestApproval(taskKey, branch, reason string) {
+	list := loadForcePushApprovals()
+	// 幂等：同 task+branch 已有 pending 则跳过
+	for _, a := range list {
+		if a.TaskKey == taskKey && a.Branch == branch && !a.Approved {
+			return
+		}
+	}
+	list = append(list, forcePushApproval{
+		ID:        fmt.Sprintf("fp-%d", time.Now().UnixNano()),
+		TaskKey:   taskKey,
+		Branch:    branch,
+		Reason:    reason,
+		CreatedAt: time.Now().UTC(),
+	})
+	_ = saveForcePushApprovals(list)
+}
+
 func actorName(c *app.RequestContext) string {
 	if v := string(c.GetHeader("X-API-Key")); v != "" {
 		return "apikey:" + textutil.SanitizePathToken(v[:minInt(8, len(v))])

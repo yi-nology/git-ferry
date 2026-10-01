@@ -126,7 +126,7 @@ func (w *Watcher) tick(ctx context.Context) {
 			continue // 首轮只建水位;已见过跳过
 		}
 
-		metrics.ObserveSyncRun(run.Status)
+		metrics.ObserveSyncRunWithTask(run.TaskKey, run.Status)
 		failed := run.Status == "failed"
 		if w.hb != nil {
 			w.hb.MarkResult(failed)

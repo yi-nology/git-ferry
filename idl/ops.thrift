@@ -92,6 +92,7 @@ struct RunDRDrillReq {
     1: optional string name (api.json="name")
     2: optional bool all (api.json="all")
     3: i32 max (api.json="max")
+    4: optional bool withMetadata (api.json="with_metadata") // 演练后抽样比对元数据快照
 }
 
 struct DrillReport {

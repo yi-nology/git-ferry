@@ -1,11 +1,11 @@
 package git_sync
 
 import (
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"encoding/json"
 	"errors"
 	"github.com/yi-nology/git-ferry/biz/model/ai"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"strings"
 	"sync"
 
@@ -137,4 +137,3 @@ func confirmErrText(err error) string {
 		return "执行失败: " + err.Error()
 	}
 }
-

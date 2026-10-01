@@ -41,6 +41,8 @@ func main() {
 	})
 	git_sync.SetAPIKey(shellCfg.APIKey)
 	git_sync.SetAPIKeyRole(shellCfg.APIKeyRole)
+	// force-push 审批：block 策略分歧时登记 pending，Admin 放行后放行覆盖
+	syncSvc.SetForcePushApprover(git_sync.ShellForcePushApprover{})
 	if shellCfg.GitServe != nil {
 		git_sync.SetGitServe(shellCfg.GitServe.Enabled, shellCfg.GitServe.BasePath, shellCfg.GitServe.PublicRead)
 	}

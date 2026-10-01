@@ -2,7 +2,38 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.20.0] - 2026-10-01
+
+### Added
+
+- **core v0.7.0 接入**：分支过滤 `include_branches`/`exclude_ref_patterns`
+  （converter/create/update + 任务向导表单）。
+- **备份远端推送** `POST /ops/push-backup` + CLI `ops +push-backup`（github/gitlab git remote）。
+- **workdir 浏览** `GET /ops/repo-files` + CLI `ops +repo-files`（防路径穿越）。
+- 首启向导平台链接修正；goreleaser brews/scoops；OpenAPI 85 paths。
+
+
+### Added
+
+- **force-push 审批闭环**：executor 注入 `ForcePushApprover`；`block` 策略分歧时
+  自动登记 pending，Admin 放行后放行覆盖（core `SetForcePushApprover` + 壳层适配器）。
+- **备份远端 push**（P2.2）：`sync.backup_remotes[]` 同步成功后向 GitHub/GitLab 等
+  push 镜像副本（`{owner}/{repo}` 占位）；与开源发布区分，不改写 module 身份。
+- **同步趋势** `GET /ops/trends?days=N` + CLI `ops +trends`；前端可接小图。
+- **metrics 按任务标签** `sync_runs_total{status,task}`。
+- **DR 演练验元数据**：`dr-drill?with_metadata=true` 抽样比对快照清单/issues 分片。
+- **AI 工具** `get_metadata_snapshots`（只读；回灌仍走 CLI）。
+- **CLI** `ops +git-url` 打印 Git Smart HTTP clone URL。
+- **配置启动校验**：`backup_format` 枚举 / `backup_keep` 范围（对齐 schema 子集）。
+- **首启向导**：仪表盘无仓库无任务时展示三步引导。
+
 ## [v1.19.4] - 2026-10-01
+
+### Changed
+
+- **README 全面重写**（中英双语对齐）：能力总览、快速开始、运维与灾备矩阵、
+  Agent 三接入面（CLI/MCP/Skills）、元数据恢复闭环、Git Smart HTTP 示例、
+  配置样例与架构图；链接指向规划/调研/示例模板。
 
 ### Fixed
 

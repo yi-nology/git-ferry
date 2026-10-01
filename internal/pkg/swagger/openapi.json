@@ -1926,6 +1926,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "with_metadata": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -3074,6 +3077,19 @@
         ]
       }
     },
+    "/api/v1/ops/force-push-approvals": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "force-push 审批列表",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/gists-backup": {
       "post": {
         "requestBody": {
@@ -3240,6 +3256,19 @@
         ]
       }
     },
+    "/api/v1/ops/push-backup": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "备份远端推送(github/gitlab)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/rbac": {
       "get": {
         "responses": {
@@ -3270,6 +3299,19 @@
           }
         },
         "summary": "一键重建(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/repo-files": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "workdir 文件浏览(救援)",
         "tags": [
           "Ops"
         ]
@@ -3419,6 +3461,19 @@
           }
         },
         "summary": "统一待办队列",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/trends": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "同步成功率/耗时趋势",
         "tags": [
           "Ops"
         ]

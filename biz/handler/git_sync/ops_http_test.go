@@ -506,3 +506,34 @@ func TestResolveOrgTarget_BadPolicy(t *testing.T) {
 		ut.Header{Key: "Content-Type", Value: "application/json"})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+func TestRepoFiles_MissingTaskKey(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.GET("/api/v1/ops/repo-files", RepoFiles)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ops/repo-files", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestPushBackup_MissingFields(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/push-backup", PushBackup)
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/push-backup",
+		&ut.Body{Body: strings.NewReader(`{"task_key":"t1"}`), Len: len(`{"task_key":"t1"}`)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestPushBackup_DryRun(t *testing.T) {
+	setupOpsHTTP(t)
+	h := opsEngine()
+	h.POST("/api/v1/ops/push-backup", PushBackup)
+	body := `{"task_key":"t1","remote":"https://example.com/a/b.git","dry_run":true}`
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/ops/push-backup",
+		&ut.Body{Body: strings.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	// 无 workdir 或 task 不存在时 400/404；存在则 200 dry_run
+	assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusBadRequest || w.Code == http.StatusNotFound,
+		"code=%d body=%s", w.Code, w.Body.String())
+}

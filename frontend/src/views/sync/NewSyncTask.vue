@@ -205,6 +205,22 @@
                   </a-tooltip>
                   <div class="option-desc">强制推送保护(替代单一「分歧保护」开关)</div>
                 </div>
+                <div class="option-item">
+                  <div class="option-label">分支白名单 include_branches</div>
+                  <a-input
+                    v-model:value="form.include_branches"
+                    placeholder="空=全部；如 main,release/*"
+                  />
+                  <div class="option-desc">逗号分隔 glob；仅白名单内的分支会被推送</div>
+                </div>
+                <div class="option-item">
+                  <div class="option-label">忽略 refs exclude_ref_patterns</div>
+                  <a-input
+                    v-model:value="form.exclude_ref_patterns"
+                    placeholder="refs/pull/*,refs/merge-requests/*"
+                  />
+                  <div class="option-desc">推送前排除的 ref；默认忽略 PR/MR 垃圾 ref</div>
+                </div>
               </a-space>
             </a-form-item>
 
@@ -284,6 +300,8 @@ const form = reactive({
   git_push_prune: false,
   keep_divergent: true,
   force_push_policy: 'block' as 'allow' | 'block' | 'backup_on_demand',
+  include_branches: '',
+  exclude_ref_patterns: 'refs/pull/*,refs/merge-requests/*',
 })
 
 const forcePushOptions = [
@@ -500,6 +518,13 @@ onMounted(() => {
   color: $text-secondary;
   margin-top: 4px;
   padding-left: 24px;
+}
+
+.option-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: $text-primary;
+  margin-bottom: 6px;
 }
 
 // Cron presets

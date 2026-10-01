@@ -13,6 +13,31 @@
       </template>
     </PageHeader>
 
+    <!-- 首启向导：无仓库无任务时引导三步 -->
+    <div v-if="isFirstRun" class="attention-card wizard-card">
+      <div class="attention-head">
+        <span>快速开始</span>
+        <a-tag color="blue">3 步</a-tag>
+      </div>
+      <ol class="wizard-steps">
+        <li>
+          <strong>1. 接入平台</strong>
+          <span class="wizard-desc">添加 GitHub / GitLab / Gitee 凭据并测试连接</span>
+          <a-button size="small" type="link" @click="router.push('/settings/platforms')">去配置</a-button>
+        </li>
+        <li>
+          <strong>2. 导入仓库</strong>
+          <span class="wizard-desc">手动添加，或自动发现平台下的仓库</span>
+          <a-button size="small" type="link" @click="router.push('/repos')">去导入</a-button>
+        </li>
+        <li>
+          <strong>3. 创建同步任务</strong>
+          <span class="wizard-desc">选源/目标分支，设 cron 或 Webhook 触发</span>
+          <a-button size="small" type="link" @click="router.push('/sync/new')">去创建</a-button>
+        </li>
+      </ol>
+    </div>
+
     <!-- 关键指标：无彩色图标，失败一眼可见 -->
     <MetricStrip :items="metrics" />
 
@@ -248,6 +273,7 @@ const systemStatus = ref<SystemStatusData | null>(null)
 // 导致切回仓库列表页(keep-alive)看到残缺列表
 const dashRepos = ref<Repo[]>([])
 const dashRepoTotal = ref(0)
+const isFirstRun = computed(() => dashRepoTotal.value === 0 && dashTaskTotal.value === 0)
 
 // 任务数据同样进本地 ref:taskStore.fetchTasks 会覆盖列表页共享缓存
 const dashTasks = ref<SyncTask[]>([])
@@ -398,6 +424,30 @@ onActivated(loadDashboard)
   color: $text-tertiary;
   font-size: 11px;
   margin: 0 4px;
+}
+
+/* 首启向导 */
+.wizard-card {
+  background: $bg-secondary;
+  border: 1px solid $border-color;
+}
+.wizard-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.wizard-steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wizard-desc {
+  color: $text-secondary;
+  font-size: $fs-sm;
+  flex: 1;
 }
 
 /* 需要关注 */

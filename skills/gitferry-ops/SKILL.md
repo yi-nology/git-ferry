@@ -19,6 +19,9 @@ metadata:
 |----------|------|------|
 | `ops +overview` | 系统概览（仓库/任务/健康） | 否 |
 | `ops +todo` | 统一待办队列（健康/孤儿/RPO） | 否 |
+| `ops +push-backup` | 推送到 github/gitlab 备份远端 | **是** |
+| `ops +repo-files` | 浏览任务 workdir 文件（救援） | 否 |
+| `ops +org-map` | org 映射目标预览 | 否 |
 | `ops +health` | 同步健康评分 + 问题列表 | 否 |
 | `ops +inventory` | 资产盘点（孤儿仓库） | 否 |
 | `ops +rpo` | RPO/RTO 观测 | 否 |
