@@ -2,6 +2,14 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed
+
+- **认证路径重构**（依赖 go-git-platform credential helper 改造 + core `executor/auth.go`）：
+  HTTPS 令牌经临时 credential helper / GIT_ASKPASS 注入 git，**不进 argv / environ 明文**；
+  临时凭证目录 RAII 清理。SSH 密钥内容同样经 0600 临时文件 + `GIT_SSH_COMMAND`。
+
 ## [v1.20.1] - 2026-10-01
 
 > 依赖 git-ferry-core v0.7.1（ForcePushApprover 注入）。

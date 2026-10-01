@@ -8,10 +8,11 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-ferry)](https://go.dev/)
 [![License](https://img.shields.io/github/license/yi-nology/git-ferry)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases)
+[![npm version](https://img.shields.io/npm/v/gitferry-cli.svg)](https://www.npmjs.com/package/gitferry-cli)
 
 **[中文文档](./README.zh-CN.md)**
 
-[Why GitFerry](#why-gitferry) · [Capabilities](#capabilities) · [Quick Start](#quick-start) · [Web Console](#web-console) · [Ops & DR](#ops--disaster-recovery) · [Agent Access](#agent-access-cli--mcp--skills) · [Configuration](#configuration) · [Architecture](#related-repositories)
+[Why GitFerry](#why-gitferry) · [Capabilities](#capabilities) · [Install CLI](#install-the-cli-humans) · [Quick Start](#quick-start-humans) · [AI Agent Quick Start](#quick-start-ai-agent) · [Web Console](#web-console) · [Ops & DR](#ops--disaster-recovery) · [Agent Access](#agent-access-cli--mcp--skills) · [Configuration](#configuration)
 
 ---
 
@@ -78,59 +79,97 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 
 ## Quick Start
 
-### Install
+### Prerequisites
 
-**Release binaries** (recommended):
+- Node.js 14+ (`npm`/`npx`) — only for npm install
+- Platforms: macOS, Linux, Windows (x64/arm64)
+- Go 1.26+ — source builds only
+- Server runs standalone: Docker or Release binary
+
+### Install the CLI (humans)
+
+> **AI assistants:** if you are helping a user install, jump to [Quick Start (AI Agent)](#quick-start-ai-agent).
+
+**Option 1 — npm (recommended, same UX as [gitlink-cli](https://github.com/ccfos/gitlink-cli)):**
 
 ```bash
-# Server
-curl -L -o git-ferry.tar.gz https://github.com/yi-nology/git-ferry/releases/latest/download/git-ferry_linux_amd64.tar.gz
-tar xzf git-ferry.tar.gz && chmod +x git-ferry
+# 1) Install CLI (postinstall downloads the right platform binary)
+npm install -g gitferry-cli
 
-# CLI
-curl -L -o gitferry.tar.gz https://github.com/yi-nology/git-ferry/releases/latest/download/gitferry_1.19.3_linux_amd64.tar.gz
-tar xzf gitferry.tar.gz && chmod +x gitferry
+# 2) Install Agent Skills (optional; for Claude Code / MiMo)
+gitferry-install-skills
+# or: npx skills add ./skills -y -g
 ```
 
-**From source**:
+**Option 2 — Release binary:**
+
+```bash
+# Pick a platform asset on https://github.com/yi-nology/git-ferry/releases/latest
+VER=1.20.1   # replace with the latest version
+curl -fsSL -o gitferry.tgz \
+  "https://github.com/yi-nology/git-ferry/releases/download/v${VER}/gitferry_${VER}_darwin_arm64.tar.gz"
+tar -xzf gitferry.tgz && sudo mv gitferry /usr/local/bin/
+```
+
+**Option 3 — Source build / package managers / Docker:**
 
 ```bash
 git clone https://github.com/yi-nology/git-ferry.git
 cd git-ferry
-make build        # server: output/git-ferry
-make build-cli    # CLI:   output/gitferry
+make build && make build-cli    # output/git-ferry + output/gitferry
+make docker-build               # server image
+
+# Package manager templates: examples/packaging/
+# brew install yi-nology/tap/git-ferry   (after tap publish)
 ```
 
-**Docker**:
+### Quick Start (humans)
 
 ```bash
-make docker-build
+# 1. Configure CLI (writes ~/.config/gitferry/config.yaml)
+gitferry config init --base-url http://127.0.0.1:8890 --token <API_KEY>
+# or via env:
+export GITFERRY_BASE_URL=http://127.0.0.1:8890
+export GITFERRY_TOKEN=<API_KEY>
+
+# 2. Verify connectivity
+gitferry auth status
+gitferry task +list --format json
+
+# 3. Start the server (if not running)
+cp .env.example .env && openssl rand -base64 32   # set ENCRYPTION_KEY
+cp conf/config.example.yaml conf/config.yaml && make run
+# Open http://localhost:8890  (System → CLI / Agent has the command cheatsheet)
 ```
 
-**Package managers** (templates in [`examples/packaging/`](examples/packaging/)):
+### Quick Start (AI Agent)
+
+> Steps for Claude Code / MiMo / Cursor. The user must supply an API Key in the browser or CI.
+
+**Step 1 — Install**
 
 ```bash
-# Homebrew (after tap publish)
-brew install yi-nology/tap/git-ferry
-
-# Scoop
-scoop install git-ferry
-
-# Nix
-nix run github:yi-nology/git-ferry
+npm install -g gitferry-cli
+gitferry-install-skills
 ```
 
-### Run
+**Step 2 — Configure**
 
 ```bash
-cp .env.example .env
-openssl rand -base64 32   # put into ENCRYPTION_KEY
-cp conf/config.example.yaml conf/config.yaml
-make run
-# open http://localhost:8890
+gitferry config init --base-url http://127.0.0.1:8890 --token "$GITFERRY_TOKEN"
+# or env only (CI / sandbox):
+export GITFERRY_BASE_URL=http://127.0.0.1:8890
+export GITFERRY_TOKEN=<API_KEY>
 ```
 
-Config JSON Schema: [`conf/config.schema.json`](conf/config.schema.json) (IDE-friendly).
+**Step 3 — Verify**
+
+```bash
+gitferry auth status
+gitferry ops +todo --format json
+```
+
+API Key source: the server `GIT_SYNC_API_KEY` used by the web console, or the key bound to the signed-in session.
 
 ### First sync in 3 minutes
 
@@ -270,12 +309,7 @@ gitferry schema list && gitferry schema show ops
 - Dangerous shortcuts (`task +run`, `ops +drill`, `ops +metadata-restore --execute`) return 409 unless `--yes`
 - `--all` paginate, `--dry-run` preview, `--csv` export
 
-Install via npm (after release):
-
-```bash
-npm install -g gitferry-cli
-gitferry-install-skills
-```
+Install: see [Quick Start](#install-the-cli-humans) (one npm command).
 
 ### 2. MCP Server (Claude Code / Cursor)
 

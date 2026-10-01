@@ -8,10 +8,11 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-ferry)](https://go.dev/)
 [![License](https://img.shields.io/github/license/yi-nology/git-ferry)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases)
+[![npm version](https://img.shields.io/npm/v/gitferry-cli.svg)](https://www.npmjs.com/package/gitferry-cli)
 
 **[English](./README.md)**
 
-[为什么是 GitFerry](#为什么是-gitferry) · [能力总览](#能力总览) · [快速开始](#快速开始) · [Web 控制台](#web-控制台) · [运维与灾备](#运维与灾备) · [Agent 接入](#agent-接入cli--mcp--skills) · [配置](#配置) · [架构](#相关仓库)
+[为什么是 GitFerry](#为什么是-gitferry) · [能力总览](#能力总览) · [安装 CLI](#安装-cli人类用户) · [快速上手](#快速上手人类用户) · [AI Agent 快速上手](#快速上手ai-agent) · [Web 控制台](#web-控制台) · [运维与灾备](#运维与灾备) · [Agent 接入](#agent-接入cli--mcp--skills) · [配置](#配置)
 
 ---
 
@@ -78,59 +79,97 @@ GitFerry 把这三件事收进一个自托管中枢：
 
 ## 快速开始
 
-### 安装
+### 前置条件
 
-**Release 二进制**（推荐）：
+- Node.js 14+（`npm`/`npx`）— 仅 npm 安装需要
+- 支持平台：macOS、Linux、Windows（x64/arm64）
+- Go 1.26+ — 仅从源码构建需要
+- 服务端可独立运行：Docker 或 Release 二进制
+
+### 安装 CLI（人类用户）
+
+> **AI 助手请注意：** 帮用户装 CLI 时请直接跳到 [快速上手（AI Agent）](#快速上手ai-agent)。
+
+**方式 1 — npm 安装（推荐，与 [gitlink-cli](https://github.com/ccfos/gitlink-cli) 同款体验）：**
 
 ```bash
-# 服务端
-curl -L -o git-ferry.tar.gz https://github.com/yi-nology/git-ferry/releases/latest/download/git-ferry_linux_amd64.tar.gz
-tar xzf git-ferry.tar.gz && chmod +x git-ferry
+# 1) 安装 CLI（postinstall 自动下载当前平台二进制）
+npm install -g gitferry-cli
 
-# CLI
-curl -L -o gitferry.tar.gz https://github.com/yi-nology/git-ferry/releases/latest/download/gitferry_1.19.3_linux_amd64.tar.gz
-tar xzf gitferry.tar.gz && chmod +x gitferry
+# 2) 安装 Agent Skills（可选，给 Claude Code / MiMo 用）
+gitferry-install-skills
+# 或 npx skills add ./skills -y -g
 ```
 
-**源码构建**：
+**方式 2 — Release 二进制：**
+
+```bash
+# 查看 https://github.com/yi-nology/git-ferry/releases/latest 选平台包
+VER=1.20.1   # 替换为最新版本
+curl -fsSL -o gitferry.tgz \
+  "https://github.com/yi-nology/git-ferry/releases/download/v${VER}/gitferry_${VER}_darwin_arm64.tar.gz"
+tar -xzf gitferry.tgz && sudo mv gitferry /usr/local/bin/
+```
+
+**方式 3 — 源码构建 / 包管理器 / Docker：**
 
 ```bash
 git clone https://github.com/yi-nology/git-ferry.git
 cd git-ferry
-make build        # 服务端: output/git-ferry
-make build-cli    # CLI:   output/gitferry
+make build && make build-cli    # output/git-ferry + output/gitferry
+make docker-build               # 服务端镜像
+
+# 包管理器模板见 examples/packaging/
+# brew install yi-nology/tap/git-ferry   （tap 发布后）
 ```
 
-**Docker**：
+### 快速上手（人类用户）
 
 ```bash
-make docker-build
+# 1. 配置 CLI（写入 ~/.config/gitferry/config.yaml）
+gitferry config init --base-url http://127.0.0.1:8890 --token <API_KEY>
+# 或环境变量：
+export GITFERRY_BASE_URL=http://127.0.0.1:8890
+export GITFERRY_TOKEN=<API_KEY>
+
+# 2. 验证连通
+gitferry auth status
+gitferry task +list --format json
+
+# 3. 启动服务端（若尚未运行）
+cp .env.example .env && openssl rand -base64 32   # 写入 ENCRYPTION_KEY
+cp conf/config.example.yaml conf/config.yaml && make run
+# 打开 http://localhost:8890  （系统 → CLI / Agent 有命令速查）
 ```
 
-**包管理器**（模板见 [`examples/packaging/`](examples/packaging/)）：
+### 快速上手（AI Agent）
+
+> 以下步骤面向 Claude Code / MiMo / Cursor 等 Agent。需要用户在浏览器或 CI 中提供 API Key。
+
+**第 1 步 — 安装**
 
 ```bash
-# Homebrew（tap 发布后）
-brew install yi-nology/tap/git-ferry
-
-# Scoop
-scoop install git-ferry
-
-# Nix
-nix run github:yi-nology/git-ferry
+npm install -g gitferry-cli
+gitferry-install-skills
 ```
 
-### 启动
+**第 2 步 — 配置**
 
 ```bash
-cp .env.example .env
-openssl rand -base64 32   # 写入 ENCRYPTION_KEY
-cp conf/config.example.yaml conf/config.yaml
-make run
-# 打开 http://localhost:8890
+gitferry config init --base-url http://127.0.0.1:8890 --token "$GITFERRY_TOKEN"
+# 或仅环境变量（CI / 沙箱）：
+export GITFERRY_BASE_URL=http://127.0.0.1:8890
+export GITFERRY_TOKEN=<API_KEY>
 ```
 
-配置 JSON Schema 见 [`conf/config.schema.json`](conf/config.schema.json)（IDE 校验友好）。
+**第 3 步 — 登录/验证**
+
+```bash
+gitferry auth status
+gitferry ops +todo --format json
+```
+
+API Key 来源：登录 Web 控制台时使用的服务端 `GIT_SYNC_API_KEY`，或界面会话对应的密钥。
 
 ### 3 分钟跑通第一条同步
 
@@ -271,12 +310,7 @@ gitferry schema list && gitferry schema show ops
 - 危险操作（`task +run`、`ops +drill`、`ops +metadata-restore --execute`）默认 409 确认，脚本用 `--yes`
 - `--all` 分页拉全、`--dry-run` 批量预览、`--csv` 导出
 
-npm 安装（发版后）：
-
-```bash
-npm install -g gitferry-cli
-gitferry-install-skills
-```
+安装方式见 [快速上手](#安装-cli人类用户)（npm 一条命令）。
 
 ### 2. MCP Server（Claude Code / Cursor）
 
