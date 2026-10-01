@@ -51,7 +51,9 @@ func Handler(opt Options) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		if _, err := os.Stat(full); err != nil {
+		// 上方 path.Clean + 拒绝 ".." + absRoot 前缀校验已封闭穿越面;
+		// G703 taint 分析识别不到前缀校验即为 sanitization,此处为误报
+		if _, err := os.Stat(full); err != nil { //nolint:gosec // G703: full 已被 absRoot 前缀约束
 			http.NotFound(w, r)
 			return
 		}

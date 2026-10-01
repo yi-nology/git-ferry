@@ -421,7 +421,7 @@ func opsMetadataRestoreCmd() *cobra.Command {
 	f := c.Flags()
 	f.String("kinds", "", "逗号分隔：labels,milestones,issues,prs,releases")
 	f.String("target-owner", "", "目标 owner（默认同源）")
-	f.String("target-repo", "", "目标仓库名（默认同源）")
+	// target-repo 已由 sc() 统一挂上，重复定义会 panic: flag redefined
 	f.Bool("execute", false, "真正写入（缺省 dry-run 预览）")
 	f.Bool("overwrite", false, "同名 label 覆盖更新")
 	return c

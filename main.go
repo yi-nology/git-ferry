@@ -142,8 +142,13 @@ func main() {
 	git_sync.SetTplStore(tplStore)
 
 	// 通知矩阵 + 运行观察(失败补偿)
+	// notify 段在配置中缺省时 shellCfg.Notify 为 nil,取字段前先判空
 	notifier := notify.New(shellCfg.Notify)
-	hb := notify.NewHeartbeat(shellCfg.Notify.Heartbeat)
+	var hbCfg *notify.HeartbeatConfig
+	if shellCfg.Notify != nil {
+		hbCfg = shellCfg.Notify.Heartbeat
+	}
+	hb := notify.NewHeartbeat(hbCfg)
 	watchCfg := runwatch.Config{}
 	if shellCfg.RunWatch != nil {
 		watchCfg = runwatch.Config{
