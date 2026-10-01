@@ -20,4 +20,3 @@ type Usage struct {
 
 // resultCap SSE tool_end 里工具结果的最大长度。
 const resultCap = 600
-

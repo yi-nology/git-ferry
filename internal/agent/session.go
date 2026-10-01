@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"context"
 	"errors"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"sync"
 	"time"
 

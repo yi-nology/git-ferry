@@ -170,7 +170,6 @@ func (r *Registry) retrySyncRun(ctx context.Context, in retryRunInput) (string, 
 	})
 }
 
-
 // ===== 统一待办队列 =====
 
 type todoInput struct {
@@ -189,9 +188,9 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 	}
 	var healthParsed struct {
 		Items []struct {
-			Key     string `json:"key"`
-			Name    string `json:"name"`
-			Score   int    `json:"score"`
+			Key     string   `json:"key"`
+			Name    string   `json:"name"`
+			Score   int      `json:"score"`
 			Issues  []string `json:"issues"`
 			Actions []string `json:"actions"`
 		} `json:"items"`

@@ -109,14 +109,14 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 	}
 
 	return marshalJSON(map[string]any{
-		"question":      in.Question,
-		"task_key":      in.TaskKey,
-		"failures":      failures,
-		"recent":        recent,
-		"weak_dims":     rankWeakDims(weakDims),
-		"conclusion":    summarizeAnalyze(in.Question, failures, weakDims),
-		"playbook":      analyzeRules(),
-		"next_action":   nextActions(failures, weakDims),
+		"question":    in.Question,
+		"task_key":    in.TaskKey,
+		"failures":    failures,
+		"recent":      recent,
+		"weak_dims":   rankWeakDims(weakDims),
+		"conclusion":  summarizeAnalyze(in.Question, failures, weakDims),
+		"playbook":    analyzeRules(),
+		"next_action": nextActions(failures, weakDims),
 	}), nil
 }
 
@@ -232,8 +232,6 @@ func fmtStr(v any) string {
 	}
 	return ""
 }
-
-
 
 // rebuildInput 全量重建。
 type rebuildInput struct {

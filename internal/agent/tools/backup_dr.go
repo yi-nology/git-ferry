@@ -147,8 +147,8 @@ func (r *Registry) getMetadataSnapshots(_ context.Context, in metadataSnapInput)
 		return nil
 	})
 	return marshalJSON(map[string]any{
-		"found":    len(items),
+		"found":     len(items),
 		"snapshots": items,
-		"note":     "回灌用 CLI: gitferry ops +metadata-restore --key <repo_key>（默认 dry-run）",
+		"note":      "回灌用 CLI: gitferry ops +metadata-restore --key <repo_key>（默认 dry-run）",
 	}), nil
 }
