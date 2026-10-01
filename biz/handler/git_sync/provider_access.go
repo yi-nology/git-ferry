@@ -8,18 +8,14 @@ import (
 )
 
 // newIssueProvider 由平台+仓库 token 构造 SDK provider(issues/metadata 等共用)。
+// 经 core ProviderForPlatform:Manager 缓存 + GitHub App installation token 解析;
+// repoToken 非空优先,空则按平台解析(原先手写 repo token→平台 token 回退已收敛)。
 func newIssueProvider(plat *corebridge.Platform, repoToken string) (sdkprov.Provider, error) {
-	token := repoToken
-	if token == "" {
-		token = plat.AccessToken
+	svc := GetSyncService()
+	if svc == nil {
+		return nil, fmt.Errorf("create provider: sync service unavailable")
 	}
-	cfg := sdkprov.Config{
-		Platform: sdkprov.Platform(plat.Type),
-		BaseURL:  plat.APIURL,
-		Token:    token,
-		SkipTLS:  plat.SkipTLSVerify,
-	}
-	p, err := sdkprov.NewProvider(cfg)
+	p, err := svc.ProviderForPlatform(plat, repoToken)
 	if err != nil {
 		return nil, fmt.Errorf("create provider: %w", err)
 	}

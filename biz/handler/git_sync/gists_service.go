@@ -2,13 +2,13 @@ package git_sync
 
 import (
 	"context"
-	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/yi-nology/git-ferry/internal/githubapi"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
@@ -34,7 +34,7 @@ func BackupGists(ctx context.Context, c *app.RequestContext) {
 		response.NotFound(c, "platform not found")
 		return
 	}
-	if !githubapi.IsGitHub(plat.Type) {
+	if plat.Type != corebridge.PlatformTypeGitHub {
 		response.BadRequest(c, "gists backup only supports GitHub platforms")
 		return
 	}
@@ -45,7 +45,12 @@ func BackupGists(ctx context.Context, c *app.RequestContext) {
 	}
 	dest := filepath.Join(backupDir, "gists", textutil.SanitizePathToken(req.PlatformKey),
 		time.Now().UTC().Format("20060102-150405"))
-	count, warnings, err := githubapi.BackupGists(ctx, plat.APIURL, plat.AccessToken, dest, int(req.MaxGists))
+	prov, perr := newIssueProvider(plat, "")
+	if perr != nil {
+		response.InternalError(c, perr.Error())
+		return
+	}
+	count, warnings, err := backupGists(ctx, prov, dest, int(req.MaxGists))
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -63,17 +62,12 @@ func PushBackup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// push 到备份远端（workdir 即 mirror 工作区）
-	args := []string{"-C", workDir, "push"}
-	if req.Force || strings.HasPrefix(refspec, "+") {
-		args = append(args, "--force")
-	}
-	args = append(args, req.Remote, refspec)
-	cmd := exec.Command("git", args...) //nolint:gosec // git push 到部署方配置的备份远端
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	out, err := cmd.CombinedOutput()
+	// push 到备份远端(workdir 即 mirror 工作区)：凭证/临时 remote/退避重试由
+	// core PushTaskBackup 经 gitbackend 处理(原裸 exec git push 无凭证,https 私有仓必败)。
+	out, err := svc.PushTaskBackup(ctx, task, workDir, req.Remote, refspec,
+		req.Force || strings.HasPrefix(refspec, "+"))
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("push backup failed: %v\n%s", err, string(out)))
+		response.InternalError(c, fmt.Sprintf("push backup failed: %v", err))
 		return
 	}
 	recordAudit(ctx, c, "push_backup", "task", req.TaskKey, "备份推送 → "+req.Remote)
@@ -82,7 +76,7 @@ func PushBackup(ctx context.Context, c *app.RequestContext) {
 		"task_key": req.TaskKey,
 		"remote":   req.Remote,
 		"refspec":  refspec,
-		"output":   truncateRunes(string(out), 2000),
+		"output":   truncateRunes(out, 2000),
 	})
 }
 

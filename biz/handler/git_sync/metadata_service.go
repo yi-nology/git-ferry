@@ -11,7 +11,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/git-ferry/internal/githubapi"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
@@ -96,11 +95,11 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 	if optBoolDefault(req.WithArchives) {
 		downloadSourceArchives(ctx, prov, repo, releases, snapDir, snap)
 	}
-	if optBoolDefault(req.WithAssets) && githubapi.IsGitHub(plat.Type) {
-		downloadReleaseAssets(ctx, plat, repo, snapDir, snap)
+	if optBoolDefault(req.WithAssets) && prov.Capabilities().ReleaseAssets {
+		collectReleaseAssets(ctx, prov, repo, releases, snapDir, snap)
 	}
-	if optBoolDefault(req.WithGists) && githubapi.IsGitHub(plat.Type) {
-		backupGists(ctx, plat, snapDir, snap)
+	if optBoolDefault(req.WithGists) && prov.Capabilities().Gists {
+		collectGists(ctx, prov, snapDir, snap)
 	}
 
 	writeSnapshotJSON(snap, snapDir)
@@ -282,14 +281,13 @@ func downloadSourceArchives(ctx context.Context, prov sdkprov.Provider, repo *co
 	snap.Counts["archives"] = int32(len(snap.Archives))
 }
 
-func downloadReleaseAssets(ctx context.Context, plat *corebridge.Platform, repo *corebridge.Repo, snapDir string, snap *ops.MetadataSnapshot) {
-	token := repo.AccessToken
-	if token == "" {
-		token = plat.AccessToken
-	}
+func collectReleaseAssets(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo,
+	releases []*sdkprov.ReleaseInfo, snapDir string, snap *ops.MetadataSnapshot) {
 	assetDir := filepath.Join(snapDir, "release-assets")
-	saved, warns, aerr := githubapi.DownloadReleaseAssets(ctx, plat.APIURL, token,
-		repo.PlatformOwner, repo.PlatformRepo, assetDir, 100)
+	// token 归 ProviderForPlatform 解析(repo token 优先,GitHub App 感知);
+	// 已收集的 releases 带 Assets 元数据则复用,不重复请求。
+	saved, warns, aerr := downloadReleaseAssets(ctx, prov, repo.PlatformOwner, repo.PlatformRepo,
+		releases, assetDir, 100)
 	snap.Warnings = append(snap.Warnings, warns...)
 	if aerr != nil {
 		snap.Warnings = append(snap.Warnings, "release-assets: "+aerr.Error())
@@ -299,10 +297,9 @@ func downloadReleaseAssets(ctx context.Context, plat *corebridge.Platform, repo 
 	snap.Counts["release_assets"] = int32(len(saved))
 }
 
-func backupGists(ctx context.Context, plat *corebridge.Platform, snapDir string, snap *ops.MetadataSnapshot) {
-	token := plat.AccessToken
+func collectGists(ctx context.Context, prov sdkprov.Provider, snapDir string, snap *ops.MetadataSnapshot) {
 	gistDir := filepath.Join(snapDir, "gists")
-	gc, warns, gerr := githubapi.BackupGists(ctx, plat.APIURL, token, gistDir, 200)
+	gc, warns, gerr := backupGists(ctx, prov, gistDir, 200)
 	snap.Warnings = append(snap.Warnings, warns...)
 	if gerr != nil {
 		snap.Warnings = append(snap.Warnings, "gists: "+gerr.Error())

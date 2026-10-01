@@ -2,7 +2,40 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.20.3] - 2026-10-02
+
+> 依赖 git-ferry-core **v0.8.0**（全面收口 go-git-platform + `PushTaskBackup` 新增）
+> + go-git-platform **v0.72.0**（可选能力 Gists/Starred/Migrations/ReleaseAssets、
+> 泛型分页 `ListAllPages`、`githubapp`、403 限流重试）。
+
+### Changed
+
+- **provider 收口**：`newIssueProvider` 改经 core `ProviderForPlatform`（Manager 缓存 +
+  GitHub App installation token 解析，repo token 非空优先）；删除 metadata 附件/gists
+  处手写 token 回退与 `sdkprov.Config+NewProvider` 样板——GitHub App 平台此前拿
+  `plat.AccessToken`（空）调 API 的错误行为随之修正。
+- **限流指标 hook 化**：`internal/githubapi.Throttler` 的 `gitferry_api_ratelimit_total`
+  打点迁到 `service.SetProviderHooks` 响应钩子（main 启动早期装配），429 或
+  403+`X-RateLimit-Remaining:0` 即计数（含重试各次尝试）；退避本身由平台 transport
+  接管。
+- **删除 `internal/githubapi` 包**（手写 HTTP/退避/分页已被平台覆盖）；`IsGitHub`
+  （含死掉的 "ghe" 分支）删除，调用点改 `plat.Type == corebridge.PlatformTypeGitHub`
+  或 `Capabilities()` 能力门控。
+- **分页收口**：gists 备份、starred 导入、组织公开仓列取、issues 导出全部改
+  `ListAllPages`/页循环；gists 备份**修复只拉 1 页（≤100）却标 maxGists=200** 的
+  bug，现分页拉到上限为止；附件下载复用已收集的 `ReleaseInfo.Assets` 不再重复请求。
+- **migration 平台化**：CreateMigration/GetMigration 迁到 `MigrationManager`
+  （org=="" 用户级），wait 轮询与响应字段/审计文案不变；请求经平台 transport 获得
+  429/5xx/限流 403 重试（原 `http.DefaultClient` 无超时无重试）。
+- **backup push 带凭证**：`POST /ops/push-backup` 删裸 `exec git push`，改
+  core `PushTaskBackup`（临时 remote + gitbackend + `BuildRepoAuth` 凭证），
+  https 私有仓可推送；dry-run/参数校验/审计/响应 JSON 不变，错误文案近似保留。
+
+### Fixed
+
+- 组织公开仓导入：`RepoManager.ListRepos` 客户端过滤 `!Private`（原 `type=public`
+  只拉公开），拉满 max 条公开仓为止；无 token 时仍可匿名列（ProviderForPlatform
+  空 token 语义不变）。
 
 ## [v1.20.2] - 2026-10-01
 

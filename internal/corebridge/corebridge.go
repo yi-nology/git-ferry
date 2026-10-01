@@ -46,6 +46,7 @@ const TriggerManual = model.TriggerManual
 
 // 平台常量 / 工具（平台管理 handler 使用）
 const (
+	PlatformTypeGitHub   = model.PlatformTypeGitHub
 	PlatformTypeCustom   = model.PlatformTypeCustom
 	PlatformStatusActive = model.PlatformStatusActive
 	PlatformStatusError  = model.PlatformStatusError

@@ -8,8 +8,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/git-ferry/internal/githubapi"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // OrgMirror POST /api/v1/ops/org-mirror
@@ -230,18 +230,36 @@ func ImportStarred(ctx context.Context, c *app.RequestContext) {
 		response.NotFound(c, "platform not found")
 		return
 	}
-	if !githubapi.IsGitHub(plat.Type) {
+	prov, perr := newIssueProvider(plat, "")
+	if perr != nil {
+		response.InternalError(c, perr.Error())
+		return
+	}
+	if !prov.Capabilities().Starred {
 		response.BadRequest(c, "starred import currently supports github only")
 		return
 	}
+	sm := prov.(sdkprov.StarredManager)
 	max := int(req.Max)
 	if max <= 0 {
 		max = 100
 	}
-	starred, err := githubapi.ListStarred(ctx, plat.APIURL, plat.AccessToken, max)
-	if err != nil {
-		response.InternalError(c, err.Error())
-		return
+	// 分页拉到 max 条为止(页不足一页即末页)。
+	perPage := sdkprov.MaxPerPage
+	starred := []*sdkprov.PlatformRepo{}
+	for page := 1; len(starred) < max; page++ {
+		batch, serr := sm.ListStarred(ctx, page, perPage)
+		if serr != nil {
+			response.InternalError(c, serr.Error())
+			return
+		}
+		starred = append(starred, batch...)
+		if len(batch) < perPage {
+			break
+		}
+	}
+	if len(starred) > max {
+		starred = starred[:max]
 	}
 	resp := &ops.ImportListResp{
 		Source:   "starred:" + req.PlatformKey,
@@ -250,8 +268,7 @@ func ImportStarred(ctx context.Context, c *app.RequestContext) {
 		Items:    []*ops.RepoImportPreview{},
 		Warnings: []string{},
 	}
-	for i := range starred {
-		s := &starred[i]
+	for _, s := range starred {
 		resp.Items = append(resp.Items, &ops.RepoImportPreview{
 			FullName: s.FullName, CloneUrl: s.CloneURL,
 			Fork: s.Fork, Archived: s.Archived, Stars: int32(s.Stars),

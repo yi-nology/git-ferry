@@ -107,29 +107,32 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 	}
 	// 空 state 交平台默认(通常 open+closed 或 open)
 	st := sdkprov.IssueState(state)
-	out := []*issueRow{}
 	const perPage = 50
-	for page := 1; len(out) < max; page++ {
-		batch, _, err := im.ListIssues(ctx, sdkprov.ListIssuesOptions{
-			Owner:   repo.PlatformOwner,
-			Repo:    repo.PlatformRepo,
-			State:   st,
-			Page:    page,
-			PerPage: perPage,
+	// 页数上限 = 拉满 max 条所需页;ListAllPages 末页截断 + 再按 max 截断。
+	maxPages := (max + perPage - 1) / perPage
+	if maxPages < 1 {
+		maxPages = 1
+	}
+	batch, err := sdkprov.ListAllPages(ctx, perPage, maxPages,
+		func(ctx context.Context, page, perPage int) ([]*sdkprov.Issue, error) {
+			items, _, lerr := im.ListIssues(ctx, sdkprov.ListIssuesOptions{
+				Owner:   repo.PlatformOwner,
+				Repo:    repo.PlatformRepo,
+				State:   st,
+				Page:    page,
+				PerPage: perPage,
+			})
+			return items, lerr
 		})
-		if err != nil {
-			return out, err
-		}
-		for _, iss := range batch {
-			row := toIssueRow(iss)
-			out = append(out, row)
-			if len(out) >= max {
-				return out, nil
-			}
-		}
-		if len(batch) < perPage {
-			break
-		}
+	if err != nil {
+		return nil, err
+	}
+	if len(batch) > max {
+		batch = batch[:max]
+	}
+	out := make([]*issueRow, 0, len(batch))
+	for _, iss := range batch {
+		out = append(out, toIssueRow(iss))
 	}
 	return out, nil
 }

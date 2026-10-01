@@ -8,9 +8,9 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/git-ferry/internal/githubapi"
 	"github.com/yi-nology/git-ferry/internal/orgmap"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // ResolveOrgTarget POST /api/v1/ops/resolve-org-target
@@ -96,23 +96,46 @@ func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 		max = 100
 	}
 
-	// GitHub 走匿名列仓（gitea-mirror public mode）；其它平台回落全量导入
+	// GitHub 走列仓+客户端过滤公开仓；其它平台回落全量导入
 	items := []map[string]any{}
 	warnings := []string{}
-	if githubapi.IsGitHub(plat.Type) {
-		repos, err := githubapi.ListPublicOrgRepos(ctx, plat.APIURL, plat.AccessToken, req.Org, max)
-		if err != nil {
-			response.InternalError(c, err.Error())
+	if plat.Type == corebridge.PlatformTypeGitHub {
+		prov, perr := newIssueProvider(plat, "")
+		if perr != nil {
+			response.InternalError(c, perr.Error())
 			return
 		}
-		for i := range repos {
-			r := &repos[i]
+		// RepoManager.ListRepos(Owner=org) 无 type=public 参数，
+		// 分页拉取后客户端过滤私有仓；拉到 max 条公开仓为止。
+		perPage := sdkprov.MaxPerPage
+		maxPages := 100 // 安全阀：平台忽略 page 参数时防无限翻页
+		publics := []*sdkprov.PlatformRepo{}
+		for page := 1; len(publics) < max && page <= maxPages; page++ {
+			batch, lerr := prov.ListRepos(ctx, sdkprov.ListRepoOptions{Owner: req.Org, Page: page, PerPage: perPage})
+			if lerr != nil {
+				response.InternalError(c, lerr.Error())
+				return
+			}
+			for _, r := range batch {
+				if r.Private {
+					continue
+				}
+				publics = append(publics, r)
+			}
+			if len(batch) < perPage {
+				break
+			}
+		}
+		if len(publics) > max {
+			publics = publics[:max]
+		}
+		for _, r := range publics {
 			items = append(items, map[string]any{
 				"full_name": r.FullName, "clone_url": r.CloneURL,
 				"fork": r.Fork, "archived": r.Archived, "stars": r.Stars,
 			})
 		}
-		warnings = append(warnings, "匿名 GitHub API 60 req/h；大组织可能只拉到部分元数据")
+		warnings = append(warnings, "按平台凭证列取组织公开仓；大组织可能只拉到部分元数据")
 	}
 
 	filter := &corebridge.RepoImportFilter{

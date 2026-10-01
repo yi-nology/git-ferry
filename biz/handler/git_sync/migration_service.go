@@ -2,16 +2,15 @@ package git_sync
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/yi-nology/git-ferry/biz/model/ops"
-	"io"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // ExportGitHubMigration POST /api/v1/ops/migration
@@ -36,75 +35,47 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 		response.NotFound(c, "platform not found")
 		return
 	}
-	if !strings.EqualFold(plat.Type, "github") {
+	if plat.Type != corebridge.PlatformTypeGitHub {
 		response.BadRequest(c, "migration export only supports github platforms")
 		return
 	}
-
-	token := plat.AccessToken
-	if token == "" {
-		response.InternalError(c, "platform has no access token")
+	prov, perr := newIssueProvider(plat, "")
+	if perr != nil {
+		response.InternalError(c, perr.Error())
 		return
 	}
-	apiBase := strings.TrimRight(plat.APIURL, "/")
-	if apiBase == "" {
-		apiBase = "https://api.github.com"
+	if !prov.Capabilities().Migrations {
+		response.BadRequest(c, "platform does not support migrations")
+		return
 	}
+	mm := prov.(sdkprov.MigrationManager)
 
-	var migURL string
-	if optStr(req.Org) != "" {
-		migURL = apiBase + "/orgs/" + optStr(req.Org) + "/migrations"
-	} else {
-		migURL = apiBase + "/user/migrations"
-	}
-
-	body, _ := json.Marshal(map[string]any{
-		"lock_repositories": true,
-		"exclude_metadata":  false,
+	// org=="" 用户级(/user/migrations),非空组织级(/orgs/{org}/migrations)。
+	org := optStr(req.Org)
+	info, err := mm.CreateMigration(ctx, org, sdkprov.CreateMigrationOptions{
+		LockRepositories: true,
+		ExcludeMetadata:  false,
 	})
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, migURL, strings.NewReader(string(body)))
 	if err != nil {
-		response.InternalError(c, err.Error())
+		response.InternalError(c, migrationCreateErrText(err))
 		return
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+token)
-	httpReq.Header.Set("Accept", "application/vnd.github+json")
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(httpReq)
-	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-	defer func() { _ = resp.Body.Close() }()
-	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode >= 300 {
-		response.InternalError(c, fmt.Sprintf("github migration create failed: status %d", resp.StatusCode))
-		return
-	}
-
-	var parsed struct {
-		ID         int64  `json:"id"`
-		State      string `json:"state"`
-		ArchiveURL string `json:"archive_url"`
-	}
-	_ = json.Unmarshal(raw, &parsed)
 
 	recordAudit(ctx, c, "export_migration", "platform", req.PlatformKey,
-		fmt.Sprintf("发起 GitHub Migration 导出 org=%s", optStr(req.Org)))
+		fmt.Sprintf("发起 GitHub Migration 导出 org=%s", org))
 
 	result := map[string]any{
-		"migration_id": parsed.ID,
-		"state":        parsed.State,
-		"archive_url":  parsed.ArchiveURL,
+		"migration_id": info.ID,
+		"state":        info.State,
+		"archive_url":  info.ArchiveURL,
 		"note":         "GitHub 异步生成归档;稍后用 GET /user/migrations/{id} 查询,archive_url 可下载 tar.gz",
 	}
 
-	// wait=true 时轮询到 completed(最多 60s)
-	if optBool(req.Wait) && parsed.ID != 0 {
+	// wait=true 时轮询到 completed(最多 60s);轮询节奏留在壳层。
+	if optBool(req.Wait) && info.ID != 0 {
 		for i := 0; i < 12; i++ {
 			time.Sleep(5 * time.Second)
-			if done := pollMigration(ctx, apiBase, token, optStr(req.Org), parsed.ID); done != nil {
+			if done := pollMigration(ctx, mm, org, info.ID); done != nil {
 				result["state"] = done.State
 				result["archive_url"] = done.ArchiveURL
 				break
@@ -115,33 +86,24 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, result)
 }
 
-type migrationState struct {
-	State      string `json:"state"`
-	ArchiveURL string `json:"archive_url"`
+// migrationCreateErrText 近似原手写文案 "github migration create failed: status %d":
+// 平台错误带 HTTP status 时按原格式,否则透出平台错误串。
+func migrationCreateErrText(err error) string {
+	var pe *sdkprov.ProviderError
+	if errors.As(err, &pe) && pe.StatusCode != 0 {
+		return fmt.Sprintf("github migration create failed: status %d", pe.StatusCode)
+	}
+	return "github migration create failed: " + err.Error()
 }
 
-func pollMigration(ctx context.Context, apiBase, token, org string, id int64) *migrationState {
-	u := fmt.Sprintf("%s/user/migrations/%d", apiBase, id)
-	if org != "" {
-		u = fmt.Sprintf("%s/orgs/%s/migrations/%d", apiBase, org, id)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, http.NoBody)
+// pollMigration 查一次迁移状态;exported/failed 终态才返回(否则 nil 继续轮询)。
+func pollMigration(ctx context.Context, mm sdkprov.MigrationManager, org string, id int64) *sdkprov.MigrationInfo {
+	mi, err := mm.GetMigration(ctx, org, id)
 	if err != nil {
 		return nil
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil
-	}
-	defer func() { _ = resp.Body.Close() }()
-	var st migrationState
-	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
-		return nil
-	}
-	if st.State == "exported" || st.State == "failed" {
-		return &st
+	if mi.State == "exported" || mi.State == "failed" {
+		return mi
 	}
 	return nil
 }

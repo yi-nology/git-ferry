@@ -27,6 +27,10 @@ func main() {
 
 	serve.SetupLogger(shellCfg.Log.Level, shellCfg.Log.Format)
 
+	// 限流指标钩子随 provider 构造固化,必须先于 core service 初始化装配
+	// (Start/首个请求都可能创建 provider)。
+	git_sync.InstallProviderHooks()
+
 	syncSvc, err := corebridge.NewService(shellCfg.Config)
 	if err != nil {
 		serve.ExitOnFail("init sync service failed", err)
