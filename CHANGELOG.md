@@ -4,8 +4,7 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
-> 依赖 git-ferry-core **未发布版本**（本地 `go.work` 指向同级源码；发版需 core 先打 tag
-> 再把本仓 `go.mod` 升上去）+ go-git-platform **v0.76.0**。
+> 依赖 git-ferry-core **v0.9.1** + go-git-platform **v0.76.0**。
 
 ### Changed
 
@@ -45,6 +44,11 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   而编排与 executor 都按 glob 语义使用 `SourceBranch: "*"`（core 侧已放行 `*?[]`）。
 - 健康评分/盘点等 N+1 查询改由 core 批量化接口承接（`HealthSnapshot` 保留原有
   8 并发 fan-out 语义）。
+
+### Changed（续）
+
+- **`biz/serve` 日志与失败退出转发 core `pkg/proclog`**：消除与内网壳的逐字重复
+  （`SetupLogger`/`ExitOnFail` 保持原导出名，调用方零改动）。
 
 ### Tests
 

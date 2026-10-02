@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"runtime/debug"
 	"syscall"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
 	"github.com/oklog/run"
+	"github.com/yi-nology/git-ferry-core/pkg/proclog"
 	"github.com/yi-nology/git-ferry/biz/router"
 )
 
@@ -122,29 +122,10 @@ func Run(h *server.Hertz, cleanup func()) error {
 
 // ExitOnFail 打日志并退出进程，供壳层 main 使用。
 func ExitOnFail(msg string, err error) {
-	slog.Error(msg, "error", err)
-	os.Exit(1)
+	proclog.ExitOnFail(msg, err)
 }
 
-// SetupLogger 按 level/format 配置默认 slog（debug|info|warn|error × json|text）。
+// SetupLogger 按 level/format 配置默认 slog；实现在 core pkg/proclog（两壳共用）。
 func SetupLogger(level, format string) {
-	var logLevel slog.Level
-	switch level {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
-	default:
-		logLevel = slog.LevelInfo
-	}
-
-	var h slog.Handler
-	if format == "text" {
-		h = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
-	} else {
-		h = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
-	}
-	slog.SetDefault(slog.New(h))
+	proclog.Setup(level, format)
 }

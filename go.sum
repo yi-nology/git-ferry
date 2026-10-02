@@ -364,8 +364,8 @@ github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/yargevad/filepathx v1.0.0 h1:SYcT+N3tYGi+NvazubCNlvgIPbzAk7i7y2dwg3I5FYc=
 github.com/yargevad/filepathx v1.0.0/go.mod h1:BprfX/gpYNJHJfc35GjRRpVcwWXS89gGulUIU5tK3tA=
-github.com/yi-nology/git-ferry-core v0.9.0 h1:9M9eOUHVCZTBmQpp6D611MQiYfDaJd7mq7kcgsmIAM0=
-github.com/yi-nology/git-ferry-core v0.9.0/go.mod h1:oaF3ahoO62cDx6MsKgFgRuRalZ3T1s0fUyDbFjL3rUI=
+github.com/yi-nology/git-ferry-core v0.9.1 h1:LqhBAhSlQgBA8j5w03L+8AZpMRzswDyfvRY+gk+QciI=
+github.com/yi-nology/git-ferry-core v0.9.1/go.mod h1:oaF3ahoO62cDx6MsKgFgRuRalZ3T1s0fUyDbFjL3rUI=
 github.com/yi-nology/go-git-platform v0.76.0 h1:+h1LPvhPf/eEBfk7omMav1t57aukM9/q5Jp4mv/W0t0=
 github.com/yi-nology/go-git-platform v0.76.0/go.mod h1:Y7j9TsmBgnykLbUtFPwXT7P2ZCUyhKjeZvSOvxVcG7M=
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
