@@ -27,15 +27,21 @@ func backupGists(ctx context.Context, prov sdkprov.Provider, destDir string, max
 	}
 	perPage := sdkprov.MaxPerPage
 	maxPages := (maxGists + perPage - 1) / perPage
-	gists, err := sdkprov.ListAllPages(ctx, perPage, maxPages,
-		func(ctx context.Context, page, perPage int) ([]*sdkprov.Gist, error) {
+	// 空页终止 + 到 max 即 ErrStopIteration;预算 +1 页用于观测空页。
+	var gists []*sdkprov.Gist
+	err = sdkprov.EachBounded(ctx,
+		func(ctx context.Context, page int) ([]*sdkprov.Gist, error) {
 			return gm.ListMyGists(ctx, page, perPage)
+		}, maxPages+1,
+		func(g *sdkprov.Gist) error {
+			if len(gists) >= maxGists {
+				return sdkprov.ErrStopIteration
+			}
+			gists = append(gists, g)
+			return nil
 		})
 	if err != nil {
 		return 0, nil, err
-	}
-	if len(gists) > maxGists {
-		gists = gists[:maxGists]
 	}
 	if err := os.MkdirAll(destDir, 0o750); err != nil {
 		return 0, nil, err

@@ -108,13 +108,15 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 	// 空 state 交平台默认(通常 open+closed 或 open)
 	st := sdkprov.IssueState(state)
 	const perPage = 50
-	// 页数上限 = 拉满 max 条所需页;ListAllPages 末页截断 + 再按 max 截断。
+	// 页预算 = 拉满 max 所需页 +1 页空页观测(空页终止语义,v0.73 分页面);
+	// fn 内到 max 即 ErrStopIteration 提前收束,预算实际用不到。
 	maxPages := (max + perPage - 1) / perPage
 	if maxPages < 1 {
 		maxPages = 1
 	}
-	batch, err := sdkprov.ListAllPages(ctx, perPage, maxPages,
-		func(ctx context.Context, page, perPage int) ([]*sdkprov.Issue, error) {
+	var batch []*sdkprov.Issue
+	err := sdkprov.EachBounded(ctx,
+		func(ctx context.Context, page int) ([]*sdkprov.Issue, error) {
 			items, _, lerr := im.ListIssues(ctx, sdkprov.ListIssuesOptions{
 				Owner:   repo.PlatformOwner,
 				Repo:    repo.PlatformRepo,
@@ -123,12 +125,16 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 				PerPage: perPage,
 			})
 			return items, lerr
+		}, maxPages+1,
+		func(iss *sdkprov.Issue) error {
+			if len(batch) >= max {
+				return sdkprov.ErrStopIteration
+			}
+			batch = append(batch, iss)
+			return nil
 		})
 	if err != nil {
 		return nil, err
-	}
-	if len(batch) > max {
-		batch = batch[:max]
 	}
 	out := make([]*issueRow, 0, len(batch))
 	for _, iss := range batch {

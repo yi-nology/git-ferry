@@ -411,10 +411,14 @@ github.com/yi-nology/git-ferry-core v0.7.2 h1:fz9kwePmQNUv9V7z93SImVV26D7IimL4hJ
 github.com/yi-nology/git-ferry-core v0.7.2/go.mod h1:fdbMRlKA8gKf0YUJz0k0Tu785gcN4vtzZ1/rpk+Ttpk=
 github.com/yi-nology/git-ferry-core v0.8.0 h1:gdkdhuupSsJtx5U6aWzmWIgJ7rwS9FSdGYVKowND8C8=
 github.com/yi-nology/git-ferry-core v0.8.0/go.mod h1:qu2SMPKmC8dC5dxXtlz6Kt5Wj+Tf24ZjnuSt6UeAzFI=
+github.com/yi-nology/git-ferry-core v0.8.1 h1:JhwwvqKQ5hB4YHAZ/QVlz0TB3fuJkF6ih4PpmGVrnU0=
+github.com/yi-nology/git-ferry-core v0.8.1/go.mod h1:jez61QUpMpt7OWCn1uZPdRoLfcYT35yFIV/Ny5x6+dc=
 github.com/yi-nology/go-git-platform v0.68.2 h1:UFklNqQo5tmdiWd1QG2gOHghO55Gqais3fSlhbpn2c8=
 github.com/yi-nology/go-git-platform v0.68.2/go.mod h1:3Uj68XtdBuiRHR+qZx8cyUn9iN10gAIeTWeRGdaOcjU=
 github.com/yi-nology/go-git-platform v0.72.0 h1:ACyIr11X8plZioI7eMO5hlGOZv70Rdcnm5wXwzHC2tQ=
 github.com/yi-nology/go-git-platform v0.72.0/go.mod h1:Y7j9TsmBgnykLbUtFPwXT7P2ZCUyhKjeZvSOvxVcG7M=
+github.com/yi-nology/go-git-platform v0.75.0 h1:MtVPZYLeIiHHaLa1hqzjzq+sD4pwB+TYfsGb17sYdeo=
+github.com/yi-nology/go-git-platform v0.75.0/go.mod h1:Y7j9TsmBgnykLbUtFPwXT7P2ZCUyhKjeZvSOvxVcG7M=
 github.com/yi-nology/go-gitcode v0.7.2 h1:ULEoYgRzhLXBlvZAfj7/9yP9F9pTqHL5vpNebiZcSr8=
 github.com/yi-nology/go-gitcode v0.7.2/go.mod h1:YE9snaa9ChVY7FoPj/4huVDkVNJaI/gpxHcWgNNGYls=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

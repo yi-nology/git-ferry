@@ -89,7 +89,8 @@ func TestBackupGists_DefaultMaxAndNoCapability(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support gists")
 
-	// 默认上限 200:1 页 100 条 + 第 2 页不足一页 → 2 页拉全
+	// 默认上限 200:1 页 100 条 + 第 2 页 1 条(短页≠末页)→ 第 3 页观测到
+	// 空页才终止(v0.73 起空页终止语义,防服务端压缩页大小时提前停)
 	page1 := make([]*sdkprov.Gist, 100)
 	for i := range page1 {
 		page1[i] = &sdkprov.Gist{ID: fmt.Sprintf("g-%03d", i)}
@@ -101,7 +102,7 @@ func TestBackupGists_DefaultMaxAndNoCapability(t *testing.T) {
 	count, _, err := backupGists(t.Context(), prov2, t.TempDir(), 0)
 	require.NoError(t, err)
 	assert.Equal(t, 101, count)
-	assert.Equal(t, []int{1, 2}, prov2.gistCalls)
+	assert.Equal(t, []int{1, 2, 3}, prov2.gistCalls)
 }
 
 // TestDownloadReleaseAssets_ReusesReleases 迁自原附件下载断言:复用已取到的
