@@ -2,7 +2,7 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.20.4] - 2026-10-02
 
 > 依赖 git-ferry-core **v0.8.1** + go-git-platform **v0.75.0**。
 
@@ -12,6 +12,8 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   `provider.EachBounded` + 到上限即 `ErrStopIteration`（`ListAllPages` 已被
   平台删除）。空页终止语义：短页≠末页（防服务端压缩页大小时提前停），
   页预算 +1 页用于观测空页。
+- **CI**：`actions/setup-node` v4→v7（消除 Node 20 运行时弃用警告），
+  构建 Node 20（EOL）→ 22。
 
 ## [v1.20.3] - 2026-10-02
 
