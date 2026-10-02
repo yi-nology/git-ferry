@@ -50,8 +50,10 @@ type OIDCSettings struct {
 
 // RunWatchSettings 对应 yaml runwatch 段,main 启动时转成 runwatch.Config。
 type RunWatchSettings struct {
-	IntervalSeconds int `yaml:"interval_seconds"`
-	HistoryLimit    int `yaml:"history_limit"`
+	// Mode 事件源：event(默认，订阅 core 完成事件) | poll(轮询兜底)
+	Mode            string `yaml:"mode"`
+	IntervalSeconds int    `yaml:"interval_seconds"`
+	HistoryLimit    int    `yaml:"history_limit"`
 	Retry           struct {
 		MaxAutoRetries  int `yaml:"max_auto_retries"`
 		CooldownMinutes int `yaml:"cooldown_minutes"`

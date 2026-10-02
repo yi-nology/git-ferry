@@ -433,14 +433,14 @@ This is the **public shell** in a three-repo architecture; it depends on the eng
 
 | Repository | Import path | Role |
 |------------|-------------|------|
-| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-ferry-core` | Sync engine library (no HTTP) |
+| [git-ferry-core](https://github.com/yi-nology/git-ferry-core) | `github.com/yi-nology/git-ferry-core` | Sync engine library (no HTTP) |
 | **git-ferry** (this repo) | `github.com/yi-nology/git-ferry` | Public shell: hz API + Vue + CLI |
-| [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | Intranet shell (gateway/SSO auth) |
+| [git-ferry-intranet](https://github.com/yi-nology/git-ferry-intranet) | `github.com/yi-nology/git-ferry-intranet` | Intranet shell (gateway/SSO auth) |
 
 Single-repo build works (`git clone` + `go build`). Local core workspace:
 
 ```bash
-go work init . ../git-sync-core   # do not commit go.work / replace
+go work init . ../git-ferry-core   # do not commit go.work / replace
 ```
 
 ### Architecture
@@ -459,7 +459,7 @@ flowchart TB
     MCP[mcp server]
     GW[git-serve read-only]
   end
-  subgraph Engine git-sync-core
+  subgraph Engine git-ferry-core
     EX[executor sync/cold backup]
     SVC[service task/platform/gov]
   end

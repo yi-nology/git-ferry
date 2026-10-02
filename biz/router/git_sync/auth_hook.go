@@ -36,7 +36,7 @@ func ResolveAuthMiddleware() app.HandlerFunc {
 }
 
 // DefaultAPIKeyAuthMiddleware 校验 X-API-Key（常量时间比较）。
-// API Key 由壳层注入（handler.SetAPIKey），不经过 git-sync-core。
+// API Key 由壳层注入（handler.SetAPIKey），不经过 git-ferry-core。
 // 服务端 API Key 为空时拒绝全部请求。
 // 角色:环境变量 GIT_SYNC_API_KEY_ROLE 指定(默认 admin,兼容旧行为)。
 func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {

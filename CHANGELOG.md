@@ -2,6 +2,56 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+> 依赖 git-ferry-core **未发布版本**（本地 `go.work` 指向同级源码；发版需 core 先打 tag
+> 再把本仓 `go.mod` 升上去）+ go-git-platform **v0.76.0**。
+
+### Changed
+
+- **业务引擎全面下沉 core**（分层整改批次 1–3，详见根目录 `DESIGN.md`）：
+  - metadata 备份/回灌引擎 → core `BackupMetadata`/`RestoreMetadata`；
+    壳 `metadata_service.go` 327→110、`metadata_restore.go` 505→77、`metabackup.go` 删除。
+  - health 评分引擎整包迁 core（`internal/health` → `git-ferry-core/health`），
+    评分走 `Service.HealthSnapshot`。
+  - trends / todo / 资产盘点 → core `OpsTrends`/`OpsTodo`/`RepoInventory`。
+  - 模板库与预览套用 → core（`Service.Templates/PreviewTemplate/ApplyTemplate`）。
+  - force-push 审批存储 → core `ForcePushStore`，执行器默认回调 core 存储，
+    壳只留 HTTP 端点与操作者身份。
+  - 组织导入/组织镜像编排 → core `ImportPublicOrg`/`BulkMirrorOrg`/`ListStarredRepos`。
+  - 密钥生成 → core `pkg/deploykey`。
+  - 壳 `biz/handler/git_sync` **8263 → 6609 行**（-1654），`internal/` 下
+    `health`/`orgmap`/`tpl` 三包迁出。
+- **runwatch 改事件驱动**：默认订阅 core `SubscribeRuns` 完成事件（`runwatch.mode:
+  event`），轮询保留为兜底（`mode: poll`）；失败自动重跑次数/冷却判定下沉 core
+  `RetryTracker`。
+- **错误映射统一**：新增 `response.FromError`（按 core `Classify` 选状态码），
+  7 处 `errors.Is(Err*NotFound)` 分支收敛。
+- **装配时序**：`main.go` 改 `corebridge.NewService(cfg, WithProviderHooks(...))`，
+  不再依赖「先调 InstallProviderHooks 再 NewService」的隐式顺序。
+- **依赖**：go-git-platform v0.75.0 → **v0.76.0**（本地与发布态对齐）。
+- 旧名清洗：文档/注释/脚本中 `git-sync-core`/`git-sync-service`/`git-sync-intranet`
+  → `git-ferry*`；`script/bootstrap.sh` 并入 `scripts/` 并修正失效的二进制名。
+
+### Removed
+
+- `internal/health`、`internal/orgmap`、`internal/tpl`（业务规则迁 core）。
+- 壳内 `ShellForcePushApprover` 的文件读写实现（改调 core 存储）。
+- `metabackup.go` / `org_mirror_helpers_test.go`（逻辑与断言随迁 core）。
+
+### Fixed
+
+- **组织导入/组织镜像「建任务」恒失败**：core `CreateTask` 的分支名校验拒绝 `*`，
+  而编排与 executor 都按 glob 语义使用 `SourceBranch: "*"`（core 侧已放行 `*?[]`）。
+- 健康评分/盘点等 N+1 查询改由 core 批量化接口承接（`HealthSnapshot` 保留原有
+  8 并发 fan-out 语义）。
+
+### Tests
+
+- 新增 `metadata_http_test`、`org_bulk_http_test`（响应逐字 JSON + 错误文案锁定）；
+  壳全量 `go test ./...` 与 `make lint` 全绿；`cmd/apidoc` 重新生成后
+  `docs/openapi.json` **零差异**。
+
 ## [v1.20.4] - 2026-10-02
 
 > 依赖 git-ferry-core **v0.8.1** + go-git-platform **v0.75.0**。

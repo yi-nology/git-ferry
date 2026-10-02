@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yi-nology/git-ferry/internal/health"
+	"github.com/yi-nology/git-ferry-core/health"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 

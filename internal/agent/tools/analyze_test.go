@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yi-nology/git-ferry/internal/health"
+	"github.com/yi-nology/git-ferry-core/health"
 )
 
 func TestWeakDimensionNames(t *testing.T) {

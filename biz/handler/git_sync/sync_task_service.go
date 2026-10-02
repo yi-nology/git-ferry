@@ -2,7 +2,6 @@ package git_sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -111,11 +110,7 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
 	})
 	if err != nil {
-		if errors.Is(err, corebridge.ErrTaskNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 	recordAudit(ctx, c, "update", "task", t.Key, "更新同步任务 "+t.Key)

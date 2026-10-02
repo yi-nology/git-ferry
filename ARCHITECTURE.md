@@ -9,28 +9,28 @@
 
 | 仓库 | Import path | 角色 | 开源策略 |
 |------|-------------|------|----------|
-| `git-sync-core` | `github.com/yi-nology/git-sync-core` | 同步引擎（无 HTTP） | 公网开源 |
+| `git-ferry-core` | `github.com/yi-nology/git-ferry-core` | 同步引擎（无 HTTP） | 公网开源 |
 | `git-ferry`（本仓） | `github.com/yi-nology/git-ferry` | 公网壳：hz API + Vue | 公网开源 |
-| `git-sync-intranet` | `github.com/yi-nology/git-sync-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
+| `git-ferry-intranet` | `github.com/yi-nology/git-ferry-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
 
-本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-sync-core v0.2.0`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
+本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-ferry-core v0.8.1`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
 
 ```
 模式 A: 公网独立服务                 模式 B: 作为库              模式 C: 内网壳
 ┌────────────────────────┐      ┌──────────────────────┐   ┌────────────────────────┐
-│ git-ferry       │      │  git-manage-service  │   │ git-sync-intranet      │
+│ git-ferry       │      │  git-manage-service  │   │ git-ferry-intranet      │
 │  main / biz / frontend │      │  ┌────────────────┐  │   │  auth(proxy/SSO hook)  │
 │         │              │      │  │  自有 handler  │  │   │  main                  │
 │         ▼              │      │  └───────┬────────┘  │   │    │                   │
-│  git-sync-core         │◄─────┤          ▼           │   │    ▼                   │
-│  model/service/…       │      │  git-sync-core       │   │  biz/serve（复用路由）  │
+│  git-ferry-core         │◄─────┤          ▼           │   │    ▼                   │
+│  model/service/…       │      │  git-ferry-core       │   │  biz/serve（复用路由）  │
 │         │              │      └──────────────────────┘   │    │                   │
 │         ▼              │                                 │    ▼                   │
-│  git-platform-sdk      │                                 │  git-sync-core         │
+│  git-platform-sdk      │                                 │  git-ferry-core         │
 └────────────────────────┘                                 └────────────────────────┘
 ```
 
-内网差异只放在 `git-sync-intranet/auth`（`SetAuthMiddlewareProvider`）与配置默认值，不复制业务逻辑。
+内网差异只放在 `git-ferry-intranet/auth`（`SetAuthMiddlewareProvider`）与配置默认值，不复制业务逻辑。
 
 ### 1.3 设计原则
 
@@ -38,7 +38,7 @@
 |------|------|
 | **完全独立** | core 不依赖壳与 git-manage-service，自包含数据模型 |
 | **单一依赖** | core 只依赖 git-platform-sdk 做 Git 平台操作 |
-| **可复用库** | 独立仓 `git-sync-core`，外部 `require github.com/yi-nology/git-sync-core` |
+| **可复用库** | 独立仓 `git-ferry-core`，外部 `require github.com/yi-nology/git-ferry-core` |
 | **壳不渗入** | hz handler / response / converter / version 留在本仓 |
 | **hz 标准** | HTTP 层遵循 hz IDL 代码生成规范 |
 
@@ -67,13 +67,13 @@
 
 ```
 my_project/
-├── git-sync-core/                   # 同步引擎库（独立仓）
-│   ├── go.mod                       # github.com/yi-nology/git-sync-core
+├── git-ferry-core/                   # 同步引擎库（独立仓）
+│   ├── go.mod                       # github.com/yi-nology/git-ferry-core
 │   ├── sync.go                      # 库入口 (package sync)
 │   ├── model/  service/  executor/  dao/  lock/
 │
 ├── git-ferry/                # 本仓：公网壳
-│   ├── go.mod                       # require git-sync-core v0.1.0（无 replace）
+│   ├── go.mod                       # require git-ferry-core v0.1.0（无 replace）
 │   ├── main.go
 │   ├── router.go / router_gen.go
 │   ├── biz/
@@ -86,7 +86,7 @@ my_project/
 │   ├── idl/
 │   └── conf/config.yaml
 │
-└── git-sync-intranet/               # 内网壳（独立仓）
+└── git-ferry-intranet/               # 内网壳（独立仓）
     ├── go.mod                       # require core + service；本地联调可用 replace
     ├── main.go
     ├── auth/                        # proxy 头 / API Key / SSO 钩子
@@ -98,7 +98,7 @@ my_project/
 ### 3.1 对外暴露的接口
 
 ```go
-// core/sync.go - 核心库入口（仓 git-sync-core）
+// core/sync.go - 核心库入口（仓 git-ferry-core）
 
 package sync
 
@@ -170,7 +170,7 @@ func (s *Service) Stop()
 
 ```go
 // main.go（壳）
-import synccore "github.com/yi-nology/git-sync-core"
+import synccore "github.com/yi-nology/git-ferry-core"
 
 cfg, _ := synccore.LoadConfig("conf/config.yaml")
 svc, _ := synccore.NewService(cfg)
@@ -180,7 +180,7 @@ svc, _ := synccore.NewService(cfg)
 
 ```go
 // 外部项目（如 git-manage-service）
-import synccore "github.com/yi-nology/git-sync-core"
+import synccore "github.com/yi-nology/git-ferry-core"
 
 cfg := &synccore.Config{
     Database: synccore.DatabaseConfig{

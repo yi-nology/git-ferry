@@ -6,23 +6,22 @@ import (
 	"strconv"
 	"time"
 
-	coreservice "github.com/yi-nology/git-ferry-core/service"
 	"github.com/yi-nology/git-ferry/internal/metrics"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
-// InstallProviderHooks 装配 core provider 生命周期钩子(平台 API 限流指标)。
-// 必须在任何 provider 创建之前调用(main 启动早期 / 测试 TestMain)——
-// 钩子随 provider 构造固化,后装对已缓存的 provider 不生效。
+// ProviderHooks 返回 core provider 生命周期钩子(平台 API 限流指标)。
+// 经 corebridge.WithProviderHooks 传入 NewService,钩子随 provider 构造固化,
+// 不再依赖"先于 core 初始化调用"的时序约定。
 //
 // 平台 transport 已接管 429/5xx 及 403+X-RateLimit-Remaining=0 的退避重试;
 // 这里只负责观测:每次响应命中限流特征即记一次
 // gitferry_api_ratelimit_total(含重试的每次尝试,与原 githubapi.Throttler
 // "每次退避打点"近似)。
-func InstallProviderHooks() {
-	coreservice.SetProviderHooks(&sdkprov.Hooks{
+func ProviderHooks() *sdkprov.Hooks {
+	return &sdkprov.Hooks{
 		Response: []sdkprov.ResponseHook{rateLimitResponseHook},
-	})
+	}
 }
 
 func rateLimitResponseHook(_ context.Context, req *http.Request, resp *http.Response, _ time.Duration, _ error) {

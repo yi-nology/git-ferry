@@ -13,7 +13,6 @@ import (
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/notify"
 	"github.com/yi-nology/git-ferry/internal/runwatch"
-	"github.com/yi-nology/git-ferry/internal/tpl"
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
 	_ "github.com/yi-nology/go-git-platform/backends/all"
@@ -27,11 +26,11 @@ func main() {
 
 	serve.SetupLogger(shellCfg.Log.Level, shellCfg.Log.Format)
 
-	// 限流指标钩子随 provider 构造固化,必须先于 core service 初始化装配
-	// (Start/首个请求都可能创建 provider)。
-	git_sync.InstallProviderHooks()
-
-	syncSvc, err := corebridge.NewService(shellCfg.Config)
+	// provider 限流指标钩子与 force-push 审批器经 Option 传入，
+	// 随 core 构造一次性生效，不再依赖"先于 NewService 调用"的时序约定。
+	syncSvc, err := corebridge.NewService(shellCfg.Config,
+		corebridge.WithProviderHooks(git_sync.ProviderHooks()),
+	)
 	if err != nil {
 		serve.ExitOnFail("init sync service failed", err)
 	}
@@ -45,8 +44,8 @@ func main() {
 	})
 	git_sync.SetAPIKey(shellCfg.APIKey)
 	git_sync.SetAPIKeyRole(shellCfg.APIKeyRole)
-	// force-push 审批：block 策略分歧时登记 pending，Admin 放行后放行覆盖
-	syncSvc.SetForcePushApprover(git_sync.ShellForcePushApprover{})
+	// force-push 审批存储随 core NewService 建立（<backup_dir>/force-push-approvals.json），
+	// 执行器分歧保护默认回调该存储；HTTP 端点见 forcepush_approval.go。
 	if shellCfg.GitServe != nil {
 		git_sync.SetGitServe(shellCfg.GitServe.Enabled, shellCfg.GitServe.BasePath, shellCfg.GitServe.PublicRead)
 	}
@@ -138,12 +137,7 @@ func main() {
 		return nil
 	})
 
-	// 同步策略模板库(文件型,零 DB 迁移)
-	tplStore, err := tpl.Open("data/templates.json")
-	if err != nil {
-		serve.ExitOnFail("open template store failed", err)
-	}
-	git_sync.SetTplStore(tplStore)
+	// 同步策略模板库已随 core NewService 打开（cfg.Templates.Path，默认 data/templates.json）
 
 	// 通知矩阵 + 运行观察(失败补偿)
 	// notify 段在配置中缺省时 shellCfg.Notify 为 nil,取字段前先判空
@@ -156,6 +150,7 @@ func main() {
 	watchCfg := runwatch.Config{}
 	if shellCfg.RunWatch != nil {
 		watchCfg = runwatch.Config{
+			Mode:            shellCfg.RunWatch.Mode,
 			IntervalSeconds: shellCfg.RunWatch.IntervalSeconds,
 			HistoryLimit:    shellCfg.RunWatch.HistoryLimit,
 			Retry: runwatch.RetryConfig{

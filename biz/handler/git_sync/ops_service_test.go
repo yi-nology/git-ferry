@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
-	"github.com/yi-nology/git-ferry/internal/health"
+	"github.com/yi-nology/git-ferry-core/health"
 )
 
 func TestScoreLevelMapping(t *testing.T) {
@@ -33,16 +33,6 @@ func TestCSVEscape(t *testing.T) {
 func TestBoolFact(t *testing.T) {
 	assert.Equal(t, "true", textutil.BoolFact(true))
 	assert.Equal(t, "false", textutil.BoolFact(false))
-}
-
-func TestMatchToFilter(t *testing.T) {
-	f := matchToFilter(map[string][]string{
-		"include_globs": {"team-*"},
-		"exclude":       {"team-x"},
-	})
-	require.NotNil(t, f)
-	assert.True(t, f.Allow("team-a", "A"))
-	assert.False(t, f.Allow("team-x", "X"))
 }
 
 func TestGenerateDeployKey(t *testing.T) {

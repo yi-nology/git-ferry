@@ -14,10 +14,11 @@ require (
 	github.com/oklog/run v1.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.8.1
-	github.com/yi-nology/go-git-platform v0.75.0
+	github.com/yi-nology/git-ferry-core v0.9.0
+	github.com/yi-nology/go-git-platform v0.76.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
+	gorm.io/gorm v1.31.2
 )
 
 require (
@@ -136,7 +137,6 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
-	gorm.io/gorm v1.31.2 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect

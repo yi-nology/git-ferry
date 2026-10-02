@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/yi-nology/git-ferry-core/tpl"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/git-ferry/internal/tpl"
 )
 
 func setupOpsHTTP(t *testing.T) {
@@ -26,7 +26,7 @@ func setupOpsHTTP(t *testing.T) {
 	// 只注入独立模板库,避免用例间串扰。
 	st, err := tpl.Open(filepath.Join(t.TempDir(), "templates.json"))
 	require.NoError(t, err)
-	SetTplStore(st)
+	GetSyncService().SetTemplates(st)
 }
 
 func opsEngine() *hertzserver.Hertz {

@@ -2,7 +2,6 @@ package git_sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -67,11 +66,7 @@ func RepoGet(ctx context.Context, c *app.RequestContext) {
 
 	r, err := GetSyncService().GetRepo(ctx, req.Key)
 	if err != nil {
-		if errors.Is(err, corebridge.ErrRepoNotFound) {
-			response.NotFound(c, "repo not found")
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 	if r == nil {
@@ -134,11 +129,7 @@ func RepoUpdate(ctx context.Context, c *app.RequestContext) {
 		Key: req.Key, Name: req.Name, AccessToken: req.AccessToken,
 	})
 	if err != nil {
-		if errors.Is(err, corebridge.ErrRepoNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 	recordAudit(ctx, c, "update", "repo", r.Key, "更新仓库 "+r.Key)

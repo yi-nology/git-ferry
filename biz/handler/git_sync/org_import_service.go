@@ -8,9 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/git-ferry/internal/orgmap"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // ResolveOrgTarget POST /api/v1/ops/resolve-org-target
@@ -31,16 +29,20 @@ func ResolveOrgTarget(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "source_repo_key is required")
 		return
 	}
-	policy, err := orgmap.ParsePolicy(req.OrgMapping)
+	policy, err := corebridge.ParseOrgMapStrategy(req.OrgMapping)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	out, err := orgmap.Map(policy, &orgmap.Input{
-		SourceKey:       req.SourceRepoKey,
-		IsPersonal:      req.IsPersonal,
-		TargetNamespace: req.TargetOrg,
-		TargetPlatform:  req.TargetPlatform,
+	// 导入侧 single/flat 共用 target_org 作为落点，缺落点报错，mixed 组织仓保持源 owner。
+	out, err := corebridge.ResolveOrgTarget("", "", &corebridge.OrgMapOptions{
+		Strategy:         policy,
+		TargetOrg:        req.TargetOrg,
+		TargetUser:       req.TargetOrg,
+		SourceIsPersonal: req.IsPersonal,
+		RequireTarget:    true,
+		SourceKey:        req.SourceRepoKey,
+		TargetPlatform:   req.TargetPlatform,
 	})
 	if err != nil {
 		response.BadRequest(c, err.Error())
@@ -48,9 +50,9 @@ func ResolveOrgTarget(ctx context.Context, c *app.RequestContext) {
 	}
 	response.Success(c, map[string]any{
 		"policy":       string(policy),
-		"target_owner": out.TargetOwner,
-		"target_repo":  out.TargetRepo,
-		"target_key":   out.TargetKey,
+		"target_owner": out.Owner,
+		"target_repo":  out.Repo,
+		"target_key":   out.Key,
 	})
 }
 
@@ -70,6 +72,7 @@ type ImportPublicOrgReq struct {
 
 // ImportPublicOrg POST /api/v1/ops/import-public-org
 // 列出组织公开仓并可选建同步任务（默认只导入仓库记录）。
+// 编排在 core Service.ImportPublicOrg；壳做绑定、平台校验、审计与响应包装。
 func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 	var req ImportPublicOrgReq
 	if err := c.BindAndValidate(&req); err != nil {
@@ -95,102 +98,38 @@ func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 	if max <= 0 {
 		max = 100
 	}
-
-	// GitHub 走列仓+客户端过滤公开仓；其它平台回落全量导入
-	items := []map[string]any{}
-	warnings := []string{}
-	if plat.Type == corebridge.PlatformTypeGitHub {
-		prov, perr := newIssueProvider(plat, "")
-		if perr != nil {
-			response.InternalError(c, perr.Error())
-			return
-		}
-		// RepoManager.ListRepos(Owner=org) 无 type=public 参数，
-		// 分页拉取后客户端过滤私有仓；拉到 max 条公开仓为止。
-		perPage := sdkprov.MaxPerPage
-		maxPages := 100 // 安全阀：平台忽略 page 参数时防无限翻页
-		publics := []*sdkprov.PlatformRepo{}
-		for page := 1; len(publics) < max && page <= maxPages; page++ {
-			batch, lerr := prov.ListRepos(ctx, sdkprov.ListRepoOptions{Owner: req.Org, Page: page, PerPage: perPage})
-			if lerr != nil {
-				response.InternalError(c, lerr.Error())
-				return
-			}
-			for _, r := range batch {
-				if r.Private {
-					continue
-				}
-				publics = append(publics, r)
-			}
-			if len(batch) < perPage {
-				break
-			}
-		}
-		if len(publics) > max {
-			publics = publics[:max]
-		}
-		for _, r := range publics {
-			items = append(items, map[string]any{
-				"full_name": r.FullName, "clone_url": r.CloneURL,
-				"fork": r.Fork, "archived": r.Archived, "stars": r.Stars,
-			})
-		}
-		warnings = append(warnings, "按平台凭证列取组织公开仓；大组织可能只拉到部分元数据")
-	}
-
 	filter := &corebridge.RepoImportFilter{
 		ExcludeArchived: optBool(req.ExcludeArchived),
 		ExcludeForks:    optBool(req.ExcludeForks),
 		MinStars:        int(req.MinStars),
 	}
-	imported := 0
-	if !dryRun {
-		n, err := svc.SyncPlatformReposFiltered(ctx, req.PlatformKey, filter)
-		if err != nil {
-			response.InternalError(c, err.Error())
-			return
-		}
-		imported = n
+
+	res, err := svc.ImportPublicOrg(ctx, corebridge.PublicOrgImportRequest{
+		PlatformKey:    req.PlatformKey,
+		Org:            req.Org,
+		CreateTasks:    req.CreateTasks,
+		TargetPlatform: req.TargetPlatform,
+		TargetOrg:      req.TargetOrg,
+		Filter:         filter,
+		DryRun:         dryRun,
+		Max:            max,
+	})
+	if err != nil {
+		response.FromError(c, err)
+		return
 	}
 
-	createdTasks := 0
-	if !dryRun && req.CreateTasks {
-		repos, _, lerr := svc.ListRepos(ctx, 0, 200)
-		if lerr == nil {
-			for _, r := range repos {
-				if !strings.Contains(r.Key, "/"+req.Org+"/") && !strings.HasPrefix(r.Key, req.PlatformKey+"/"+req.Org+"/") {
-					continue
-				}
-				target := r.Key
-				if req.TargetOrg != "" {
-					if out, merr := orgmap.Map(orgmap.PolicySingle, &orgmap.Input{
-						SourceKey: r.Key, TargetNamespace: req.TargetOrg, TargetPlatform: req.TargetPlatform,
-					}); merr == nil {
-						target = out.TargetKey
-						if target == "" {
-							target = out.TargetOwner + "/" + out.TargetRepo
-						}
-					}
-				}
-				name := r.Name + "-mirror"
-				_, cerr := svc.CreateTask(ctx, &corebridge.CreateTaskRequest{
-					Name:          name,
-					SourceRepoKey: r.Key,
-					SourceBranch:  "*",
-					TargetRepoKey: target,
-					TargetBranch:  "*",
-					SyncMode:      "all",
-				})
-				if cerr == nil {
-					createdTasks++
-				}
-			}
-		}
+	items := make([]map[string]any, 0, len(res.Items))
+	for _, it := range res.Items {
+		items = append(items, map[string]any{
+			"full_name": it.FullName, "clone_url": it.CloneURL,
+			"fork": it.Fork, "archived": it.Archived, "stars": it.Stars,
+		})
 	}
-
+	warnings := append([]string{}, res.Warnings...)
 	if !dryRun {
 		recordAudit(ctx, c, "import_public_org", "platform", req.PlatformKey,
-			"导入公共组织 "+req.Org+" 仓库数="+strconv.Itoa(imported)+" 任务="+strconv.Itoa(createdTasks))
+			"导入公共组织 "+req.Org+" 仓库数="+strconv.Itoa(res.Imported)+" 任务="+strconv.Itoa(res.CreatedTasks))
 	} else {
 		warnings = append(warnings, "dry_run=true：未写入")
 	}
@@ -198,8 +137,8 @@ func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 		"org":           req.Org,
 		"dry_run":       dryRun,
 		"found":         len(items),
-		"imported":      imported,
-		"created_tasks": createdTasks,
+		"imported":      res.Imported,
+		"created_tasks": res.CreatedTasks,
 		"items":         items,
 		"warnings":      warnings,
 		"filter":        filter,

@@ -55,7 +55,7 @@ restart:
 	fi
 	@$(MAKE) run
 
-# 依赖 github.com/yi-nology/git-sync-core(go.mod,可从模块代理拉取)。
+# 依赖 github.com/yi-nology/git-ferry-core(go.mod,可从模块代理拉取)。
 # 本地改 core 时可用 go.work 或临时 replace,勿提交 replace。
 tidy:
 	@go mod tidy

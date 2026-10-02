@@ -2,14 +2,12 @@ package git_sync
 
 import (
 	"context"
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -54,7 +52,12 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 	}
 	metaCheck := map[string]any{}
 	if optBoolDefault(req.WithMetadata) {
-		metaCheck = sampleMetadataVerify(optStr(req.Name))
+		rep, verr := svc.SampleMetadataVerify(ctx, "", 5)
+		if verr != nil {
+			metaCheck = map[string]any{"ok": false, "reason": verr.Error()}
+		} else {
+			metaCheck = metadataVerifyMap(rep)
+		}
 	}
 	recordAudit(ctx, c, "dr_drill", "backup", optStr(req.Name), "灾备演练")
 	response.Success(c, map[string]any{
@@ -64,52 +67,17 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// sampleMetadataVerify 抽样比对元数据快照：清单存在、分片可解析、数量一致。
-func sampleMetadataVerify(bundleName string) map[string]any {
-	svc := GetSyncService()
-	if svc == nil || svc.BackupDir() == "" {
-		return map[string]any{"ok": false, "reason": "backup_dir not configured"}
+// metadataVerifyMap core 抽样校验报告 → 响应结构（与历史输出逐键一致：
+// backup_dir 未配置时仅 {ok,reason}，否则 {checked,ok,warnings}）。
+func metadataVerifyMap(rep corebridge.VerifyReport) map[string]any {
+	if rep.Reason != "" {
+		return map[string]any{"ok": false, "reason": rep.Reason}
 	}
-	root := filepath.Join(svc.BackupDir(), "metadata")
-	out := map[string]any{"checked": 0, "ok": true, "warnings": []string{}}
-	warns := []string{}
-	checked := 0
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || d.Name() != "manifest.json" {
-			return nil
-		}
-		checked++
-		data, rerr := os.ReadFile(path) //nolint:gosec // 内部备份路径
-		if rerr != nil {
-			warns = append(warns, path+": read")
-			return nil
-		}
-		var snap struct {
-			Counts map[string]int32 `json:"counts"`
-			Files  []string         `json:"files"`
-		}
-		if json.Unmarshal(data, &snap) != nil {
-			warns = append(warns, path+": manifest parse")
-			return nil
-		}
-		// 抽样：issues.json 存在且条数与 counts 对齐
-		if snap.Counts["issues"] > 0 {
-			issuesPath := filepath.Join(filepath.Dir(path), "issues.json")
-			if _, serr := os.Stat(issuesPath); serr != nil {
-				warns = append(warns, path+": issues.json missing")
-			}
-		}
-		if checked >= 5 {
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	out["checked"] = checked
-	out["warnings"] = warns
-	if len(warns) > 0 {
-		out["ok"] = false
+	return map[string]any{
+		"checked":  rep.Checked,
+		"ok":       rep.OK,
+		"warnings": rep.Warnings,
 	}
-	return out
 }
 
 // DrillHistory GET /api/v1/ops/dr-drill/history?limit=

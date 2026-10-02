@@ -2,7 +2,7 @@ package git_sync
 
 import "os"
 
-// 壳层 API Key（公网默认鉴权）。不进 git-sync-core。
+// 壳层 API Key（公网默认鉴权）。不进 git-ferry-core。
 // 启动时由 main 经 corebridge.LoadShellConfig 注入。
 
 var serverAPIKey string

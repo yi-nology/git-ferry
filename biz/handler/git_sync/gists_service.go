@@ -50,7 +50,7 @@ func BackupGists(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, perr.Error())
 		return
 	}
-	count, warnings, err := backupGists(ctx, prov, dest, int(req.MaxGists))
+	count, warnings, err := svc.BackupGists(ctx, prov, dest, int(req.MaxGists))
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return

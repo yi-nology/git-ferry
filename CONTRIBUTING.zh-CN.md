@@ -36,7 +36,7 @@ make build-cli    # CLI gitferry
 | `frontend/` | Vue 3 控制台 |
 | `idl/` | thrift IDL |
 
-同步引擎在 [git-sync-core](https://github.com/yi-nology/git-sync-core)，本仓以 Go module 依赖；联调未发布 core 用本地 `go.work`，**不要提交 `replace`**。
+同步引擎在 [git-ferry-core](https://github.com/yi-nology/git-ferry-core)，本仓以 Go module 依赖；联调未发布 core 用本地 `go.work`，**不要提交 `replace`**。
 
 ## 提交规范
 

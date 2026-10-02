@@ -3,13 +3,11 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // OrgMirror POST /api/v1/ops/org-mirror
@@ -28,10 +26,12 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 	if strategy == "" {
 		strategy = "preserve"
 	}
-	if strategy != "preserve" && strategy != "single" && strategy != "flat" && strategy != "mixed" {
+	parsed, err := corebridge.ParseOrgMapStrategy(strategy)
+	if err != nil {
 		response.BadRequest(c, "strategy must be preserve|single|flat|mixed")
 		return
 	}
+	strategy = string(parsed)
 	dryRun := optBoolDefault(req.DryRun)
 	createTasks := req.CreateTasks != nil && *req.CreateTasks
 
@@ -50,20 +50,23 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 1) 导入源平台仓库（可选）
-	if req.ImportNew != nil && *req.ImportNew {
-		_, _ = svc.SyncPlatformReposFiltered(ctx, req.SourcePlatform, &corebridge.RepoImportFilter{
-			ExcludeArchived: true,
-		})
-	}
-
-	// 2) 过滤出源 org 下的仓库
-	all, err := svc.ListReposByPlatform(ctx, req.SourcePlatform)
+	// 编排（过滤/映射/建仓/建任务/统计）在 core；壳保留校验、审计与响应包装。
+	bulk, err := svc.BulkMirrorOrg(ctx, corebridge.BulkMirrorRequest{
+		SourcePlatformKey: req.SourcePlatform,
+		SourceOrg:         req.SourceOrg,
+		TargetPlatform:    dstPlat,
+		Strategy:          corebridge.OrgMapStrategy(strategy),
+		TargetOrg:         req.GetTargetOrg(),
+		TargetUser:        req.GetTargetUser(),
+		ImportNew:         req.ImportNew != nil && *req.ImportNew,
+		CreateTasks:       createTasks,
+		DryRun:            dryRun,
+	})
 	if err != nil {
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
-	orgLower := strings.ToLower(req.SourceOrg)
+
 	result := &ops.OrgMirrorResp{
 		Strategy:  strategy,
 		SourceOrg: req.SourceOrg,
@@ -75,79 +78,15 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 	if result.Target == "" {
 		result.Target = req.GetTargetUser()
 	}
-
-	for _, r := range all {
-		if !strings.EqualFold(r.PlatformOwner, req.SourceOrg) {
-			continue
-		}
-		_ = orgLower
-		srcName := r.PlatformOwner + "/" + r.PlatformRepo
-		tOwner, tRepo := resolveOrgTarget(strategy, r.PlatformOwner, r.PlatformRepo, req.GetTargetOrg(), req.GetTargetUser())
-		tName := tOwner + "/" + tRepo
-		item := &ops.OrgMirrorItem{Source: srcName, Target: tName}
-		result.Planned++
-
-		if dryRun {
-			item.Action = "planned"
-			result.Items = append(result.Items, item)
-			continue
-		}
-
-		// 3) 目标仓登记（按 clone URL；已存在则跳过创建）
-		tURL := rewriteRepoURL(r.CloneURL, tOwner, tRepo)
-		if tURL == "" {
-			tURL = rewriteRepoURL(dstPlat.InstanceURL, tOwner, tRepo)
-		}
-		tRepoRec, terr := svc.CreateRepo(ctx, &corebridge.CreateRepoRequest{
-			Name:        tName,
-			RemoteURL:   tURL,
-			PlatformID:  dstPlat.ID,
-			AccessToken: r.AccessToken,
+	result.Planned = int32(bulk.Planned)
+	result.Imported = int32(bulk.Imported)
+	result.TasksCreated = int32(bulk.TasksCreated)
+	for _, it := range bulk.Items {
+		result.Items = append(result.Items, &ops.OrgMirrorItem{
+			Source: it.Source, Target: it.Target, Action: it.Action, Message: it.Message,
 		})
-		if terr != nil {
-			// 已存在等错误：尝试按名称找
-			item.Action = "skipped"
-			item.Message = terr.Error()
-			result.Items = append(result.Items, item)
-			result.Warnings = append(result.Warnings, tName+": "+terr.Error())
-			continue
-		}
-		result.Imported++
-
-		if !createTasks {
-			item.Action = "imported"
-			result.Items = append(result.Items, item)
-			continue
-		}
-
-		// 4) 建同步任务
-		srcKey := r.Key
-		if srcKey == "" {
-			item.Action = "failed"
-			item.Message = "source repo key empty"
-			result.Items = append(result.Items, item)
-			continue
-		}
-		taskName := "org-mirror-" + tRepo
-		_, terr = svc.CreateTask(ctx, &corebridge.CreateTaskRequest{
-			Name:          taskName,
-			SourceRepoKey: srcKey,
-			SourceBranch:  "*",
-			TargetRepoKey: tRepoRec.Key,
-			TargetBranch:  "*",
-			SyncMode:      "all",
-			GitTags:       true,
-		})
-		if terr != nil {
-			item.Action = "failed"
-			item.Message = terr.Error()
-			result.Warnings = append(result.Warnings, taskName+": "+terr.Error())
-		} else {
-			item.Action = "task_created"
-			result.TasksCreated++
-		}
-		result.Items = append(result.Items, item)
 	}
+	result.Warnings = append(result.Warnings, bulk.Warnings...)
 
 	if !dryRun {
 		recordAudit(ctx, c, "org_mirror", "platform", req.SourceOrg,
@@ -157,55 +96,6 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 		result.Warnings = append(result.Warnings, "dry_run=true：未写入")
 	}
 	response.Success(c, result)
-}
-
-// resolveOrgTarget 目标 owner/repo 映射（复用 internal/orgmap 语义）。
-func resolveOrgTarget(strategy, sourceOwner, sourceRepo, targetOrg, targetUser string) (owner, repo string) {
-	repo = sourceRepo
-	switch strategy {
-	case "single":
-		if targetOrg != "" {
-			return targetOrg, repo
-		}
-		return sourceOwner, repo
-	case "flat":
-		if targetUser != "" {
-			return targetUser, repo
-		}
-		return sourceOwner, repo
-	case "mixed":
-		if targetUser != "" && strings.EqualFold(sourceOwner, targetUser) {
-			return targetUser, repo
-		}
-		if targetOrg != "" {
-			return targetOrg, repo
-		}
-		return sourceOwner, repo
-	default:
-		return sourceOwner, repo
-	}
-}
-
-// rewriteRepoURL 把 clone URL 中的 owner/repo 换成目标（支持 https 与 ssh）。
-func rewriteRepoURL(raw, owner, repo string) string {
-	if raw == "" || owner == "" || repo == "" {
-		return raw
-	}
-	// https://host/old/oldrepo.git
-	if i := strings.Index(raw, "://"); i > 0 {
-		rest := raw[i+3:]
-		slash := strings.Index(rest, "/")
-		if slash < 0 {
-			return raw
-		}
-		prefix := raw[:i+3+slash+1]
-		return prefix + owner + "/" + repo + ".git"
-	}
-	// git@host:old/oldrepo.git
-	if i := strings.Index(raw, ":"); i > 0 && strings.Contains(raw[:i], "@") {
-		return raw[:i+1] + owner + "/" + repo + ".git"
-	}
-	return raw
 }
 
 // ImportStarred POST /api/v1/ops/import-starred
@@ -225,41 +115,15 @@ func ImportStarred(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	plat, err := svc.GetPlatform(ctx, req.PlatformKey)
-	if err != nil || plat == nil {
-		response.NotFound(c, "platform not found")
-		return
-	}
-	prov, perr := newIssueProvider(plat, "")
-	if perr != nil {
-		response.InternalError(c, perr.Error())
-		return
-	}
-	if !prov.Capabilities().Starred {
-		response.BadRequest(c, "starred import currently supports github only")
-		return
-	}
-	sm := prov.(sdkprov.StarredManager)
 	max := int(req.Max)
 	if max <= 0 {
 		max = 100
 	}
-	// 分页拉到 max 条为止(页不足一页即末页)。
-	perPage := sdkprov.MaxPerPage
-	starred := []*sdkprov.PlatformRepo{}
-	for page := 1; len(starred) < max; page++ {
-		batch, serr := sm.ListStarred(ctx, page, perPage)
-		if serr != nil {
-			response.InternalError(c, serr.Error())
-			return
-		}
-		starred = append(starred, batch...)
-		if len(batch) < perPage {
-			break
-		}
-	}
-	if len(starred) > max {
-		starred = starred[:max]
+	// 列举（平台校验 + 能力门控 + 分页）在 core；壳做 DTO 映射与可选导入。
+	starred, err := svc.ListStarredRepos(ctx, req.PlatformKey, max)
+	if err != nil {
+		response.FromError(c, err)
+		return
 	}
 	resp := &ops.ImportListResp{
 		Source:   "starred:" + req.PlatformKey,

@@ -2,7 +2,6 @@ package git_sync
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 
@@ -115,11 +114,7 @@ func RuleUpdate(ctx context.Context, c *app.RequestContext) {
 		Enabled: req.Enabled, Description: req.Description,
 	})
 	if err != nil {
-		if errors.Is(err, corebridge.ErrRuleNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 	recordAudit(ctx, c, "update", "rule", r.Name, "更新 webhook 规则 "+r.Name)
@@ -199,11 +194,7 @@ func RegisterPlatformWebhook(ctx context.Context, c *app.RequestContext) {
 
 	wh, err := GetSyncService().RegisterPlatformWebhook(ctx, req.RepoKey, req.CallbackUrl, req.Secret, req.Events)
 	if err != nil {
-		if errors.Is(err, corebridge.ErrRepoNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -228,11 +219,7 @@ func ListPlatformWebhooks(ctx context.Context, c *app.RequestContext) {
 
 	webhooks, err := GetSyncService().ListPlatformWebhooks(ctx, req.RepoKey)
 	if err != nil {
-		if errors.Is(err, corebridge.ErrRepoNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -257,11 +244,7 @@ func DeletePlatformWebhook(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if err := GetSyncService().DeletePlatformWebhook(ctx, req.RepoKey, req.WebhookId); err != nil {
-		if errors.Is(err, corebridge.ErrRepoNotFound) {
-			response.NotFound(c, err.Error())
-			return
-		}
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 

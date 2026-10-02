@@ -436,14 +436,14 @@ runwatch:
 
 | Repository | Import path | Role |
 |------------|-------------|------|
-| [git-sync-core](https://github.com/yi-nology/git-sync-core) | `github.com/yi-nology/git-ferry-core` | 同步引擎库（无 HTTP） |
+| [git-ferry-core](https://github.com/yi-nology/git-ferry-core) | `github.com/yi-nology/git-ferry-core` | 同步引擎库（无 HTTP） |
 | **git-ferry**（本仓） | `github.com/yi-nology/git-ferry` | 公网壳：hz API + Vue + CLI |
-| [git-sync-intranet](https://github.com/yi-nology/git-sync-intranet) | `github.com/yi-nology/git-sync-intranet` | 内网壳（网关/SSO 鉴权） |
+| [git-ferry-intranet](https://github.com/yi-nology/git-ferry-intranet) | `github.com/yi-nology/git-ferry-intranet` | 内网壳（网关/SSO 鉴权） |
 
 单仓即可构建（`git clone` 后 `go build`）。本地联调未发布 core：
 
 ```bash
-go work init . ../git-sync-core   # 勿提交 go.work / replace
+go work init . ../git-ferry-core   # 勿提交 go.work / replace
 ```
 
 ### 架构示意
@@ -462,7 +462,7 @@ flowchart TB
     MCP[mcp 服务]
     GW[git-serve 只读]
   end
-  subgraph 引擎 git-sync-core
+  subgraph 引擎 git-ferry-core
     EX[executor 同步/冷备]
     SVC[service 任务/平台/治理]
   end

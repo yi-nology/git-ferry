@@ -5,8 +5,8 @@ import (
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/go-git-platform/pkg/credential"
 )
 
 // GenerateDeployKey POST /api/v1/ops/deploy-key
@@ -22,7 +22,7 @@ func GenerateDeployKey(ctx context.Context, c *app.RequestContext) {
 	if comment == "" {
 		comment = "gitferry-mirror"
 	}
-	key, err := credential.GenerateEd25519DeployKey(comment)
+	key, err := corebridge.GenerateDeployKey(comment)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return

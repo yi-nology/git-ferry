@@ -2,24 +2,21 @@ package git_sync
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
-	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
 // MetadataBackup POST /api/v1/ops/metadata-backup
 // 抓取 issues/PR/labels/milestones/releases 元数据快照,
 // 可选下载 source archive / GitHub Release 附件 / Gists。
 // 请求体绑定 biz/model/ops(IDL 生成,snake_case 标签)。
+// 采集引擎在 core（Service.BackupMetadata，经 ProviderForPlatform 取数）；
+// 本层只做 Bind → core → DTO 转换 → 审计。
 func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 	var req ops.MetadataBackupReq
 	if err := c.BindAndValidate(&req); err != nil {
@@ -30,84 +27,34 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "repo_key is required")
 		return
 	}
-	maxItems := int(req.MaxItems)
-	if maxItems <= 0 {
-		maxItems = 500
-	}
-	if maxItems > 2000 {
-		maxItems = 2000
-	}
 
 	svc, ok := requireSyncService(c)
 	if !ok {
 		return
 	}
-	repo, err := svc.GetRepo(ctx, req.RepoKey)
-	if err != nil || repo == nil {
-		response.NotFound(c, "repo not found")
-		return
-	}
-	plat, err := svc.GetPlatformByID(ctx, repo.PlatformID)
-	if err != nil || plat == nil {
-		response.NotFound(c, "platform not found")
-		return
-	}
-	prov, err := newIssueProvider(plat, repo.AccessToken)
+	res, err := svc.BackupMetadata(ctx, corebridge.MetadataBackupOptions{
+		RepoKey:         req.RepoKey,
+		MaxIssues:       int(req.MaxItems),
+		MaxPRs:          int(req.MaxItems),
+		MaxReleases:     int(req.MaxItems),
+		IncludeIssues:   optBoolDefault(req.WithIssues),
+		IncludePRs:      optBoolDefault(req.WithPRs),
+		IncludeReleases: optBoolDefault(req.WithReleases),
+		IncludeSource:   optBoolDefault(req.WithArchives),
+		IncludeAssets:   optBoolDefault(req.WithAssets),
+		IncludeGists:    optBoolDefault(req.WithGists),
+		Since:           req.GetSince(),
+	})
 	if err != nil {
-		response.InternalError(c, err.Error())
+		metadataEngineError(c, err)
 		return
 	}
 
-	backupDir := svc.BackupDir()
-	if backupDir == "" {
-		response.BadRequest(c, "sync.backup_dir not configured")
-		return
-	}
-	snapDir := filepath.Join(backupDir, "metadata", textutil.SanitizePathToken(req.RepoKey),
-		time.Now().UTC().Format("20060102-150405"))
-	if err := os.MkdirAll(snapDir, 0o750); err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-
-	snap := &ops.MetadataSnapshot{
-		RepoKey:   req.RepoKey,
-		Platform:  plat.Type,
-		Owner:     repo.PlatformOwner,
-		Repo:      repo.PlatformRepo,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
-		Dir:       snapDir,
-		Counts:    map[string]int32{},
-		Files:     []string{},
-		Archives:  []string{},
-		Assets:    []string{},
-		Warnings:  []string{},
-	}
-
-	collectLabelsMilestones(ctx, prov, repo, snap)
-	if optBoolDefault(req.WithIssues) {
-		collectIssues(ctx, prov, repo, maxItems, req.GetSince(), snap)
-	}
-	if optBoolDefault(req.WithPRs) {
-		collectPullRequests(ctx, prov, repo, maxItems, snap)
-	}
-	releases := collectReleases(ctx, prov, repo, &req, maxItems, snap)
-	if optBoolDefault(req.WithArchives) {
-		downloadSourceArchives(ctx, prov, repo, releases, snapDir, snap)
-	}
-	if optBoolDefault(req.WithAssets) && prov.Capabilities().ReleaseAssets {
-		collectReleaseAssets(ctx, prov, repo, releases, snapDir, snap)
-	}
-	if optBoolDefault(req.WithGists) && prov.Capabilities().Gists {
-		collectGists(ctx, prov, snapDir, snap)
-	}
-
-	writeSnapshotJSON(snap, snapDir)
 	recordAudit(ctx, c, "metadata_backup", "backup", req.RepoKey,
 		fmt.Sprintf("元数据快照 issues=%d prs=%d releases=%d archives=%d assets=%d gists=%d",
-			snap.Counts["issues"], snap.Counts["pull_requests"], snap.Counts["releases"],
-			snap.Counts["archives"], snap.Counts["release_assets"], snap.Counts["gists"]))
-	response.Success(c, snap)
+			res.Counts["issues"], res.Counts["pull_requests"], res.Counts["releases"],
+			res.Counts["archives"], res.Counts["release_assets"], res.Counts["gists"]))
+	response.Success(c, metadataSnapshotToOps(&res.MetadataSnapshot))
 }
 
 // ListMetadataBackups GET /api/v1/ops/metadata-backups?repo_key=
@@ -116,212 +63,48 @@ func ListMetadataBackups(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	backupDir := svc.BackupDir()
-	if backupDir == "" {
-		response.Success(c, &ops.ListMetadataBackupsResp{Items: []*ops.MetadataSnapshot{}, Total: 0})
-		return
-	}
-	filter := c.Query("repo_key")
-	items := []*ops.MetadataSnapshot{}
-	root := filepath.Join(backupDir, "metadata")
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || d.Name() != "manifest.json" {
-			return nil
-		}
-		data, rerr := os.ReadFile(path) //nolint:gosec // 内部路径
-		if rerr != nil {
-			return nil
-		}
-		var snap ops.MetadataSnapshot
-		if json.Unmarshal(data, &snap) != nil {
-			return nil
-		}
-		if filter != "" && snap.RepoKey != filter {
-			return nil
-		}
-		items = append(items, &snap)
-		return nil
-	})
-	response.Success(c, &ops.ListMetadataBackupsResp{Items: items, Total: int64(len(items))})
-}
-
-// ===== 收集器:单一职责,便于复用与测试 =====
-
-func collectLabelsMilestones(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo, snap *ops.MetadataSnapshot) {
-	if im, ok := prov.(sdkprov.IssueManager); ok {
-		labels, lerr := im.ListIssueLabels(ctx, repo.PlatformOwner, repo.PlatformRepo)
-		if lerr != nil {
-			snap.Warnings = append(snap.Warnings, "labels: "+lerr.Error())
-		} else {
-			writeSnapshotPart(snap, "labels.json", labels)
-			snap.Counts["labels"] = int32(len(labels))
-		}
-	}
-	if mm, ok := prov.(sdkprov.MilestoneManager); ok {
-		ms, merr := mm.ListMilestones(ctx, repo.PlatformOwner, repo.PlatformRepo, sdkprov.ListMilestonesOptions{})
-		if merr != nil {
-			snap.Warnings = append(snap.Warnings, "milestones: "+merr.Error())
-		} else {
-			writeSnapshotPart(snap, "milestones.json", ms)
-			snap.Counts["milestones"] = int32(len(ms))
-		}
-	}
-}
-
-func collectIssues(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo, maxItems int, since string, snap *ops.MetadataSnapshot) {
-	im, ok := prov.(sdkprov.IssueManager)
-	if !ok {
-		return
-	}
-	issues, ierr := listIssues(ctx, prov, repo, "all", maxItems)
-	if ierr != nil {
-		snap.Warnings = append(snap.Warnings, "issues: "+ierr.Error())
-		return
-	}
-	if since != "" {
-		issues = filterIssuesSince(issues, since)
-	}
-	for _, iss := range issues {
-		comments, cerr := im.ListIssueComments(ctx, repo.PlatformOwner, repo.PlatformRepo, iss.Number)
-		if cerr == nil {
-			iss.CommentList = comments
-		}
-	}
-	writeSnapshotPart(snap, "issues.json", issues)
-	snap.Counts["issues"] = int32(len(issues))
-}
-
-// filterIssuesSince 仅保留 UpdatedAt >= since(RFC3339) 的 issue。
-func filterIssuesSince(issues []*issueRow, since string) []*issueRow {
-	cut, err := time.Parse(time.RFC3339, since)
+	items, err := svc.ListMetadataBackups(ctx, c.Query("repo_key"))
 	if err != nil {
-		return issues
+		response.InternalError(c, err.Error())
+		return
 	}
-	out := issues[:0]
-	for _, iss := range issues {
-		if iss == nil {
-			continue
-		}
-		if t, perr := time.Parse(time.RFC3339, iss.UpdatedAt); perr == nil && t.Before(cut) {
-			continue
-		}
-		out = append(out, iss)
+	out := make([]*ops.MetadataSnapshot, 0, len(items))
+	for i := range items {
+		out = append(out, metadataSnapshotToOps(&items[i]))
 	}
-	return out
+	response.Success(c, &ops.ListMetadataBackupsResp{Items: out, Total: int64(len(out))})
 }
 
-func collectPullRequests(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo, maxItems int, snap *ops.MetadataSnapshot) {
-	cm, ok := prov.(sdkprov.ChangeRequestManager)
-	if !ok {
-		return
+// metadataEngineError 元数据引擎错误 → HTTP：repo/平台缺失回 404、快照与
+// backup_dir 校验回 400（文案逐字契约），其余（含 provider 构造/MkdirAll，
+// 即使底层是 SDK ProviderError）一律 500 —— 与历史 newIssueProvider 分支一致，
+// 详情只进服务端日志。显式 errors.Is 而非 Classify，避免 provider 4xx 被分类成 4xx。
+func metadataEngineError(c *app.RequestContext, err error) {
+	switch {
+	case errors.Is(err, corebridge.ErrRepoNotFound),
+		errors.Is(err, corebridge.ErrPlatformNotFound),
+		errors.Is(err, corebridge.ErrTargetPlatformNotFound):
+		response.NotFound(c, err.Error())
+	case errors.Is(err, corebridge.ErrMetadataValidation):
+		response.BadRequest(c, err.Error())
+	default:
+		response.InternalError(c, err.Error())
 	}
-	prs, _, perr := cm.ListCRs(ctx, sdkprov.ListCROptions{
-		Owner: repo.PlatformOwner, Repo: repo.PlatformRepo, PerPage: maxItems,
-	})
-	if perr != nil {
-		snap.Warnings = append(snap.Warnings, "pull_requests: "+perr.Error())
-		return
-	}
-	if len(prs) > maxItems {
-		prs = prs[:maxItems]
-	}
-	writeSnapshotPart(snap, "pull_requests.json", prs)
-	snap.Counts["pull_requests"] = int32(len(prs))
 }
 
-func collectReleases(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo,
-	req *ops.MetadataBackupReq, maxItems int, snap *ops.MetadataSnapshot) []*sdkprov.ReleaseInfo {
-	if !optBoolDefault(req.WithReleases) {
-		return nil
+// metadataSnapshotToOps core 快照 → IDL 生成的 ops DTO（字段一一对应）。
+func metadataSnapshotToOps(s *corebridge.MetadataSnapshot) *ops.MetadataSnapshot {
+	return &ops.MetadataSnapshot{
+		RepoKey:   s.RepoKey,
+		Platform:  s.Platform,
+		Owner:     s.Owner,
+		Repo:      s.Repo,
+		CreatedAt: s.CreatedAt,
+		Dir:       s.Dir,
+		Counts:    s.Counts,
+		Files:     s.Files,
+		Archives:  s.Archives,
+		Assets:    s.Assets,
+		Warnings:  s.Warnings,
 	}
-	rm, ok := prov.(sdkprov.ReleaseManager)
-	if !ok {
-		return nil
-	}
-	rels, rerr := rm.ListReleases(ctx, repo.PlatformOwner, repo.PlatformRepo)
-	if rerr != nil {
-		snap.Warnings = append(snap.Warnings, "releases: "+rerr.Error())
-		return nil
-	}
-	if len(rels) > maxItems {
-		rels = rels[:maxItems]
-	}
-	writeSnapshotPart(snap, "releases.json", rels)
-	snap.Counts["releases"] = int32(len(rels))
-	return rels
-}
-
-func downloadSourceArchives(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo,
-	releases []*sdkprov.ReleaseInfo, snapDir string, snap *ops.MetadataSnapshot) {
-	if len(releases) == 0 {
-		return
-	}
-	rm, ok := prov.(sdkprov.ReleaseManager)
-	if !ok {
-		return
-	}
-	archDir := filepath.Join(snapDir, "archives")
-	_ = os.MkdirAll(archDir, 0o750)
-	for _, rel := range releases {
-		if rel.TagName == "" {
-			continue
-		}
-		data, aerr := rm.GetArchive(ctx, repo.PlatformOwner, repo.PlatformRepo, rel.TagName, "tar.gz")
-		if aerr != nil {
-			snap.Warnings = append(snap.Warnings, "archive "+rel.TagName+": "+aerr.Error())
-			continue
-		}
-		name := textutil.SanitizePathToken(rel.TagName) + ".tar.gz"
-		if err := os.WriteFile(filepath.Join(archDir, name), data, 0o600); err != nil {
-			snap.Warnings = append(snap.Warnings, "write archive "+name+": "+err.Error())
-			continue
-		}
-		snap.Archives = append(snap.Archives, name)
-	}
-	snap.Counts["archives"] = int32(len(snap.Archives))
-}
-
-func collectReleaseAssets(ctx context.Context, prov sdkprov.Provider, repo *corebridge.Repo,
-	releases []*sdkprov.ReleaseInfo, snapDir string, snap *ops.MetadataSnapshot) {
-	assetDir := filepath.Join(snapDir, "release-assets")
-	// token 归 ProviderForPlatform 解析(repo token 优先,GitHub App 感知);
-	// 已收集的 releases 带 Assets 元数据则复用,不重复请求。
-	saved, warns, aerr := downloadReleaseAssets(ctx, prov, repo.PlatformOwner, repo.PlatformRepo,
-		releases, assetDir, 100)
-	snap.Warnings = append(snap.Warnings, warns...)
-	if aerr != nil {
-		snap.Warnings = append(snap.Warnings, "release-assets: "+aerr.Error())
-		return
-	}
-	snap.Assets = saved
-	snap.Counts["release_assets"] = int32(len(saved))
-}
-
-func collectGists(ctx context.Context, prov sdkprov.Provider, snapDir string, snap *ops.MetadataSnapshot) {
-	gistDir := filepath.Join(snapDir, "gists")
-	gc, warns, gerr := backupGists(ctx, prov, gistDir, 200)
-	snap.Warnings = append(snap.Warnings, warns...)
-	if gerr != nil {
-		snap.Warnings = append(snap.Warnings, "gists: "+gerr.Error())
-		return
-	}
-	snap.Counts["gists"] = int32(gc)
-}
-
-// writeSnapshotPart 写出分片 JSON 并登记文件名。
-func writeSnapshotPart(snap *ops.MetadataSnapshot, name string, v any) {
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		snap.Warnings = append(snap.Warnings, name+": marshal: "+err.Error())
-		return
-	}
-	if err := os.WriteFile(filepath.Join(snap.Dir, name), data, 0o600); err != nil {
-		snap.Warnings = append(snap.Warnings, name+": write: "+err.Error())
-		return
-	}
-	snap.Files = append(snap.Files, name)
-}
-
-func writeSnapshotJSON(snap *ops.MetadataSnapshot, snapDir string) {
-	writeSnapshotPart(snap, "manifest.json", snap)
 }

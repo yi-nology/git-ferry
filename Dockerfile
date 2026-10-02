@@ -1,4 +1,4 @@
-# 公网壳镜像。git-sync-core 以 Go module 版本依赖（go.mod），无需同级源码目录。
+# 公网壳镜像。git-ferry-core 以 Go module 版本依赖（go.mod），无需同级源码目录。
 #   docker build -t git-ferry:latest .
 #   跨架构(如 ARM64 麒麟):docker buildx build --platform linux/arm64 .
 # 注意:镜像内只带 config.example.yaml;部署必须挂载真实 conf/(含 server.api_key),
