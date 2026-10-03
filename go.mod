@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/apache/thrift v0.13.0
-	github.com/cloudwego/eino v0.9.19
+	github.com/cloudwego/eino v0.9.21
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/cloudwego/hertz v0.10.5
 	github.com/google/uuid v1.6.0
