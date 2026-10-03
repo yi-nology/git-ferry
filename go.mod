@@ -3,7 +3,7 @@ module github.com/yi-nology/git-ferry
 go 1.26.3
 
 require (
-	github.com/apache/thrift v0.13.0
+	github.com/apache/thrift v0.25.0
 	github.com/cloudwego/eino v0.9.19
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/cloudwego/hertz v0.10.5
