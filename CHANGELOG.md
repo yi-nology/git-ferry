@@ -2,7 +2,7 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.21.0] - 2026-10-03
 
 > 依赖 git-ferry-core **v0.9.1** + go-git-platform **v0.76.0**。
 
