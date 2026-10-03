@@ -81,7 +81,7 @@ GitFerry 把这三件事收进一个自托管中枢：
 
 ### 前置条件
 
-- Node.js 14+（`npm`/`npx`）— 仅 npm 安装需要
+- Node.js 14+（`npm`/`npx`）— 仅安装 Agent Skills 需要（`npx skills add`）
 - 支持平台：macOS、Linux、Windows（x64/arm64）
 - Go 1.26+ — 仅从源码构建需要
 - 服务端可独立运行：Docker 或 Release 二进制
@@ -90,25 +90,22 @@ GitFerry 把这三件事收进一个自托管中枢：
 
 > **AI 助手请注意：** 帮用户装 CLI 时请直接跳到 [快速上手（AI Agent）](#快速上手ai-agent)。
 
-**方式 1 — npm 安装（推荐，与 [gitlink-cli](https://github.com/ccfos/gitlink-cli) 同款体验）：**
-
-```bash
-# 1) 安装 CLI（postinstall 自动下载当前平台二进制）
-npm install -g gitferry-cli
-
-# 2) 安装 Agent Skills（可选，给 Claude Code / MiMo 用）
-gitferry-install-skills
-# 或 npx skills add ./skills -y -g
-```
-
-**方式 2 — Release 二进制：**
+**方式 1 — Release 二进制（推荐）：**
 
 ```bash
 # 查看 https://github.com/yi-nology/git-ferry/releases/latest 选平台包
-VER=1.20.1   # 替换为最新版本
+VER=1.21.0   # 替换为最新版本
 curl -fsSL -o gitferry.tgz \
   "https://github.com/yi-nology/git-ferry/releases/download/v${VER}/gitferry_${VER}_darwin_arm64.tar.gz"
 tar -xzf gitferry.tgz && sudo mv gitferry /usr/local/bin/
+```
+
+**方式 2 — Agent Skills（可选，给 Claude Code / MiMo 用）：**
+
+```bash
+# 在本仓库的克隆目录下执行（需要 Node.js）
+npx skills add ./skills -y -g
+# 或 make install-skills
 ```
 
 **方式 3 — 源码构建 / 包管理器 / Docker：**
@@ -122,6 +119,10 @@ make docker-build               # 服务端镜像
 # 包管理器模板见 examples/packaging/
 # brew install yi-nology/tap/git-ferry   （tap 发布后）
 ```
+
+> **npm（尚未发布）：** `npm install -g gitferry-cli` 要等 Release workflow 配上
+> `NPM_TOKEN` 后才可用 —— 该包**目前不在 npm registry 上**（发布步骤会静默跳过）。
+> 在此之前请使用方式 1。
 
 ### 快速上手（人类用户）
 
@@ -149,8 +150,10 @@ cp conf/config.example.yaml conf/config.yaml && make run
 **第 1 步 — 安装**
 
 ```bash
-npm install -g gitferry-cli
-gitferry-install-skills
+# 1) 安装 CLI —— 按上文「方式 1 — Release 二进制」执行
+#    （npm 包尚未发布）
+# 2) 在本仓库克隆目录下安装 Agent Skills：
+npx skills add ./skills -y -g
 ```
 
 **第 2 步 — 配置**

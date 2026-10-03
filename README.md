@@ -81,7 +81,7 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 
 ### Prerequisites
 
-- Node.js 14+ (`npm`/`npx`) — only for npm install
+- Node.js 14+ (`npm`/`npx`) — only for skill installation (`npx skills add`)
 - Platforms: macOS, Linux, Windows (x64/arm64)
 - Go 1.26+ — source builds only
 - Server runs standalone: Docker or Release binary
@@ -90,25 +90,22 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 
 > **AI assistants:** if you are helping a user install, jump to [Quick Start (AI Agent)](#quick-start-ai-agent).
 
-**Option 1 — npm (recommended, same UX as [gitlink-cli](https://github.com/ccfos/gitlink-cli)):**
-
-```bash
-# 1) Install CLI (postinstall downloads the right platform binary)
-npm install -g gitferry-cli
-
-# 2) Install Agent Skills (optional; for Claude Code / MiMo)
-gitferry-install-skills
-# or: npx skills add ./skills -y -g
-```
-
-**Option 2 — Release binary:**
+**Option 1 — Release binary (recommended):**
 
 ```bash
 # Pick a platform asset on https://github.com/yi-nology/git-ferry/releases/latest
-VER=1.20.1   # replace with the latest version
+VER=1.21.0   # replace with the latest version
 curl -fsSL -o gitferry.tgz \
   "https://github.com/yi-nology/git-ferry/releases/download/v${VER}/gitferry_${VER}_darwin_arm64.tar.gz"
 tar -xzf gitferry.tgz && sudo mv gitferry /usr/local/bin/
+```
+
+**Option 2 — Agent Skills (optional; for Claude Code / MiMo):**
+
+```bash
+# Run inside a clone of this repository (requires Node.js)
+npx skills add ./skills -y -g
+# or: make install-skills
 ```
 
 **Option 3 — Source build / package managers / Docker:**
@@ -122,6 +119,10 @@ make docker-build               # server image
 # Package manager templates: examples/packaging/
 # brew install yi-nology/tap/git-ferry   (after tap publish)
 ```
+
+> **npm (not published yet):** `npm install -g gitferry-cli` will start working once
+> `NPM_TOKEN` is configured for the Release workflow — the package is **not on the npm
+> registry yet** (the publish step currently skips silently). Until then, use Option 1.
 
 ### Quick Start (humans)
 
@@ -149,8 +150,10 @@ cp conf/config.example.yaml conf/config.yaml && make run
 **Step 1 — Install**
 
 ```bash
-npm install -g gitferry-cli
-gitferry-install-skills
+# 1) Install the CLI — follow "Option 1 — Release binary" above
+#    (the npm package is not published yet)
+# 2) Install Agent Skills from a clone of this repository:
+npx skills add ./skills -y -g
 ```
 
 **Step 2 — Configure**
