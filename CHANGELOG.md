@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.22.1] - 2026-10-17
+
+> 依赖 git-ferry-core **v0.10.1** + go-git-platform **v0.90.0** + oekit logx **v0.5.1** /
+> bootstrap **v0.5.4**。
+
+### Changed
+
+- **依赖补丁批**:go-git-platform v0.89.0 → v0.90.0(transport debug 日志按级别守卫,
+  被过滤时不求值响应体拷贝)、logx v0.5.0 → v0.5.1(修复 std 后端默认级别 DEBUG 的
+  iota 陷阱,未设 LOG_LEVEL 的进程不再全量打 Debug)、bootstrap v0.5.3 → v0.5.4
+  (`WithBeforeServe` 启动钩子,本仓暂无使用点)。生产代码零改动,`go test ./...`
+  19 包 + `make lint` 全绿。
+
 ## [v1.22.0] - 2026-10-17
 
 > 依赖 git-ferry-core **v0.10.0**(oekit 接入 + go-git-platform v0.89.0)+ go-git-platform
