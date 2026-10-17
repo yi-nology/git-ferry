@@ -83,7 +83,7 @@ GitFerry 把这三件事收进一个自托管中枢：
 
 - Node.js 14+（`npm`/`npx`）— 仅安装 Agent Skills 需要（`npx skills add`）
 - 支持平台：macOS、Linux、Windows（x64/arm64）
-- Go 1.26+ — 仅从源码构建需要
+- Go 1.27+ — 仅从源码构建需要
 - 服务端可独立运行：Docker 或 Release 二进制
 
 ### 安装 CLI（人类用户）

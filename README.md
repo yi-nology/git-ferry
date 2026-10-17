@@ -83,7 +83,7 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 
 - Node.js 14+ (`npm`/`npx`) — only for skill installation (`npx skills add`)
 - Platforms: macOS, Linux, Windows (x64/arm64)
-- Go 1.26+ — source builds only
+- Go 1.27+ — source builds only
 - Server runs standalone: Docker or Release binary
 
 ### Install the CLI (humans)

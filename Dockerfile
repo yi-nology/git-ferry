@@ -4,7 +4,7 @@
 # 注意:镜像内只带 config.example.yaml;部署必须挂载真实 conf/(含 server.api_key),
 # 否则启动即 fail-fast——防止把开发默认密钥带进生产。
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 
 ARG TARGETARCH
 

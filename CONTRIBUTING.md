@@ -15,7 +15,7 @@ make build        # 服务端 git-ferry
 make build-cli    # CLI gitferry
 ```
 
-依赖：Go 1.26+；前端开发另需 Node.js 20+（`frontend/`）。
+依赖：Go 1.27+；前端开发另需 Node.js 20+（`frontend/`）。
 
 ## 开发流程
 

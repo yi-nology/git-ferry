@@ -1,6 +1,6 @@
 module github.com/yi-nology/git-ferry
 
-go 1.26.3
+go 1.27.2
 
 require (
 	github.com/apache/thrift v0.13.0
@@ -20,7 +20,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.9.1
-	github.com/yi-nology/go-git-platform v0.76.0
+	github.com/yi-nology/go-git-platform v0.88.1
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -60,8 +60,8 @@ require (
 	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.9.1 // indirect
-	github.com/go-git/go-git/v5 v5.19.2 // indirect
+	github.com/go-git/go-billy/v5 v5.9.2 // indirect
+	github.com/go-git/go-git/v5 v5.19.3 // indirect
 	github.com/go-openapi/errors v0.22.9 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
 	github.com/go-openapi/strfmt v0.27.2 // indirect
@@ -107,6 +107,7 @@ require (
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/oekit/core v0.3.3 // indirect
 	github.com/oekit/logx v0.2.0 // indirect
+	github.com/oekit/pkg v0.6.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
@@ -132,7 +133,7 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	github.com/yi-nology/go-gitcode v0.7.2 // indirect
-	gitlab.com/gitlab-org/api/client-go/v3 v3.15.0 // indirect
+	gitlab.com/gitlab-org/api/client-go/v3 v3.18.0 // indirect
 	go.uber.org/atomic v1.12.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/arch v0.14.0 // indirect

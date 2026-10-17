@@ -5,10 +5,17 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 ## [Unreleased]
 
 > 依赖 git-ferry-core **v0.9.1**（本批壳层改动不依赖 core 新 API；core 侧同批次的 oekit
-> 接入发版后再升 go.mod）+ go-git-platform **v0.76.0**。
+> 接入 + SDK 升级发版后再升 go.mod）+ go-git-platform **v0.88.1**。
 
 ### Changed
 
+- **依赖升 go-git-platform v0.76.0 → v0.88.1**,随之 **Go 版本线 1.26 → 1.27.2**(SDK go.mod
+  要求):`go.mod`、`Dockerfile`(`golang:1.27-alpine`)、`release.yml` 的 setup-go、README /
+  CONTRIBUTING 的环境要求同步;`ci.yml`/`codeql.yml` 本就跟随 `go-version-file`。壳层代码零改动,
+  与已发布 core v0.9.1 组合编译通过(core 源码与新 SDK API 兼容),可独立过 CI。
+  实测:GitCode 平台连通性测试 0.49s 通过且能力探测齐全,仓库分页列表正常。
+  **随 SDK 带入的行为变更**见 core CHANGELOG(webhook 空密钥改拒绝——壳层 `IsWebhookValidation`
+  哨兵路径返 401 不变;分页触顶改报错;SDK 错误文本形状变化,壳层无文本匹配受影响)。
 - **接入 oekit 基础库**（替换自写基础设施，依据 <https://oekit.github.io/llms.txt>）：
   - **启动骨架 → `oekit/bootstrap` + `oekit/hertz.RunServer`**：`serve.Run` 不再用 `oklog/run`
     手拼 run.Group，改由 bootstrap 统一信号监听、资源逆序关闭与超时预算；关闭顺序不变
