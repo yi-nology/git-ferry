@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
+	"github.com/oekit/concurrency/async"
 )
 
 // FakeStep 脚本步骤:toolName 非空 → 本轮发起工具调用;否则输出最终文本。
@@ -77,7 +78,7 @@ func (f *FakeModel) Generate(ctx context.Context, _ []*schema.Message, _ ...mode
 
 func (f *FakeModel) Stream(ctx context.Context, in []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	sr, sw := schema.Pipe[*schema.Message](2)
-	go func() {
+	async.GoSafe(func() {
 		defer sw.Close()
 		msg, err := f.Generate(ctx, in, opts...)
 		if err != nil {
@@ -85,6 +86,6 @@ func (f *FakeModel) Stream(ctx context.Context, in []*schema.Message, opts ...mo
 			return
 		}
 		sw.Send(msg, nil)
-	}()
+	})
 	return sr, nil
 }

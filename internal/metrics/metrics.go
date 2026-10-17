@@ -1,205 +1,169 @@
-// Package metrics 提供零依赖的 Prometheus 文本格式指标。
-// 只覆盖壳层可观测刚需:HTTP 请求、同步运行结果、最近一次运行时间。
+// Package metrics 提供壳层可观测指标:基于 prometheus/client_golang,默认注册表复用
+// oekit metrics.Registry(自带 Go runtime / process 采集器与 app_build_info),
+// /metrics 端点由 oekit hertz/metrics 暴露。只覆盖壳层刚需:HTTP 请求、同步运行结果、
+// 最近一次运行时间、平台 API 限流回退。
 package metrics
 
 import (
+	"bytes"
 	"fmt"
-	"net/http"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
+
+	oemetrics "github.com/oekit/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/expfmt"
 )
+
+// serviceName 进入 oekit app_build_info{service} 标签。
+const serviceName = "git-ferry"
 
 // Registry 进程内指标注册表(线程安全)。
 type Registry struct {
+	reg      *prometheus.Registry
 	mu       sync.Mutex
-	counters map[string]*int64
-	gauges   map[string]*atomic.Int64
-	labeled  map[string]*int64
-	help     map[string]string
+	counters map[string]prometheus.Counter
+	gauges   map[string]prometheus.Gauge
+	vecs     map[string]*labeledVec
 	now      func() time.Time
 }
 
-// New 创建注册表。now 可注入(测试用)。
+// labeledVec 标签名在首次注册时固定:client_golang 要求同名指标的标签名一致。
+type labeledVec struct {
+	keys []string
+	vec  *prometheus.CounterVec
+}
+
+// New 创建独立注册表。now 可注入(测试用)。
 func New(now func() time.Time) *Registry {
+	return newRegistry(prometheus.NewRegistry(), now)
+}
+
+func newRegistry(reg *prometheus.Registry, now func() time.Time) *Registry {
 	if now == nil {
 		now = time.Now
 	}
-	return &Registry{
-		counters: map[string]*int64{},
-		gauges:   map[string]*atomic.Int64{},
-		labeled:  map[string]*int64{},
-		help:     map[string]string{},
+	r := &Registry{
+		reg:      reg,
+		counters: map[string]prometheus.Counter{},
+		gauges:   map[string]prometheus.Gauge{},
+		vecs:     map[string]*labeledVec{},
 		now:      now,
 	}
+	// sync_runs_total 有/无 task 两种打点形态,统一为 {status,task}:无 task 时值为空串,
+	// Prometheus 摄入时空标签等价于不存在,查询语义与此前分开两条序列一致。
+	r.registerVec("sync_runs_total", "Sync runs by status", []string{"status", "task"})
+	return r
 }
 
-var defaultRegistry = New(nil)
+var defaultRegistry = func() *Registry {
+	oemetrics.Init(serviceName)
+	return newRegistry(oemetrics.Registry, nil)
+}()
 
-// Default 返回进程默认注册表。
+// Default 返回进程默认注册表(底层为 oekit metrics.Registry)。
 func Default() *Registry { return defaultRegistry }
+
+// registerVec 调用方须持有 r.mu。
+func (r *Registry) registerVec(name, help string, keys []string) *labeledVec {
+	v := prometheus.NewCounterVec(prometheus.CounterOpts{Name: name, Help: helpOrName(help, name)}, keys)
+	r.reg.MustRegister(v)
+	lv := &labeledVec{keys: keys, vec: v}
+	r.vecs[name] = lv
+	return lv
+}
+
+// helpOrName client_golang 拒绝空 Help,沿用旧 API 允许不传 help 的习惯时退化为指标名。
+func helpOrName(help, name string) string {
+	if help == "" {
+		return name
+	}
+	return help
+}
 
 // IncCounter 无标签计数器 +1。
 func (r *Registry) IncCounter(name, help string) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	c, ok := r.counters[name]
 	if !ok {
-		var v int64
-		c = &v
+		c = prometheus.NewCounter(prometheus.CounterOpts{Name: name, Help: helpOrName(help, name)})
+		r.reg.MustRegister(c)
 		r.counters[name] = c
-		r.help[name] = help
 	}
-	atomic.AddInt64(c, 1)
+	r.mu.Unlock()
+	c.Inc()
 }
 
-// AddLabeled 有标签计数器 +delta。labels 形如 {"status":"success"}。
+// AddLabeled 有标签计数器 +delta(delta<=0 忽略)。labels 形如 {"status":"success"};
+// 标签名以该指标首次出现时为准,之后缺失的标签取空串、多余的忽略。
 func (r *Registry) AddLabeled(name, help string, labels map[string]string, delta int64) {
-	key := labeledKey(name, labels)
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	c, ok := r.labeled[key]
-	if !ok {
-		var v int64
-		c = &v
-		r.labeled[key] = c
-		if help != "" {
-			r.help[name] = help
-		}
+	if delta <= 0 {
+		return
 	}
-	atomic.AddInt64(c, delta)
+	r.mu.Lock()
+	lv, ok := r.vecs[name]
+	if !ok {
+		lv = r.registerVec(name, help, sortedKeys(labels))
+	}
+	r.mu.Unlock()
+	vals := make([]string, len(lv.keys))
+	for i, k := range lv.keys {
+		vals[i] = labels[k]
+	}
+	lv.vec.WithLabelValues(vals...).Add(float64(delta))
 }
 
 // SetGauge 设置无标签 gauge。
 func (r *Registry) SetGauge(name, help string, v int64) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	g, ok := r.gauges[name]
 	if !ok {
-		g = &atomic.Int64{}
+		g = prometheus.NewGauge(prometheus.GaugeOpts{Name: name, Help: helpOrName(help, name)})
+		r.reg.MustRegister(g)
 		r.gauges[name] = g
-		r.help[name] = help
 	}
-	g.Store(v)
+	r.mu.Unlock()
+	g.Set(float64(v))
 }
 
 // ObserveSyncRun 记录一次同步运行结果并刷新最近运行时间戳。
 func (r *Registry) ObserveSyncRun(status string) {
-	r.AddLabeled("sync_runs_total", "Sync runs by status", map[string]string{"status": status}, 1)
-	r.SetGauge("sync_last_run_timestamp_seconds",
-		"Unix timestamp of last observed sync run", r.now().Unix())
+	r.ObserveSyncRunWithTask("", status)
 }
 
-// ObserveSyncRunWithTask 按任务+状态记录（任务数有界，不会打爆基数）。
+// ObserveSyncRunWithTask 按任务+状态记录(任务数有界,不会打爆基数)。
 func (r *Registry) ObserveSyncRunWithTask(taskKey, status string) {
-	if taskKey == "" {
-		r.ObserveSyncRun(status)
-		return
-	}
 	r.AddLabeled("sync_runs_total", "Sync runs by status",
 		map[string]string{"status": status, "task": taskKey}, 1)
 	r.SetGauge("sync_last_run_timestamp_seconds",
 		"Unix timestamp of last observed sync run", r.now().Unix())
 }
 
-func labeledKey(name string, labels map[string]string) string {
-	if len(labels) == 0 {
-		return name
-	}
-	parts := make([]string, 0, len(labels))
-	for k, v := range labels {
-		parts = append(parts, k+"="+v)
-	}
-	sort.Strings(parts)
-	return name + "|" + strings.Join(parts, "|")
-}
-
-type sample struct {
-	key string
-	val int64
-}
-
-// WritePrometheus 渲染 Prometheus 文本格式。
+// WritePrometheus 渲染 Prometheus 文本格式(测试与诊断用;/metrics 端点走 hertz/metrics)。
 func (r *Registry) WritePrometheus() string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	var b strings.Builder
-
-	names := make([]string, 0, len(r.help))
-	for n := range r.help {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		if h := r.help[name]; h != "" {
-			fmt.Fprintf(&b, "# HELP %s %s\n", name, h)
-		}
-
-		var labeled []sample
-		for k, v := range r.labeled {
-			if k == name || strings.HasPrefix(k, name+"|") {
-				labeled = append(labeled, sample{k, atomic.LoadInt64(v)})
-			}
-		}
-
-		_, hasCounter := r.counters[name]
-		_, hasGauge := r.gauges[name]
-
-		if hasCounter || len(labeled) > 0 && !hasGauge {
-			if !hasGauge {
-				fmt.Fprintf(&b, "# TYPE %s counter\n", name)
-			}
-		}
-		if hasGauge {
-			fmt.Fprintf(&b, "# TYPE %s gauge\n", name)
-		}
-
-		if hasCounter {
-			fmt.Fprintf(&b, "%s %d\n", name, atomic.LoadInt64(r.counters[name]))
-		}
-		if hasGauge {
-			fmt.Fprintf(&b, "%s %d\n", name, r.gauges[name].Load())
-		}
-		if len(labeled) > 0 {
-			sort.Slice(labeled, func(i, j int) bool { return labeled[i].key < labeled[j].key })
-			for _, s := range labeled {
-				fmt.Fprintf(&b, "%s%s %d\n", name, formatLabelSuffix(s.key, name), s.val)
-			}
-		}
-	}
-	return b.String()
-}
-
-func formatLabelSuffix(key, name string) string {
-	if key == name {
+	mfs, err := r.reg.Gather()
+	if err != nil {
 		return ""
 	}
-	rest := strings.TrimPrefix(key, name+"|")
-	pairs := strings.Split(rest, "|")
-	out := make([]string, 0, len(pairs))
-	for _, p := range pairs {
-		kv := strings.SplitN(p, "=", 2)
-		if len(kv) != 2 {
-			continue
+	var buf bytes.Buffer
+	enc := expfmt.NewEncoder(&buf, expfmt.NewFormat(expfmt.TypeTextPlain))
+	for _, mf := range mfs {
+		if err := enc.Encode(mf); err != nil {
+			break
 		}
-		out = append(out, fmt.Sprintf("%s=%q", kv[0], kv[1]))
 	}
-	if len(out) == 0 {
-		return ""
-	}
-	return "{" + strings.Join(out, ",") + "}"
+	return buf.String()
 }
 
-// HTTPHandler 输出 /metrics。
-func HTTPHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-		_, _ = w.Write([]byte(defaultRegistry.WritePrometheus()))
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
+	sort.Strings(keys)
+	return keys
 }
 
 // ObserveHTTP 记录一次 HTTP 请求到默认注册表。
@@ -213,7 +177,7 @@ func ObserveSyncRun(status string) {
 	defaultRegistry.ObserveSyncRun(status)
 }
 
-// ObserveSyncRunWithTask 记录到默认注册表（带 task 标签）。
+// ObserveSyncRunWithTask 记录到默认注册表(带 task 标签)。
 func ObserveSyncRunWithTask(taskKey, status string) {
 	defaultRegistry.ObserveSyncRunWithTask(taskKey, status)
 }

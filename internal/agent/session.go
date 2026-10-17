@@ -3,11 +3,12 @@ package agent
 import (
 	"context"
 	"errors"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/oekit/concurrency/async"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
 // ErrSessionNotFound 会话不存在或已过期。
@@ -106,7 +107,7 @@ func (st *SessionStore) Snapshot(s *Session) []Message {
 // StartJanitor 启动周期性过期回收:Get 只做惰性清理,再无人访问的会话
 // (如爬虫创建后即弃)靠 janitor 兜底,防止 map 只增不减。
 func (st *SessionStore) StartJanitor(ctx context.Context, interval time.Duration) {
-	go func() {
+	async.GoSafe(func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for {
@@ -124,7 +125,7 @@ func (st *SessionStore) StartJanitor(ctx context.Context, interval time.Duration
 				st.mu.Unlock()
 			}
 		}
-	}()
+	})
 }
 
 // SetPending 在会话上登记一次待确认调用(代理给 Session 的接口适配)。

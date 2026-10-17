@@ -16,6 +16,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
+	"github.com/oekit/concurrency/async"
 
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
@@ -145,10 +146,11 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 	}
 	msgs := historyMessages(r.sessions.Snapshot(sess))
 
-	go func() {
+	async.GoSafe(func() {
 		defer close(out)
 		defer cancel()
 		defer func() { <-r.sem }()
+		// 自带 recover:panic 要作为 error 事件推给客户端,不能只靠 GoSafe 的全局日志。
 		defer func() {
 			if rec := recover(); rec != nil {
 				emit(Event{Type: "error", Content: fmt.Sprintf("内部错误: %v", rec)})
@@ -214,7 +216,7 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 		}
 		r.sessions.Append(sess, "assistant", full.String())
 		emit(Event{Type: "done", Usage: &usage})
-	}()
+	})
 	return out, cancel, nil
 }
 

@@ -1,19 +1,15 @@
 package router
 
 import (
-	"context"
-
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	hertzmetrics "github.com/oekit/hertz/hertz/metrics"
 	handler "github.com/yi-nology/git-ferry/biz/handler"
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	routergitsync "github.com/yi-nology/git-ferry/biz/router/git_sync"
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 	"github.com/yi-nology/git-ferry/internal/gitserve"
 	"github.com/yi-nology/git-ferry/internal/mcp"
-	"github.com/yi-nology/git-ferry/internal/metrics"
 	"github.com/yi-nology/git-ferry/internal/pkg/swagger"
 )
 
@@ -26,8 +22,8 @@ func CustomizedRegister(r *server.Hertz) {
 	// Readiness probe (checks database and Redis, no auth)
 	r.GET("/health", git_sync.HealthCheck)
 
-	// Prometheus 指标(公开,供抓取端拉取)
-	r.GET("/metrics", metricsHandler)
+	// Prometheus 指标(公开,供抓取端拉取):oekit 全局注册表,含壳层业务指标 + Go runtime/process
+	r.GET("/metrics", hertzmetrics.MetricsHandler())
 
 	// Webhook 接收端点（带速率限制，不走 API 鉴权）
 	r.POST("/api/webhook/receive/:repoKey", git_sync.RateLimitMiddleware(), git_sync.ReceiveWebhook)
@@ -123,10 +119,4 @@ func CustomizedRegister(r *server.Hertz) {
 	r.GET("/swagger/", swagger.SwaggerUI)
 	r.GET("/swagger/index.html", swagger.SwaggerUI)
 	r.GET("/swagger/openapi.json", swagger.OpenAPISpec)
-}
-
-// metricsHandler 输出 Prometheus 文本格式指标。
-func metricsHandler(_ context.Context, c *app.RequestContext) {
-	c.Data(consts.StatusOK, "text/plain; version=0.0.4; charset=utf-8",
-		[]byte(metrics.Default().WritePrometheus()))
 }

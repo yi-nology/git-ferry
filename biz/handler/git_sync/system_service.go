@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/concurrency/async"
 	system "github.com/yi-nology/git-ferry/biz/model/system"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -35,14 +36,14 @@ func SystemStatus(ctx context.Context, c *app.RequestContext) {
 	}
 	repoCh := make(chan repoCountResult, 1)
 	taskCh := make(chan taskCountResult, 1)
-	safe.Go("CountRepos", func() {
+	async.GoSafe(func() {
 		var r repoCountResult
 		// defer LIFO:先注册发送、后注册 recover,panic 时 recover 先写 err 再发送
 		defer func() { repoCh <- r }()
 		defer safe.RecoverToErr("CountRepos", &r.err)
 		r.count, r.err = svc.CountRepos()
 	})
-	safe.Go("CountTasksByStatus", func() {
+	async.GoSafe(func() {
 		var r taskCountResult
 		defer func() { taskCh <- r }()
 		defer safe.RecoverToErr("CountTasksByStatus", &r.err)

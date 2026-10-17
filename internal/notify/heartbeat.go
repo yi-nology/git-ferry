@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/oekit/concurrency/async"
 )
 
 // Heartbeat 按「最近是否有失败」分路打点。
@@ -51,7 +53,7 @@ func (h *Heartbeat) Start(ctx context.Context) {
 		return
 	}
 	interval := time.Duration(h.cfg.IntervalSeconds) * time.Second
-	go func() {
+	async.GoSafe(func() {
 		t := time.NewTicker(interval)
 		defer t.Stop()
 		for {
@@ -68,7 +70,7 @@ func (h *Heartbeat) Start(ctx context.Context) {
 				}
 			}
 		}
-	}()
+	})
 }
 
 func (h *Heartbeat) pingAll(urls []string, suffix string) {

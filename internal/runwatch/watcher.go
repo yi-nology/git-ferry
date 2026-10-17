@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oekit/concurrency/async"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/metrics"
 	"github.com/yi-nology/git-ferry/internal/notify"
@@ -106,16 +107,16 @@ func (w *Watcher) Start(ctx context.Context) {
 		cancel := w.svc.SubscribeRuns(func(ev corebridge.RunEvent) {
 			w.onRunEvent(ctx, &ev)
 		})
-		go func() {
+		async.GoSafe(func() {
 			<-ctx.Done()
 			cancel()
-		}()
+		})
 		slog.Info("run watcher started",
 			"mode", ModeEvent, "max_auto_retries", w.cfg.Retry.MaxAutoRetries)
 		return
 	}
 
-	go func() {
+	async.GoSafe(func() {
 		t := time.NewTicker(time.Duration(w.cfg.IntervalSeconds) * time.Second)
 		defer t.Stop()
 		w.tick(ctx)
@@ -127,7 +128,7 @@ func (w *Watcher) Start(ctx context.Context) {
 				w.tick(ctx)
 			}
 		}
-	}()
+	})
 	slog.Info("run watcher started",
 		"mode", ModePoll,
 		"interval_seconds", w.cfg.IntervalSeconds,

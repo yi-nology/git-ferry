@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/concurrency/async"
 	operation_log "github.com/yi-nology/git-ferry/biz/model/operation_log"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -62,7 +63,7 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	statsCh := make(chan statsResult, 1)
 	statsCtx, statsCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer statsCancel()
-	safe.Go("OperationStats", func() {
+	async.GoSafe(func() {
 		var r statsResult
 		defer func() { statsCh <- r }()
 		defer safe.RecoverToErr("OperationStats", &r.err)

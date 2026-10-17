@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/oekit/concurrency/async"
 )
 
 // ResolveTokenFromEnv 用环境变量覆盖平台访问令牌。
@@ -41,14 +43,14 @@ func ResolveTokenFromEnv(platformKey, current string) string {
 func runTokenCmd(cmdStr string, timeout time.Duration) string {
 	type result struct{ out []byte }
 	ch := make(chan result, 1)
-	go func() {
+	async.GoSafe(func() {
 		// #nosec G204 G702 —— 命令来自部署方 GIT_SYNC_TOKEN_CMD_* 环境变量，
 		// 与密钥注入同等信任级（ghorg token_cmd 同模型），非用户请求参数
 		cmd := exec.Command("sh", "-c", cmdStr) //nolint:gosec // 见上
 		cmd.Env = os.Environ()
 		b, _ := cmd.Output()
 		ch <- result{out: b}
-	}()
+	})
 	select {
 	case r := <-ch:
 		s := strings.TrimSpace(string(r.out))

@@ -1,25 +1,27 @@
 // Package serve 提供公网/内网壳共用的 HTTP 启动能力：
-// JSON recovery、gzip、完整路由注册、信号驱动的优雅退出。
+// JSON recovery、gzip、完整路由注册、oekit bootstrap 驱动的优雅退出。
 // 壳层只负责：配置、core.Service 初始化、鉴权 Provider、生命周期清理。
 package serve
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
-	"syscall"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
-	"github.com/oklog/run"
+	"github.com/oekit/bootstrap/bootstrap"
+	hertzx "github.com/oekit/hertz/hertz"
 	"github.com/yi-nology/git-ferry-core/pkg/proclog"
 	"github.com/yi-nology/git-ferry/biz/router"
 )
+
+// serviceName 是 bootstrap 生命周期与日志里的服务标识。
+const serviceName = "git-ferry"
 
 // Config 是 HTTP 服务监听相关配置（与 core.Config.Server/Webhook 对齐字段）。
 type Config struct {
@@ -91,33 +93,28 @@ func New(cfg Config, extra ...app.HandlerFunc) *server.Hertz {
 	return h
 }
 
-// Run 启动 HTTP 服务并阻塞至 SIGINT/SIGTERM，随后优雅关闭并执行 cleanup。
+// Run 启动 HTTP 服务并阻塞至 SIGINT/SIGTERM,随后优雅关闭并执行 cleanup。
+// 生命周期交给 oekit bootstrap:资源按注册逆序关闭——cleanup 先注册、后执行,
+// 保证 HTTP 排空完成后才释放 core.Service 等依赖(与此前 run.Group 的顺序一致)。
 func Run(h *server.Hertz, cleanup func()) error {
-	var g run.Group
-
-	g.Add(func() error {
-		h.Spin()
-		return nil
-	}, func(error) {
-		slog.Info("shutting down server...")
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := h.Shutdown(ctx); err != nil {
-			slog.Error("server shutdown error", "error", err)
-		}
-		slog.Info("server stopped")
-	})
-
-	g.Add(run.SignalHandler(context.Background(), syscall.SIGINT, syscall.SIGTERM))
-
-	err := g.Run()
-	if cleanup != nil {
-		cleanup()
-	}
-	if err != nil && !errors.Is(err, run.ErrSignal) {
+	b, err := bootstrap.New(
+		bootstrap.WithServiceName(serviceName),
+		bootstrap.WithShutdownTimeout(10*time.Second),
+	)
+	if err != nil {
 		return err
 	}
-	return nil
+	return b.Run(func(app *bootstrap.App) error {
+		if cleanup != nil {
+			app.AddResource("shell-cleanup", func(context.Context) error {
+				cleanup()
+				return nil
+			})
+		}
+		hertzx.RunServer(app, "http", h)
+		<-app.Context().Done()
+		return nil
+	})
 }
 
 // ExitOnFail 打日志并退出进程，供壳层 main 使用。

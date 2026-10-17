@@ -2,6 +2,34 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+> 依赖 git-ferry-core **v0.9.1**（本批壳层改动不依赖 core 新 API；core 侧同批次的 oekit
+> 接入发版后再升 go.mod）+ go-git-platform **v0.76.0**。
+
+### Changed
+
+- **接入 oekit 基础库**（替换自写基础设施，依据 <https://oekit.github.io/llms.txt>）：
+  - **启动骨架 → `oekit/bootstrap` + `oekit/hertz.RunServer`**：`serve.Run` 不再用 `oklog/run`
+    手拼 run.Group，改由 bootstrap 统一信号监听、资源逆序关闭与超时预算；关闭顺序不变
+    （先排空 HTTP，再执行 `cleanup` 停 watcher/core）。实测 SIGTERM 后 1s 内退出、端口释放。
+  - **裸 `go func` → `oekit/concurrency/async.GoSafe`**：通知派发、心跳、AI 会话 janitor、
+    AI 流式回复、run watcher（事件/轮询两路）、token 命令执行、测试假模型共 9 处统一经
+    GoSafe 启动；`internal/pkg/safe.Go` 删除，`safe.RecoverToErr`（panic 转 error 回传）保留。
+  - **指标 → `prometheus/client_golang` + `oekit/metrics` + `oekit/hertz/metrics`**：
+    `internal/metrics` 不再手写 Prometheus 文本渲染（253 行 → 注册表薄封装），默认注册表复用
+    oekit `metrics.Registry`，`/metrics` 由 `hertzmetrics.MetricsHandler()` 暴露，因而新增
+    Go runtime / process 采集器与 `app_build_info`、`app_start_time_seconds`；对外 API
+    （`IncCounter/AddLabeled/SetGauge/ObserveSyncRun*/ObserveHTTP/WritePrometheus`）不变。
+    **抓取面两处格式差异**：`sync_runs_total` 无 task 的打点现落在 `task=""` 序列
+    （Prometheus 摄入时空标签等价于不存在，PromQL 查询不受影响）；gauge 按最短浮点输出
+    （如 `1.7e+09`）。
+- 依赖：`cloudwego/hertz` v0.10.5 → v0.10.6（oekit/hertz 要求）。
+
+### Removed
+
+- `github.com/oklog/run`（被 oekit bootstrap 取代）。
+
 ## [v1.21.0] - 2026-10-03
 
 > 依赖 git-ferry-core **v0.9.1** + go-git-platform **v0.76.0**。

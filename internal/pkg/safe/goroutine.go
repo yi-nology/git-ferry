@@ -1,3 +1,6 @@
+// Package safe 收纳 oekit concurrency/async 没有覆盖的 panic 处理原语。
+// goroutine 的启动一律走 async.GoSafe(进程级 PanicHandler 由 core pkg/proclog 接到 slog);
+// 这里只保留"panic 转 error 回传调用方"的 defer 辅助。
 package safe
 
 import (
@@ -5,25 +8,6 @@ import (
 	"log/slog"
 	"runtime/debug"
 )
-
-// Go 启动一个带 panic recovery 的 goroutine。
-// 如果 goroutine 发生 panic,会记录错误日志并调用可选的 onError 回调,
-// 而不是让整个进程崩溃。Hertz 的 recovery.Recovery() middleware
-// 只保护 handler 主 goroutine,子 goroutine 需要自行 recover。
-func Go(name string, fn func()) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("goroutine panic recovered",
-					"goroutine", name,
-					"panic", fmt.Sprintf("%v", r),
-					"stack", string(debug.Stack()),
-				)
-			}
-		}()
-		fn()
-	}()
-}
 
 // RecoverToErr 用于 defer recover,将 panic 转为 error 写回调用方变量。
 // 适用于需要把 panic 信息传递给调用方的场景(如并行 DB 查询)。

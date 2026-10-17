@@ -178,6 +178,6 @@ func main() {
 		syncSvc.Stop()
 	}
 	if err := serve.Run(h, cleanup); err != nil {
-		serve.ExitOnFail("run group exited with error", err)
+		serve.ExitOnFail("server exited with error", err)
 	}
 }

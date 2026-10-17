@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/oekit/concurrency/async"
 )
 
 // RunEvent 一次同步运行的结束事件。
@@ -54,11 +56,11 @@ func (n *Notifier) NotifyRun(ev *RunEvent) {
 	if n.cfg.OnlyFail && ev.Status == "success" {
 		return
 	}
-	go func() {
+	async.GoSafe(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 		n.pushAll(ctx, ev)
-	}()
+	})
 }
 
 func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
