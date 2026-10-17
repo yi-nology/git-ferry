@@ -2,14 +2,16 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.22.0] - 2026-10-17
 
-> 依赖 git-ferry-core **v0.9.1**（本批壳层改动不依赖 core 新 API；core 侧同批次的 oekit
-> 接入 + SDK 升级发版后再升 go.mod）+ go-git-platform **v0.88.1**。
+> 依赖 git-ferry-core **v0.10.0**(oekit 接入 + go-git-platform v0.89.0)+ go-git-platform
+> **v0.89.0**。
 
 ### Changed
 
-- **依赖升 go-git-platform v0.76.0 → v0.88.1**,随之 **Go 版本线 1.26 → 1.27.2**(SDK go.mod
+- **依赖升 git-ferry-core v0.9.1 → v0.10.0**(core 侧 oekit 接入与行为变更见 core
+  CHANGELOG:webhook 空密钥改拒绝、锁族迁移 distlock、日志接线 logx)。
+- **依赖升 go-git-platform v0.76.0 → v0.89.0**,随之 **Go 版本线 1.26 → 1.27.2**(SDK go.mod
   要求):`go.mod`、`Dockerfile`(`golang:1.27-alpine`)、`release.yml` 的 setup-go、README /
   CONTRIBUTING 的环境要求同步;`ci.yml`/`codeql.yml` 本就跟随 `go-version-file`。壳层代码零改动,
   与已发布 core v0.9.1 组合编译通过(core 源码与新 SDK API 兼容),可独立过 CI。

@@ -11,15 +11,15 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oekit/bootstrap v0.5.0
-	github.com/oekit/concurrency v0.5.2
-	github.com/oekit/hertz v0.5.3
-	github.com/oekit/metrics v0.1.5
+	github.com/oekit/bootstrap v0.5.3
+	github.com/oekit/concurrency v0.5.4
+	github.com/oekit/hertz v0.5.10
+	github.com/oekit/metrics v0.1.6
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.9.1
+	github.com/yi-nology/git-ferry-core v0.10.0
 	github.com/yi-nology/go-git-platform v0.89.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -106,8 +106,9 @@ require (
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/oekit/core v0.6.0 // indirect
-	github.com/oekit/logx v0.4.0 // indirect
-	github.com/oekit/pkg v0.9.3 // indirect
+	github.com/oekit/logx v0.5.0 // indirect
+	github.com/oekit/pkg v0.11.0 // indirect
+	github.com/oekit/redisx v0.7.5 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
