@@ -12,15 +12,15 @@ require (
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oekit/bootstrap v0.5.0
-	github.com/oekit/concurrency v0.4.0
-	github.com/oekit/hertz v0.5.2
+	github.com/oekit/concurrency v0.5.2
+	github.com/oekit/hertz v0.5.3
 	github.com/oekit/metrics v0.1.5
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.9.1
-	github.com/yi-nology/go-git-platform v0.88.1
+	github.com/yi-nology/go-git-platform v0.89.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -105,9 +105,9 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
-	github.com/oekit/core v0.3.3 // indirect
-	github.com/oekit/logx v0.2.0 // indirect
-	github.com/oekit/pkg v0.6.0 // indirect
+	github.com/oekit/core v0.6.0 // indirect
+	github.com/oekit/logx v0.4.0 // indirect
+	github.com/oekit/pkg v0.9.3 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
@@ -147,7 +147,6 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
 	modernc.org/libc v1.22.5 // indirect
