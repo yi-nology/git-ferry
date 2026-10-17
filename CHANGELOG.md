@@ -31,7 +31,10 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
     **抓取面两处格式差异**：`sync_runs_total` 无 task 的打点现落在 `task=""` 序列
     （Prometheus 摄入时空标签等价于不存在，PromQL 查询不受影响）；gauge 按最短浮点输出
     （如 `1.7e+09`）。
-- 依赖：`cloudwego/hertz` v0.10.5 → v0.10.6（oekit/hertz 要求）。
+- 依赖：`cloudwego/hertz` v0.10.5 → v0.10.6（oekit/hertz 要求）；oekit 升至结构重置后的新基线
+  **bootstrap v0.5.0 / hertz v0.5.2**（包提升到模块根：import `oekit/bootstrap/bootstrap`→`oekit/bootstrap`、
+  `oekit/hertz/hertz`→`oekit/hertz`、`oekit/hertz/hertz/metrics`→`oekit/hertz/metrics`；hertz v0.5.1
+  的测试仍引用旧 bootstrap 路径导致 `go mod tidy` 报错，v0.5.2 已修，tidy 干净通过）。
 
 ### Removed
 

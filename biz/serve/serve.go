@@ -14,8 +14,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
-	"github.com/oekit/bootstrap/bootstrap"
-	hertzx "github.com/oekit/hertz/hertz"
+	"github.com/oekit/bootstrap"
+	hertzx "github.com/oekit/hertz"
 	"github.com/yi-nology/git-ferry-core/pkg/proclog"
 	"github.com/yi-nology/git-ferry/biz/router"
 )

@@ -3,7 +3,7 @@ package router
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/adaptor"
-	hertzmetrics "github.com/oekit/hertz/hertz/metrics"
+	hertzmetrics "github.com/oekit/hertz/metrics"
 	handler "github.com/yi-nology/git-ferry/biz/handler"
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	routergitsync "github.com/yi-nology/git-ferry/biz/router/git_sync"

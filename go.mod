@@ -11,9 +11,9 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oekit/bootstrap v0.4.2
+	github.com/oekit/bootstrap v0.5.0
 	github.com/oekit/concurrency v0.4.0
-	github.com/oekit/hertz v0.5.0
+	github.com/oekit/hertz v0.5.2
 	github.com/oekit/metrics v0.1.5
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
