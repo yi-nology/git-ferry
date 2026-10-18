@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/oekit/concurrency/async"
+	"github.com/oekit/concurrency/syncx"
 	system "github.com/yi-nology/git-ferry/biz/model/system"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/safe"
 	"github.com/yi-nology/git-ferry/internal/version"
 )
 
@@ -26,42 +25,32 @@ func SystemStatus(ctx context.Context, c *app.RequestContext) {
 	// CountRepos 与 CountTasksByStatus 互不依赖,并行执行。
 	// 注:CountRepos/CountTasksByStatus 不接受 ctx(core API 限制),
 	// goroutine 无法被取消,但都是快速 count 查询,泄漏风险可忽略
-	type repoCountResult struct {
-		count int64
-		err   error
+	type counts struct {
+		repoCount  int64
+		taskCounts map[string]int64
 	}
-	type taskCountResult struct {
-		counts map[string]int64
-		err    error
-	}
-	repoCh := make(chan repoCountResult, 1)
-	taskCh := make(chan taskCountResult, 1)
-	async.GoSafe(func() {
-		var r repoCountResult
-		// defer LIFO:先注册发送、后注册 recover,panic 时 recover 先写 err 再发送
-		defer func() { repoCh <- r }()
-		defer safe.RecoverToErr("CountRepos", &r.err)
-		r.count, r.err = svc.CountRepos()
+	slots := syncx.FanInErr(2, func(i int) (counts, error) {
+		var r counts
+		var err error
+		switch i {
+		case 0:
+			r.repoCount, err = svc.CountRepos()
+		default:
+			r.taskCounts, err = svc.CountTasksByStatus()
+		}
+		return r, err
 	})
-	async.GoSafe(func() {
-		var r taskCountResult
-		defer func() { taskCh <- r }()
-		defer safe.RecoverToErr("CountTasksByStatus", &r.err)
-		r.counts, r.err = svc.CountTasksByStatus()
-	})
-
-	rr := <-repoCh
-	if rr.err != nil {
+	// Slot.Err 承载查询错误与 panic(async.PanicError),与此前 RecoverToErr 等价
+	if slots[0].Err != nil {
 		response.InternalError(c, "get repo count failed")
 		return
 	}
-	tr := <-taskCh
-	if tr.err != nil {
+	if slots[1].Err != nil {
 		response.InternalError(c, "get task count failed")
 		return
 	}
-	repoCount := rr.count
-	taskCounts := tr.counts
+	repoCount := slots[0].Val.repoCount
+	taskCounts := slots[1].Val.taskCounts
 	taskTotal := taskCounts["total"]
 	runningCount := taskCounts["running"]
 	failedCount := taskCounts["failed"]

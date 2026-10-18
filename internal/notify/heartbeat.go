@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/oekit/concurrency/async"
+	"github.com/oekit/concurrency/loop"
 )
 
 // Heartbeat 按「最近是否有失败」分路打点。
@@ -53,24 +53,18 @@ func (h *Heartbeat) Start(ctx context.Context) {
 		return
 	}
 	interval := time.Duration(h.cfg.IntervalSeconds) * time.Second
-	async.GoSafe(func() {
-		t := time.NewTicker(interval)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				if h.lastFailUnix != 0 && time.Since(time.Unix(h.lastFailUnix, 0)) > 24*time.Hour {
-					// 失败悬挂超 24h,重新允许成功分路
-					h.lastFailUnix = 0
-				}
-				if h.lastFailUnix == 0 {
-					h.pingAll(h.cfg.SuccessURLs, "")
-				}
+	// loop 契约:单轮 panic 经 RunSafeLabeled 收编(循环存活),忙时丢 tick 不重叠;
+	// FirstDelay=interval 保持旧 ticker 语义(首跳在间隔后,不立即打点)
+	loop.Run(ctx, loop.Config{Interval: interval, FirstDelay: interval, Name: "notify-heartbeat"},
+		func(_ context.Context) {
+			if h.lastFailUnix != 0 && time.Since(time.Unix(h.lastFailUnix, 0)) > 24*time.Hour {
+				// 失败悬挂超 24h,重新允许成功分路
+				h.lastFailUnix = 0
 			}
-		}
-	})
+			if h.lastFailUnix == 0 {
+				h.pingAll(h.cfg.SuccessURLs, "")
+			}
+		})
 }
 
 func (h *Heartbeat) pingAll(urls []string, suffix string) {

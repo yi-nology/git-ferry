@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed
+
+- **依赖升 git-ferry-core v0.10.2 + oekit 全家最新**(concurrency v0.10.0 / logx v0.7.0 /
+  bootstrap v0.6.2 / hertz v0.6.4 / metrics v0.1.7 / redisx v0.7.6,go-git-platform v0.90.1;
+  core v0.10.2 已适配 logx v0.7.0 的 `ParseLogLevel (Level, error)` 新签名)。
+- **手写周期循环收编 oekit `loop`**(heartbeat / AI 会话 janitor / runwatch poll 三处):
+  立即首跑与 FirstDelay 语义与旧 ticker 逐一对应;增强:单轮 panic 经 RunSafeLabeled
+  收编(此前 panic 会杀死整个循环,现在循环存活且告警带任务名)、忙时丢 tick 不重叠。
+- **SystemStatus 双查询并行改 `syncx.FanInErr`**:错误/panic 统一进 Slot.Err
+  (async.PanicError,全局 PanicHandler 观测),删除 channel + RecoverToErr 样板。
+
 ## [v1.22.1] - 2026-10-17
 
 > 依赖 git-ferry-core **v0.10.1** + go-git-platform **v0.90.0** + oekit logx **v0.5.1** /

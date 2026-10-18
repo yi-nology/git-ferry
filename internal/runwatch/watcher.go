@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/oekit/concurrency/async"
+	"github.com/oekit/concurrency/loop"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/metrics"
 	"github.com/yi-nology/git-ferry/internal/notify"
@@ -116,19 +117,12 @@ func (w *Watcher) Start(ctx context.Context) {
 		return
 	}
 
-	async.GoSafe(func() {
-		t := time.NewTicker(time.Duration(w.cfg.IntervalSeconds) * time.Second)
-		defer t.Stop()
-		w.tick(ctx)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				w.tick(ctx)
-			}
-		}
-	})
+	// loop 契约:立即首跑(保持旧实现"首轮只建水位不发通知"的入口)、忙时丢 tick、
+	// 单轮 panic 收编(循环存活)
+	loop.Run(ctx, loop.Config{Interval: time.Duration(w.cfg.IntervalSeconds) * time.Second, Name: "runwatch-poll"},
+		func(c context.Context) {
+			w.tick(c)
+		})
 	slog.Info("run watcher started",
 		"mode", ModePoll,
 		"interval_seconds", w.cfg.IntervalSeconds,

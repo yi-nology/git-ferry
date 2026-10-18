@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/oekit/concurrency/async"
+	"github.com/oekit/concurrency/loop"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
@@ -106,26 +106,20 @@ func (st *SessionStore) Snapshot(s *Session) []Message {
 
 // StartJanitor 启动周期性过期回收:Get 只做惰性清理,再无人访问的会话
 // (如爬虫创建后即弃)靠 janitor 兜底,防止 map 只增不减。
+// loop 契约:单轮 panic 收编(循环存活)、忙时丢 tick;FirstDelay=interval 保持
+// 旧 ticker 语义(首次清扫在 interval 后)。
 func (st *SessionStore) StartJanitor(ctx context.Context, interval time.Duration) {
-	async.GoSafe(func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				st.mu.Lock()
-				now := time.Now()
-				for id, s := range st.sessions {
-					if now.Sub(s.LastAt) > st.ttl {
-						delete(st.sessions, id)
-					}
+	loop.Run(ctx, loop.Config{Interval: interval, FirstDelay: interval, Name: "agent-session-janitor"},
+		func(_ context.Context) {
+			st.mu.Lock()
+			now := time.Now()
+			for id, s := range st.sessions {
+				if now.Sub(s.LastAt) > st.ttl {
+					delete(st.sessions, id)
 				}
-				st.mu.Unlock()
 			}
-		}
-	})
+			st.mu.Unlock()
+		})
 }
 
 // SetPending 在会话上登记一次待确认调用(代理给 Session 的接口适配)。
