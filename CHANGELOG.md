@@ -2,7 +2,14 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v1.23.0] - 2026-10-22
+
+> 依赖 git-ferry-core **v0.11.0**（含 BREAKING：`lock.Semaphore.Renew` 改 `(bool, error)`、
+> `Cleanup` 改 `(int64, error)`、删 `LocalLock`）+ go-git-platform **v0.96.0** +
+> oekit `core` **v0.12.0** / `pkg` **v0.22.0** / `concurrency` **v0.20.1** /
+> `logx` **v0.7.1** / `redisx` **v0.10.0** / `bootstrap` **v0.6.4** /
+> `hertz` **v0.8.1** / `metrics` **v0.1.9** +
+> oagentkit `guardx` **v0.14.0**（私有仓，构建需 `GOPRIVATE=github.com/oagentkit/*`）。
 
 ### Changed
 
