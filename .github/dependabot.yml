@@ -26,3 +26,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      # codeql-action 的 init / autobuild / analyze 三个 step 必须同版本,
+      # 否则 CodeQL 直接拒绝运行:
+      #   "Loaded a configuration file for version '4.38.2', but running version '4.39.0'.
+      #    All steps in a workflow that use github/codeql-action must use the same version"
+      # Dependabot 默认按「每个 step 一条依赖」升级,只升其中一条就必然撞版本错配。
+      # 分组后一次性升全部 codeql-action step,PR 才是绿的。
+      codeql-action:
+        patterns:
+          - "github/codeql-action"
+          - "github/codeql-action/*"
