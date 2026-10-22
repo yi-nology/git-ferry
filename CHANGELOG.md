@@ -2,6 +2,17 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed
+
+- **eino v0.9.19 → v0.9.22**：本仓 `internal/agent/**` 直接消费 eino
+  （`adk` / `compose` / `schema` / `components/tool` / `components/model`）。
+  同时与 oagentkit `guardx v0.14.0` 的 eino 下限（v0.9.21）对齐——
+  后续若引入 oagentkit/agent 不会再因 eino 版本被顶回。
+  `eino-ext/components/model/openai` v0.1.13、`eino-ext/libs/acl/openai` v0.1.17、
+  `eino-contrib/jsonschema` v1.0.3 均已是各自最新。
+
 ## [v1.23.0] - 2026-10-22
 
 > 依赖 git-ferry-core **v0.11.0**（含 BREAKING：`lock.Semaphore.Renew` 改 `(bool, error)`、
