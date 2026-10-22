@@ -5,6 +5,21 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # github.com/apache/thrift 锁在 v0.13.0 上——被「代码生成工具的能力」锁死，
+      # 不是保守选择：
+      #   - thrift v0.14.0 起把 TProtocol 的方法 ctx 化
+      #     (ReadStructBegin(ctx) / Skip(ctx, type))；
+      #   - 本仓 biz/model/** 全部由 thriftgo 生成（hz model 内部也是调 thriftgo），
+      #     生成物调用的是旧签名 (ReadStructBegin() / Skip(type))；
+      #   - thriftgo 最新版 v0.4.5 实测仍生成旧签名，没有 ctx 化的版本。
+      # 于是升 thrift 必然编译失败（typecheck: not enough arguments in call to
+      # iprot.ReadStructBegin / iprot.Skip）。
+      # 解封条件：① thriftgo 或 hz 发布生成 ctx 化代码的版本；或
+      #           ② 把这些模型从 thrift runtime 上摘掉、改用不依赖 TProtocol 的生成路径。
+      # 在此之前不接受该依赖的自动升级（此前每轮 Dependabot PR 都在这一步编译失败）。
+      - dependency-name: "github.com/apache/thrift"
+        versions: [">= v0.14.0"]
 
   - package-ecosystem: github-actions
     directory: "/"
