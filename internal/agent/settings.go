@@ -94,18 +94,7 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 			return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
 		}
 	}
-	if in.Temperature <= 0 {
-		in.Temperature = 0.3
-	}
-	if in.MaxTokens <= 0 {
-		in.MaxTokens = 2048
-	}
-	if in.TimeoutSeconds <= 0 {
-		in.TimeoutSeconds = 60
-	}
-	if in.MaxConcurrentChats <= 0 {
-		in.MaxConcurrentChats = 4
-	}
+	in.applyDefaults()
 	in.UpdatedAt = time.Now()
 
 	s.mu.Lock()
@@ -178,18 +167,7 @@ func (st *Settings) ToConfig() *Config {
 		TimeoutSeconds:     st.TimeoutSeconds,
 		MaxConcurrentChats: st.MaxConcurrentChats,
 	}
-	if cfg.Temperature <= 0 {
-		cfg.Temperature = 0.3
-	}
-	if cfg.MaxTokens <= 0 {
-		cfg.MaxTokens = 2048
-	}
-	if cfg.TimeoutSeconds <= 0 {
-		cfg.TimeoutSeconds = 60
-	}
-	if cfg.MaxConcurrentChats <= 0 {
-		cfg.MaxConcurrentChats = 4
-	}
+	cfg.applyDefaults()
 	return cfg
 }
 

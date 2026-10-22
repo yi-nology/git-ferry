@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/concurrency/retry"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -51,7 +54,7 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	mm := prov.(sdkprov.MigrationManager)
 
 	// org=="" 用户级(/user/migrations),非空组织级(/orgs/{org}/migrations)。
-	org := optStr(req.Org)
+	org := ptrx.Deref(req.Org, "")
 	info, err := mm.CreateMigration(ctx, org, sdkprov.CreateMigrationOptions{
 		LockRepositories: true,
 		ExcludeMetadata:  false,
@@ -72,14 +75,22 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// wait=true 时轮询到 completed(最多 60s);轮询节奏留在壳层。
-	if optBool(req.Wait) && info.ID != 0 {
-		for i := 0; i < 12; i++ {
-			time.Sleep(5 * time.Second)
-			if done := pollMigration(ctx, mm, org, info.ID); done != nil {
-				result["state"] = done.State
-				result["archive_url"] = done.ArchiveURL
-				break
+	if ptrx.Deref(req.Wait, false) && info.ID != 0 {
+		// retry.Poll:cond 先执行一次,未达成则按 interval 重试,超时返回 ErrTimeout。
+		// 原实现先睡后查(首次查在 5s 后),这里改成先查后睡——只是查得更早,口径不变。
+		perr := retry.Poll(ctx, 5*time.Second, 60*time.Second, func() (bool, error) {
+			done := pollMigration(ctx, mm, org, info.ID)
+			if done == nil {
+				return false, nil
 			}
+			result["state"] = done.State
+			result["archive_url"] = done.ArchiveURL
+			return true, nil
+		})
+		// 超时(ErrTimeout)按原实现口径静默收束:保留轮询前的旧 state。
+		// 其余错误 = 请求上下文被取消(客户端断开),同样保留旧 state 并提前结束轮询。
+		if perr != nil && !errors.Is(perr, retry.ErrTimeout) {
+			slog.Warn("migration poll interrupted", "migration_id", info.ID, "error", perr)
 		}
 	}
 

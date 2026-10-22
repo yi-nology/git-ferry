@@ -12,6 +12,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/oekit/pkg/ptrx"
 
 	"github.com/yi-nology/git-ferry/internal/agent"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -58,7 +59,7 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	key := optStr(req.ApiKey)
+	key := ptrx.Deref(req.ApiKey, "")
 	// 界面回显的脱敏值不可当作新密钥
 	if strings.Contains(key, "****") {
 		key = ""
@@ -174,7 +175,7 @@ func AITestConfig(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "base_url 不能为空")
 		return
 	}
-	key := optStr(req.ApiKey)
+	key := ptrx.Deref(req.ApiKey, "")
 	if strings.Contains(key, "****") {
 		key = ""
 	}
@@ -186,7 +187,7 @@ func AITestConfig(ctx context.Context, c *app.RequestContext) {
 
 	// 优先 GET /models(OpenAI 兼容);失败再 POST /chat/completions 极短补全
 	client := &http.Client{Timeout: 8 * time.Second}
-	status, modelOK, msg := probeOpenAICompat(ctx, client, base, key, optStr(req.Model))
+	status, modelOK, msg := probeOpenAICompat(ctx, client, base, key, ptrx.Deref(req.Model, ""))
 	response.Success(c, map[string]any{
 		"ok":         status > 0 && status < 400,
 		"status":     status,

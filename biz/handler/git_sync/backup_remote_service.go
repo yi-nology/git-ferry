@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/pathx"
 
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
@@ -102,11 +103,20 @@ func RepoFiles(ctx context.Context, c *app.RequestContext) {
 	if rel == "" {
 		rel = "."
 	}
-	if strings.Contains(rel, "..") || filepath.IsAbs(rel) {
-		response.BadRequest(c, "path must be relative and without ..")
-		return
+	// pathx.SanitizeRelStrict:显式 ".." 段一律拒绝,并额外拒绝绝对路径、Windows 盘符与 UNC
+	// (原实现在 Linux 上这些全部漏过)。返回 "/" 分隔路径,拼接前转回平台分隔符。
+	cleaned, ok := pathx.SanitizeRelStrict(rel)
+	if !ok {
+		// 清洗后为空 = 指向 workdir 根目录本身("." / "./" 等):按原行为单独放行。
+		// 含 ".." 的路径不是根目录指针,一律拒绝。
+		if filepath.Clean(rel) == "." && !strings.Contains(rel, "..") {
+			cleaned = "."
+		} else {
+			response.BadRequest(c, "path must be relative and without ..")
+			return
+		}
 	}
-	full := filepath.Join(root, filepath.Clean(rel))
+	full := filepath.Join(root, filepath.FromSlash(cleaned))
 	// 双保险：解析后必须仍在 root 下
 	if absRoot, err := filepath.Abs(root); err == nil {
 		if absFull, err2 := filepath.Abs(full); err2 == nil && !strings.HasPrefix(absFull, absRoot) {

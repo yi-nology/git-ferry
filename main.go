@@ -176,6 +176,8 @@ func main() {
 	cleanup := func() {
 		watchCancel()
 		syncSvc.Stop()
+		// webhook 限流器带后台空闲回收 goroutine,退出前关闭
+		git_sync.CloseWebhookRateLimiter()
 	}
 	if err := serve.Run(h, cleanup); err != nil {
 		serve.ExitOnFail("server exited with error", err)

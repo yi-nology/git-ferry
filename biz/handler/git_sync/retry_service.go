@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -69,7 +70,7 @@ func BatchRetryFailed(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	failed, err := collectRecentFailedRuns(ctx, svc, optStr(req.TaskKey), limit)
+	failed, err := collectRecentFailedRuns(ctx, svc, ptrx.Deref(req.TaskKey, ""), limit)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
@@ -87,7 +88,7 @@ func BatchRetryFailed(ctx context.Context, c *app.RequestContext) {
 			"task_key": item.taskKey,
 		})
 	}
-	recordAudit(ctx, c, "batch_retry", "sync_run", optStr(req.TaskKey),
+	recordAudit(ctx, c, "batch_retry", "sync_run", ptrx.Deref(req.TaskKey, ""),
 		fmt.Sprintf("批量重试 %d 条失败执行", len(retried)))
 	response.Success(c, map[string]any{
 		"success":   true,

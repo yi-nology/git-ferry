@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -85,20 +84,4 @@ func setIf(cmd *cobra.Command, q url.Values, flagName, queryName string) {
 	if v := flagStr(cmd, flagName); v != "" {
 		q.Set(queryName, v)
 	}
-}
-
-// splitCSV 逗号分隔并去空白。
-func splitCSV(s string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
 }

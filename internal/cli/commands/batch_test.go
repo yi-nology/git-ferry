@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/oekit/pkg/stringx"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,11 +78,11 @@ func TestOpsRetryBatchDryRun(t *testing.T) {
 }
 
 func TestSplitCSV(t *testing.T) {
-	got := splitCSV(" a , b ,,c ")
+	got := stringx.SplitCSVNonEmpty(" a , b ,,c ")
 	if len(got) != 3 || got[0] != "a" || got[2] != "c" {
 		t.Fatalf("got %v", got)
 	}
-	if splitCSV("") != nil {
+	if stringx.SplitCSVNonEmpty("") != nil {
 		t.Fatal("empty should be nil")
 	}
 }

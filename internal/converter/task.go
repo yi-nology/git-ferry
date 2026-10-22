@@ -3,6 +3,7 @@ package converter
 import (
 	"github.com/yi-nology/git-ferry-core/model"
 	taskmodel "github.com/yi-nology/git-ferry/biz/model/sync_task"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 func ToTaskInfo(t *model.SyncTask) *taskmodel.SyncTaskInfo {
@@ -121,15 +122,19 @@ func ToSyncRunStepInfoList(steps []*model.SyncRunStep) []*taskmodel.SyncRunStepI
 	return result
 }
 
+// PageToOffset 把 page/pageSize 换算成 offset/limit。
+//
+// 页大小的缺省与上限由 core dao 的口径决定（dao.DefaultPagination）——
+// 本包不自己写死 50/200，避免与 core 各留一份。这里先用 DefaultPagination
+// 把 pageSize 钳好，**再**用钳后的值算 offset：顺序反了的话
+// 「页大小超上限」时 offset 会算在未钳的页大小上。
+//
+// 只依赖 corebridge 的转发入口（core 的 dao 口径），不直接引用 core 的
+// 新增常量——core 尚未发版时壳层仍能编译。
 func PageToOffset(page, pageSize int32) (int, int) {
-	if pageSize <= 0 {
-		pageSize = 50
-	}
-	if pageSize > 200 {
-		pageSize = 200
-	}
+	p := corebridge.DefaultPagination(0, int(pageSize))
 	if page <= 0 {
 		page = 1
 	}
-	return int((page - 1) * pageSize), int(pageSize)
+	return (int(page) - 1) * p.Limit, p.Limit
 }

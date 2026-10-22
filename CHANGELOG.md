@@ -6,14 +6,157 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ### Changed
 
-- **依赖升 git-ferry-core v0.10.2 + oekit 全家最新**(concurrency v0.10.0 / logx v0.7.0 /
-  bootstrap v0.6.2 / hertz v0.6.4 / metrics v0.1.7 / redisx v0.7.6,go-git-platform v0.90.1;
-  core v0.10.2 已适配 logx v0.7.0 的 `ParseLogLevel (Level, error)` 新签名)。
+- **依赖地板再抬一档**：oekit `pkg` v0.21.0→**v0.22.0**、`concurrency` v0.20.0→**v0.20.1**、
+  `oagentkit/guardx` v0.13.1→**v0.14.0**。三个版本正是上一轮向上游提的 issue 的落地：
+  - `pkg v0.22.0` 补齐 `pathx.MatchGlob`（#64）、`pathx.IsSafeFileName`（#63）、
+    `stringx.SplitCSVNonEmpty`（#65）三个原语；
+  - `concurrency v0.20.1` 修 `syncx.KeyedGate` 的 release 竞态（#70）——改用
+    `atomic.Bool` CAS，与同包 `Gate` 对齐，不再有「双重归还名额突破 cap 上限」；
+  - `guardx v0.14.0` 让 permgate **原生支持**「只读档对写入类工具是禁不是问」（#24）。
+- **收编上游新原语，删除本地第二份口径**：
+  - 本轮曾为消费方缺口在本地实现过 `MatchGlob` / `IsSafeFileName` /
+    `SplitCSVNonEmpty` 三个原语——上游已补齐同名原语，**本地实现全部删除**，
+    调用点改为直接调 oekit（`pathx.MatchGlob` / `pathx.IsSafeFileName` /
+    `stringx.SplitCSVNonEmpty`）。上游实现比本地更正确：
+    `pathx.MatchGlob` 把「`*` 是通配符」的判定**前置于**字面量比较
+    （本地实现顺序反了，模式里的 `*` 会被当字面量：`MatchGlob("a*b","a*b")`
+    本地返回 false、上游返回 true）；`stringx.SplitCSVNonEmpty` 全空白输入返回
+    **nil**（本地返回空切片，会把「没配」与「配了空」混同）。
+  - `internal/pkg/textutil` 的两个转发函数（`IsSafeFileName` / `SplitCSVNonEmpty`）
+    随之删除——本仓直接调 oekit。
+- **工具权限判定不再有本地只读兜底**（`internal/agent/tools/permission.go`）：
+  「只读档对危险工具是拒不是问」此前由本地一行判定兜底（因为 permgate 的
+  `AlwaysAsk` 段会先于模式判定短路返回 Ask）。`guardx v0.14.0` 已原生支持
+  （只读拦截段插在 project ask 之前、以及 `checkAlwaysAsk` 的会话授权之后，
+  RuleID/Reason 与原只读段逐字相同、公共 API 零变更），本地兜底删除。
+  保留一处本地判定：显式 override 最高优先（permgate 的规则集排在只读档之下，
+  表达不了「把某工具显式改成只读/放行」）。
+  新增测试钉住只读档对危险工具=拒的口径——上游若改动判定顺序，测试会先红。
+- **依赖地板抬到真最新**：oekit `core` v0.9.0→**v0.12.0**、`pkg` v0.14.0→**v0.21.0**、
+  `concurrency` v0.16.0→**v0.20.0**、`logx` v0.7.0→**v0.7.1**、`redisx` v0.9.0→**v0.10.0**、
+  `bootstrap` v0.6.2→**v0.6.4**、`hertz` v0.6.4→**v0.8.1**、`metrics` v0.1.7→**v0.1.9**、
+  go-git-platform v0.90.1→**v0.96.0**；go 指令 1.27.2→**1.27.3**（与 go-git-platform 对齐，
+  go1.27.3 修复 crypto/x509 GO-2026-6809）。`github.com/oekit/pkg` 由间接依赖升为直接依赖。
+  版本一律用真实发布版本，仓内无 `replace`。
+- **新引入 oagentkit 家族**（`github.com/oagentkit/guardx` v0.13.1，私有仓需
+  `GOPRIVATE=github.com/oagentkit/*`）：见下「新增 oagentkit 落点」一节。
+  刻意**不**引入 `oagentkit/agentkit` 门面（其自身标注已废弃、只保留兼容转发，
+  且会拖入全部 12 个子模块含 milvus SDK / mcp-go），**不**引入 `toolgate/policy`
+  （其判定模型是「变异工具一律 Deny」，与本仓「危险工具走确认」的形态正面冲突）。
 - **手写周期循环收编 oekit `loop`**(heartbeat / AI 会话 janitor / runwatch poll 三处):
   立即首跑与 FirstDelay 语义与旧 ticker 逐一对应;增强:单轮 panic 经 RunSafeLabeled
   收编(此前 panic 会杀死整个循环,现在循环存活且告警带任务名)、忙时丢 tick 不重叠。
 - **SystemStatus 双查询并行改 `syncx.FanInErr`**:错误/panic 统一进 Slot.Err
   (async.PanicError,全局 PanicHandler 观测),删除 channel + RecoverToErr 样板。
+- **手写通用工具收编 oekit `pkg`**：
+  - `biz/handler/git_sync/optbind.go` 整个文件删除，三个手写可选指针解包
+    (`optStr`/`optBool`/`optBoolDefault`) 换 `ptrx.Deref`（16 个文件 50 处调用点）。
+  - 8 处 `strconv.Atoi(c.Query(...))` 丢 error → `convert.Str2Int` / `convert.Str2Int64`；
+    `trends_service.go` 手写 `parseIntQuery` 删除。
+  - `forcepush_approval.go` 手写 `minInt` → Go 内建 `min`。
+  - 两份重复的逗号串切分（`splitCSV` / `parseTaskKeys`）合并为 `splitCommaList`，
+    用 `stringx.SplitByComma` + `slicex.Filter`（**空结果返回 nil**——core 的
+    `UpdateRule` 有 `if req.TaskKeys != nil` 门，返回空切片会把「保留原列表」变成「清空」）。
+- **手写 CSV 拼装收编 `hertz/render.CSV`**（审计报告 / 问题列表两处）：
+  改走标准库 `encoding/csv`（RFC 4180）。与原 `textutil.CSVEscape` 的普通行输出逐字节
+  一致；差异是 `encoding/csv` 还会给**首字符是空白**的字段加引号（RFC 正确性提升）。
+- **手写路径穿越防线收编 `pkg/pathx.SanitizeRelStrict`**（`backup_remote_service.go`）：
+  严格档显式 `..` 段一律拒绝，并额外拒绝 Windows 盘符 `C:\foo`、UNC `//host/share`
+  与绝对路径——**原实现这些在 Linux 上全部漏过**。`.`（列仓库根目录）单独放行；
+  原有 `Abs` + `HasPrefix` 双保险保留作纵深防御。附带修掉旧实现按**子串** `..`
+  拒绝、误杀 `foo..bar.git` 这类合法文件名的过度拦截。
+- **webhook per-IP 限流器收编 oekit `concurrency/ratelimit`**：手写令牌桶 map + 惰性清理
+  → `NewKeyedLimiterByFunc` + `TokenBucket` + `WithIdleTTL(10min)`，桶的空闲回收由引擎负责。
+  **刻意不设 `MaxEntries` 硬上限**：key 来自 `ClientIP()`，而 hertz 默认可信网段是
+  `0.0.0.0/0`（信任所有对端的 `X-Forwarded-For`），key 空间可被伪造——硬上限会让伪造流量
+  占满表后反过来把合法 webhook 来源全拒成 429。测试用的假时钟改用
+  `ratelimit.WithTokenClock` 注入（复用同一个桶，与原 `AllowN(at,n)` 等价）。
+  限流器的后台回收 goroutine 由 `CloseWebhookRateLimiter()` 收口，已接进 `main.go` 的退出路径。
+- **手写轮询收编 `concurrency/retry.Poll`**（GitHub migration 导出）：
+  原实现先睡后查且**完全忽略 ctx 取消**；改为先查后睡（首次查更早，无损），
+  超时（`retry.ErrTimeout`）静默收束并保留旧 state（对外行为不变），ctx 取消则提前结束。
+- **AI 助手并发闸门收编 `concurrency/syncx.Gate`**：手写 `chan struct{}` + `select/default`
+  → `Gate.TryAcquire()`（满额即拒，语义逐位一致；release 幂等）。
+- **`internal/corebridge/tokenenv.go` 改用 `exec.CommandContext`**：原实现是
+  goroutine + `time.After`，超时后只是放弃等待、**子进程仍在后台跑**（泄漏）；
+  现在超时即杀子进程，墙钟上限不变。
+- **删 `internal/pkg/safe`**：该包注释声称「oekit concurrency/async 没有覆盖的 panic
+  处理原语」——**这个前提从未成立**（`async.RunSafeErr`/`RunSafeRetLabeled` 自
+  concurrency v0.10.0 起就在）。唯一调用点改用 `async.RunSafeRetLabeled`，
+  panic 收编为带 payload 与栈的 error 回传（此前若直接删掉 defer 辅助，
+  「统计 panic」会被当成「统计成功且全为 0」返回 200）。
+- **AI 会话 run 排序收编标准库 `slices.SortFunc`**：手写插入排序 O(n²) → O(n log n)。
+- **bundle 文件名校验收敛为单一事实源**（`strutil.IsSafeFileName`，core 侧实现）：
+  壳层 verify / restore bundle 与 core 的 DR 演练原本各写一份
+  `filepath.Base(name) != name`——**该判定漏了 `".."`**（`filepath.Base("..") == ".."`），
+  而 name 随后被 `filepath.Join(backupDir, name)` 拼进路径，能读到 backup 目录的**父目录**。
+  改用 core 的 `strutil.IsSafeFileName`（`pathx.SanitizeRelStrict` 严格档 + 单段检查），
+  壳层经 `internal/pkg/textutil` 转发层调用。
+- **git smart HTTP 路径穿越防线收编 `pkg/pathx.SanitizeRelStrict`**（`internal/gitserve`）：
+  迁移前是 `path.Clean("/"+p)` + `strings.Contains(p,"..")`——后者是**子串**判定，
+  既让 Windows 风格分隔符的口径与 Linux 不一致，又误杀 `foo..bar.git` 这类合法仓库名。
+  现在统一分隔符口径（`/` 与 `\` 同为分隔符，跨平台同判）、拒显式 `..` 段与盘符/UNC，
+  并补专项测试：穿越用例（含编码形态 `%2e%2e%2f`）与合法名（`foo..bar.git`、重复斜杠）两侧都钉住。
+- **`internal/notify` 手写去尾斜杠** → 标准库 `strings.TrimRight`。
+- **JSON recovery 中间件收编 oekit `core/chain` + `hertz/chainmw`**（`biz/serve`）：
+  手写的 defer/recover 换成 `chain.Recovery`（panic 收编为带 payload 与栈的
+  `*chain.PanicError`）+ `chainmw.Wrap`（错误出口经 `WithOnError` 完全接管——
+  chainmw 默认出口是 `middleware.Fail` 的统一响应格式，本仓要自己的 JSON 体）。
+  此前这条链路**零测试覆盖**，现补 `biz/serve` 测试钉住「panic → JSON 500
+  （非 Hertz 默认的 HTML）且后续请求仍可用」。
+- **AI 配置默认值收敛为单一事实源**：`0.3 / 2048 / 60 / 4` 这组默认值此前在四处
+  各写一遍（配置校验 / 设置更新 / 设置转运行时 / runner 兜底），改一个要同步四处。
+  现在值只在 `config.go` 的常量里定义一次。
+- **`internal/converter/safe_convert.go` 边界钳制收编 oekit `pkg/mathx.Clamp`**：
+  三个手写钳位函数（int→int32 / int64→int32 / uint→int32）塌成一行，语义逐字相同。
+- **分页缺省统一为 50**：镜像通道列表此前独立实现了一套钳制且缺省值是 20，
+  于是同一次请求在任务/仓库/操作日志列表返回 50 条、在镜像通道列表返回 20 条。
+  现与其它列表端点共用 `converter.PageToOffset`（缺省与上限取 core dao 的口径）。
+  **对外行为变化**：镜像通道列表每页条数由 20 变为 50。
+  实现上只依赖 `corebridge.DefaultPagination`（已发布的转发入口）而**不直接引用
+  core 的新增常量**——core 尚未发版时，壳层仍能按已发布的 core 编译
+  （`GOWORK=off go build ./...` 可过）。钳制顺序有讲究：先用它把 pageSize 钳好、
+  **再**用钳后的值算 offset，否则「页大小超上限」时 offset 会算在未钳的页大小上、
+  翻页跳号；已补测试钉住这一顺序。
+- **CLI 的 CSV 拆分与 int→string 收编到 core 统一入口**：本地 `splitCSV` 与
+  `itoa` 分别改为调用 core 的 `strutil.SplitCSVNonEmpty` / `strutil.Itoa`。
+- **`internal/metrics` 的 `sortedKeys` → 标准库 `slices.Sorted(maps.Keys(m))`**
+  （与 core `executor/drdrill.go` 的同名实现逐字同构，两份合成一份口径）。
+
+### Fixed
+
+- **`internal/corebridge` 密钥命令超时不再泄漏子进程**：见上 `exec.CommandContext` 一条。
+- **bundle 名可逃逸到 backup 目录的父目录**：见上 `IsSafeFileName` 一条（壳层与 core 两处同款）。
+- **system prompt 里的危险工具清单与代码脱节**：提示词手写了一份只列 3 个
+  （`run_task` / `test_repo_connection` / `test_platform_connection`），而
+  `tools.DangerTools` 实际有 6 个——`retry_sync_run` / `rebuild_task` / `run_dr_drill`
+  同样要走确认链路，模型却不知道，会直接调用而不提示等待确认。
+  清单改为从 `tools.DangerTools` 派生（排序后填入模板），加危险工具只改那一处；
+  新增测试钉住「每个危险工具都出现在 system prompt 中」。
+- **平台仓库过滤的 glob 模式此前等于没配**（core 侧修复，行为影响到本仓的
+  平台自动发现与仓库过滤）：core 内三份 glob 实现语义各异，其中平台仓库过滤用的
+  `filepath.Match` 不让 `*` 跨 `/`，而匹配对象是仓库全名 `owner/repo` ——
+  于是 `exclude_globs: ["*"]` 这类模式永远匹配不到，拦不住任何仓库。
+  现统一到 core 的 `strutil.MatchGlob`（`*` 跨 `/`），详见 core CHANGELOG。
+
+### Added
+
+- **oagentkit 落点（两处，均在 `internal/agent`）**：
+  - **`guardx/permgate` 接管工具权限判定**（`internal/agent/tools/permission.go`）：
+    权限判定从一段本地 switch 变成 oagentkit 的规则引擎裁决——本仓三档动作
+    (`readonly`/`confirm`/`denied`) 映射到 permgate 的 `Behavior{Allow,Ask,Deny}`，
+    危险工具集合映射为 `Capability{AlwaysAsk}`，模式映射为 `Mode{Default,ReadOnly}`，
+    裁决结果带 `RuleID`/`Reason`。**两处判定留在本地**（permgate 的判定顺序表达不了）：
+    ① 显式 override 最高优先（permgate 的规则集排在只读档之下）；
+    ② 只读模式下危险工具一律**拒**（permgate 的 `AlwaysAsk` 段会先于模式判定短路
+    返回 `Ask`＝「问一句」，而本仓只读档的语义是「拒」）。
+    新增测试钉住这两条与审计档行为。
+  - **`guardx/injectband` 给记忆注入加数据围栏**（`internal/agent/prompt.go`）：
+    记忆摘要是「用户/agent 曾经写下的内容」——属于数据不是指令。此前是裸拼进
+    system prompt，一段记忆正文里写个伪造的 `<system-reminder>` 标签就能把自己
+    抬升成系统注入（散文规则挡不住结构化标签）。现在包成
+    `<system-reminder source="memory">…</system-reminder>`，且 body 内伪造标签
+    被转义。新增测试钉住这一点。
 
 ## [v1.22.1] - 2026-10-17
 

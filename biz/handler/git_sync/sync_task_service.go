@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/convert"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/sync_task"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -73,9 +75,9 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		GitForce: req.GitForce, GitPrune: req.GitPrune,
 		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		KeepDivergent:      req.KeepDivergent,
-		ForcePushPolicy:    optStr(req.ForcePushPolicy),
-		IncludeBranches:    optStr(req.IncludeBranches),
-		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
+		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
+		IncludeBranches:    ptrx.Deref(req.IncludeBranches, ""),
+		ExcludeRefPatterns: ptrx.Deref(req.ExcludeRefPatterns, ""),
 	})
 	if err != nil {
 		response.InternalError(c, fmt.Sprintf("create task failed: %v", err))
@@ -105,9 +107,9 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		GitPrune: &req.GitPrune,
 		GitLFS:   &req.GitLfs, SyncWiki: &req.SyncWiki, GitBundle: &req.GitBundle, Submodules: &req.Submodules, GitPushPrune: &req.GitPushPrune,
 		KeepDivergent:      req.KeepDivergent,
-		ForcePushPolicy:    optStr(req.ForcePushPolicy),
-		IncludeBranches:    optStr(req.IncludeBranches),
-		ExcludeRefPatterns: optStr(req.ExcludeRefPatterns),
+		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
+		IncludeBranches:    ptrx.Deref(req.IncludeBranches, ""),
+		ExcludeRefPatterns: ptrx.Deref(req.ExcludeRefPatterns, ""),
 	})
 	if err != nil {
 		response.FromError(c, err)
@@ -191,7 +193,7 @@ func TaskHistory(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	offset, _ := strconv.Atoi(c.Query("offset"))
+	offset := convert.Str2Int(c.Query("offset"), 0)
 	page := corebridge.DefaultPagination(offset, int(req.Limit))
 	runs, _, err := GetSyncService().ListHistory(ctx, req.TaskKey, page.Offset, page.Limit)
 	if err != nil {

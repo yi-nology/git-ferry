@@ -2,9 +2,9 @@ package git_sync
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/pathx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
@@ -34,7 +34,7 @@ func VerifyBundle(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "name is required")
 		return
 	}
-	if filepath.Base(name) != name {
+	if !pathx.IsSafeFileName(name) {
 		response.BadRequest(c, "invalid bundle name")
 		return
 	}
@@ -61,7 +61,7 @@ func RestoreBundle(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "name and dest_dir are required")
 		return
 	}
-	if filepath.Base(req.Name) != req.Name {
+	if !pathx.IsSafeFileName(req.Name) {
 		response.BadRequest(c, "invalid bundle name")
 		return
 	}

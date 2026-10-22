@@ -10,7 +10,6 @@ import (
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/safe"
 )
 
 // ListOperationLogs GET /api/v1/logs/operations
@@ -66,8 +65,16 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	async.GoSafe(func() {
 		var r statsResult
 		defer func() { statsCh <- r }()
-		defer safe.RecoverToErr("OperationStats", &r.err)
-		r.today, r.week, r.total, r.err = svc.OperationStats(statsCtx)
+		// 用 oekit async.RunSafeRetLabeled:panic 收编为 error 回传调用方
+		// (错误载体带原始 payload 与栈),而不是只被全局 PanicHandler 吞掉——
+		// 吞掉的话这里会把「统计 panic」当成「统计成功且全为 0」返回 200。
+		res, err := async.RunSafeRetLabeled("OperationStats",
+			func() (statsResult, error) {
+				today, week, total, err := svc.OperationStats(statsCtx)
+				return statsResult{today: today, week: week, total: total}, err
+			})
+		r = res
+		r.err = err
 	})
 
 	list, total, err := svc.ListOperations(ctx, offset, limit, &filter)

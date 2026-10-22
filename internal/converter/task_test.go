@@ -294,6 +294,10 @@ func TestPageToOffset(t *testing.T) {
 		{"zero pageSize", 1, 0, 0, 50},      // pageSize defaults to 50
 		{"negative pageSize", 1, -1, 0, 50}, // pageSize defaults to 50
 		{"large pageSize", 1, 300, 0, 200},  // pageSize capped at 200
+		// 钳制顺序:页大小超上限时,offset 必须按「钳后」的页大小算——
+		// 若先用未钳的 300 算 offset(=300)再把 limit 钳到 200,翻页会跳号。
+		{"capped pageSize affects offset", 2, 300, 200, 200},
+		{"capped pageSize page 3", 3, 1000, 400, 200},
 	}
 
 	for _, tt := range tests {

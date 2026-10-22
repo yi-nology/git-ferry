@@ -5,6 +5,7 @@ import (
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
@@ -18,7 +19,7 @@ func GenerateDeployKey(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	comment := optStr(req.Comment)
+	comment := ptrx.Deref(req.Comment, "")
 	if comment == "" {
 		comment = "gitferry-mirror"
 	}

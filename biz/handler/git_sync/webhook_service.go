@@ -3,9 +3,9 @@ package git_sync
 import (
 	"context"
 	"strconv"
-	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/convert"
 	"github.com/yi-nology/git-ferry/biz/model/webhook"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -53,20 +53,6 @@ func RuleGet(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, &webhook.GetRuleResp{Rule: converter.ToRuleInfo(r)})
 }
 
-// parseTaskKeys 解析逗号分隔的任务 key 列表(去空白、去空项)。
-func parseTaskKeys(s string) []string {
-	if s == "" {
-		return nil
-	}
-	var keys []string
-	for _, key := range strings.Split(s, ",") {
-		if key = strings.TrimSpace(key); key != "" {
-			keys = append(keys, key)
-		}
-	}
-	return keys
-}
-
 func RuleCreate(ctx context.Context, c *app.RequestContext) {
 	var req webhook.CreateRuleReq
 	if err := c.BindAndValidate(&req); err != nil {
@@ -78,7 +64,7 @@ func RuleCreate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	taskKeys := parseTaskKeys(req.SyncTaskKeys)
+	taskKeys := splitCommaList(req.SyncTaskKeys)
 
 	r, err := GetSyncService().CreateRule(ctx, &corebridge.CreateRuleRequest{
 		Name: req.Name, RepoKey: req.RepoKey, EventType: req.EventType,
@@ -105,7 +91,7 @@ func RuleUpdate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	taskKeys := parseTaskKeys(req.SyncTaskKeys)
+	taskKeys := splitCommaList(req.SyncTaskKeys)
 
 	r, err := GetSyncService().UpdateRule(ctx, &corebridge.UpdateRuleRequest{
 		ID: uint(req.ID), Name: req.Name, EventType: req.EventType,
@@ -150,7 +136,7 @@ func ListEvents(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	offset, _ := strconv.Atoi(c.Query("offset"))
+	offset := convert.Str2Int(c.Query("offset"), 0)
 	page := corebridge.DefaultPagination(offset, int(req.Limit))
 	events, total, err := GetSyncService().ListEvents(ctx, req.RepoKey, page.Offset, page.Limit)
 	if err != nil {

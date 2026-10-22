@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
+	"github.com/oekit/pkg/convert"
 	platform "github.com/yi-nology/git-ferry/biz/model/platform"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -279,7 +279,7 @@ func ListPlatformRepos(ctx context.Context, c *app.RequestContext) {
 
 	// SDK 不回传远端真实总数,total 语义为"当页条数";
 	// has_more 提示调用方还有下一页(返回条数打满请求页大小)。
-	reqPerPage, _ := strconv.Atoi(perPage)
+	reqPerPage := convert.Str2Int(perPage, 0)
 	response.Success(c, map[string]interface{}{
 		"repos":    repos,
 		"total":    len(repos),

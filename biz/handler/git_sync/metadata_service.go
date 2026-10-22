@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -37,12 +38,12 @@ func MetadataBackup(ctx context.Context, c *app.RequestContext) {
 		MaxIssues:       int(req.MaxItems),
 		MaxPRs:          int(req.MaxItems),
 		MaxReleases:     int(req.MaxItems),
-		IncludeIssues:   optBoolDefault(req.WithIssues),
-		IncludePRs:      optBoolDefault(req.WithPRs),
-		IncludeReleases: optBoolDefault(req.WithReleases),
-		IncludeSource:   optBoolDefault(req.WithArchives),
-		IncludeAssets:   optBoolDefault(req.WithAssets),
-		IncludeGists:    optBoolDefault(req.WithGists),
+		IncludeIssues:   ptrx.Deref(req.WithIssues, true),
+		IncludePRs:      ptrx.Deref(req.WithPRs, true),
+		IncludeReleases: ptrx.Deref(req.WithReleases, true),
+		IncludeSource:   ptrx.Deref(req.WithArchives, true),
+		IncludeAssets:   ptrx.Deref(req.WithAssets, true),
+		IncludeGists:    ptrx.Deref(req.WithGists, true),
 		Since:           req.GetSince(),
 	})
 	if err != nil {

@@ -31,6 +31,50 @@ type Config struct {
 	MemoryManifest string `yaml:"-"`
 }
 
+// AI 配置的缺省值。
+// 补默认的逻辑此前在四处各写一遍(配置校验 / 设置更新 / 设置转运行时 / runner 兜底),
+// 改一个默认值要同步四处——收敛到这一处。
+const (
+	defaultTemperature        = 0.3
+	defaultMaxTokens          = 2048
+	defaultTimeoutSeconds     = 60
+	defaultMaxConcurrentChats = 4
+)
+
+// applyDefaults 补齐零值字段(<=0 视为未设置)。
+func (c *Config) applyDefaults() {
+	if c.Temperature <= 0 {
+		c.Temperature = defaultTemperature
+	}
+	if c.MaxTokens <= 0 {
+		c.MaxTokens = defaultMaxTokens
+	}
+	if c.TimeoutSeconds <= 0 {
+		c.TimeoutSeconds = defaultTimeoutSeconds
+	}
+	if c.MaxConcurrentChats <= 0 {
+		c.MaxConcurrentChats = defaultMaxConcurrentChats
+	}
+}
+
+// applyDefaults 补齐零值字段(<=0 视为未设置)。
+// Settings 与 Config 是两份平行结构、这四个字段同名同义——默认值只在
+// config.go 的常量里定义一次,两处只做同样的判零。
+func (s *Settings) applyDefaults() {
+	if s.Temperature <= 0 {
+		s.Temperature = defaultTemperature
+	}
+	if s.MaxTokens <= 0 {
+		s.MaxTokens = defaultMaxTokens
+	}
+	if s.TimeoutSeconds <= 0 {
+		s.TimeoutSeconds = defaultTimeoutSeconds
+	}
+	if s.MaxConcurrentChats <= 0 {
+		s.MaxConcurrentChats = defaultMaxConcurrentChats
+	}
+}
+
 // ErrBusy 并发会话已达上限。
 var ErrBusy = errors.New("ai_busy: 当前会话数已达上限,请稍后再试")
 
@@ -69,17 +113,6 @@ func (c *Config) Validate(apiKey string) error {
 	if apiKey == "" {
 		return fmt.Errorf("ai.enabled 需要环境变量 %s", APIKeyEnvVar)
 	}
-	if c.Temperature <= 0 {
-		c.Temperature = 0.3
-	}
-	if c.MaxTokens <= 0 {
-		c.MaxTokens = 2048
-	}
-	if c.TimeoutSeconds <= 0 {
-		c.TimeoutSeconds = 60
-	}
-	if c.MaxConcurrentChats <= 0 {
-		c.MaxConcurrentChats = 4
-	}
+	c.applyDefaults()
 	return nil
 }

@@ -15,6 +15,7 @@ import (
 
 func TestRateLimiter_Allow(t *testing.T) {
 	rl := newIPRateLimiter(5) // 5 requests per second per IP
+	defer rl.Close()
 
 	// Should allow first 5 requests immediately
 	for i := 0; i < 5; i++ {
@@ -27,6 +28,7 @@ func TestRateLimiter_Allow(t *testing.T) {
 
 func TestRateLimiter_Refill(t *testing.T) {
 	rl := newIPRateLimiter(10)
+	defer rl.Close()
 
 	// Exhaust all tokens
 	for i := 0; i < 10; i++ {
@@ -42,6 +44,7 @@ func TestRateLimiter_Refill(t *testing.T) {
 
 func TestRateLimiter_DefaultRate(t *testing.T) {
 	rl := newIPRateLimiter(1)
+	defer rl.Close()
 
 	// First request should be allowed
 	require.True(t, rl.Allow("1.2.3.4"), "expected first request to be allowed")
@@ -52,6 +55,7 @@ func TestRateLimiter_DefaultRate(t *testing.T) {
 
 func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 	rl := newIPRateLimiter(100)
+	defer rl.Close()
 
 	var wg sync.WaitGroup
 	allowed := make(chan bool, 200)
@@ -178,11 +182,13 @@ func TestRateLimitMiddleware_ReturnsCorrectStatusCode(t *testing.T) {
 func TestRateLimiter_ZeroRateNormalized(t *testing.T) {
 	// 配置 0/负数不再表示"全拒",而是回落到默认速率(与文档一致)
 	rl := newIPRateLimiter(0)
+	defer rl.Close()
 	require.True(t, rl.Allow("1.2.3.4"), "zero config should fall back to default rate")
 }
 
 func TestRateLimiter_LargeBurst(t *testing.T) {
 	rl := newIPRateLimiter(1000)
+	defer rl.Close()
 
 	// Should allow 1000 requests
 	allowed := 0
@@ -201,6 +207,7 @@ func TestRateLimiter_LargeBurst(t *testing.T) {
 
 func TestRateLimiter_ConcurrentSafety(t *testing.T) {
 	rl := newIPRateLimiter(50)
+	defer rl.Close()
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -233,6 +240,7 @@ func TestRateLimiter_ConcurrentSafety(t *testing.T) {
 
 func TestRateLimitMiddleware_PerIPIsolation(t *testing.T) {
 	rl := newIPRateLimiter(1)
+	defer rl.Close()
 	// IP A 耗尽
 	require.True(t, rl.Allow("10.0.0.1"))
 	require.False(t, rl.Allow("10.0.0.1"))

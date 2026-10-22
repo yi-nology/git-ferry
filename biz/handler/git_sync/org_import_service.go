@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -93,14 +94,14 @@ func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	dryRun := optBoolDefault(req.DryRun)
+	dryRun := ptrx.Deref(req.DryRun, true)
 	max := int(req.Max)
 	if max <= 0 {
 		max = 100
 	}
 	filter := &corebridge.RepoImportFilter{
-		ExcludeArchived: optBool(req.ExcludeArchived),
-		ExcludeForks:    optBool(req.ExcludeForks),
+		ExcludeArchived: ptrx.Deref(req.ExcludeArchived, false),
+		ExcludeForks:    ptrx.Deref(req.ExcludeForks, false),
 		MinStars:        int(req.MinStars),
 	}
 

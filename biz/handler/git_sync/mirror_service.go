@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/convert"
+	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
@@ -25,20 +27,15 @@ func mirrorID(c *app.RequestContext) (uint, bool) {
 	return uint(id), true
 }
 
-// parsePage 解析分页参数(缺省 1/20,上限 200)。
+// parsePage 解析分页参数(缺省 1/50,上限 200)。
+// 与其它列表端点共用 converter.PageToOffset——此前此处独立实现且缺省值是 20,
+// 于是同一次请求在任务/仓库列表返回 50 条、在镜像通道列表返回 20 条。
 func parsePage(c *app.RequestContext) corebridge.Pagination {
-	page, _ := strconv.Atoi(c.Query("page"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize"))
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 20
-	}
-	if pageSize > 200 {
-		pageSize = 200
-	}
-	return corebridge.DefaultPagination((page-1)*pageSize, pageSize)
+	offset, limit := converter.PageToOffset(
+		int32(convert.Str2Int(c.Query("page"), 0)),
+		int32(convert.Str2Int(c.Query("pageSize"), 0)),
+	)
+	return corebridge.DefaultPagination(offset, limit)
 }
 
 func toMirrorTargetInputs(reqs []*mirrormodel.MirrorTargetReq) []corebridge.MirrorTargetInput {

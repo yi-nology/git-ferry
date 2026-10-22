@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -32,7 +33,7 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	strategy = string(parsed)
-	dryRun := optBoolDefault(req.DryRun)
+	dryRun := ptrx.Deref(req.DryRun, true)
 	createTasks := req.CreateTasks != nil && *req.CreateTasks
 
 	svc, ok := requireSyncService(c)
@@ -110,7 +111,7 @@ func ImportStarred(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "platform_key is required")
 		return
 	}
-	dryRun := optBoolDefault(req.DryRun)
+	dryRun := ptrx.Deref(req.DryRun, true)
 	svc, ok := requireSyncService(c)
 	if !ok {
 		return

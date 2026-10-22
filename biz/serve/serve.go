@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"runtime/debug"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
 	"github.com/oekit/bootstrap"
+	"github.com/oekit/core/chain"
 	hertzx "github.com/oekit/hertz"
+	"github.com/oekit/hertz/chainmw"
 	"github.com/yi-nology/git-ferry-core/pkg/proclog"
 	"github.com/yi-nology/git-ferry/biz/router"
 )
@@ -32,24 +33,35 @@ type Config struct {
 
 // Recovery 返回 JSON 格式的 panic 恢复中间件，
 // 替代 Hertz 默认 recovery.Recovery()（HTML/text，前端无法解析）。
+//
+// 用 oekit core/chain + hertz/chainmw：panic 由 chain.Recovery 收编为
+// *chain.PanicError（带原始 payload 与栈），错误出口经 chainmw.WithOnError
+// 完全接管——chainmw 的默认出口是 middleware.Fail 的统一响应格式，
+// 本仓要的是自己的 JSON 体。
 func Recovery() app.HandlerFunc {
-	return func(ctx context.Context, c *app.RequestContext) {
-		defer func() {
-			if r := recover(); r != nil {
+	return chainmw.Wrap(
+		[]chain.Middleware{
+			chain.Recovery(chain.WithPanicReporter(func(_ context.Context, req any, pv chain.PanicError) {
+				method, path := "", ""
+				if c, ok := req.(*app.RequestContext); ok {
+					method, path = string(c.Method()), string(c.Path())
+				}
 				slog.Error("handler panic recovered",
-					"panic", fmt.Sprintf("%v", r),
-					"stack", string(debug.Stack()),
-					"method", string(c.Method()),
-					"path", string(c.Path()),
+					"panic", fmt.Sprintf("%v", pv.Value),
+					"stack", pv.Stack,
+					"method", method,
+					"path", path,
 				)
-				c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "internal server error",
-				})
-				c.Abort()
-			}
-		}()
-		c.Next(ctx)
-	}
+			})),
+		},
+		func(ctx context.Context, c *app.RequestContext) { c.Next(ctx) },
+		chainmw.WithOnError(func(_ context.Context, c *app.RequestContext, _ error) {
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "internal server error",
+			})
+			c.Abort()
+		}),
+	)
 }
 
 // Register 注册全部路由（IDL 生成 + 定制探活/webhook）。

@@ -7,11 +7,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oekit/pkg/stringx"
 	"github.com/spf13/cobra"
 
 	"github.com/yi-nology/git-ferry/internal/cli/client"
 	"github.com/yi-nology/git-ferry/internal/cli/config"
 	"github.com/yi-nology/git-ferry/internal/cli/output"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
 // ---------- repo ----------
@@ -238,7 +240,7 @@ type batchRow struct {
 
 // taskBatchRun 批量触发：--task-keys a,b,c；--dry-run 只列出计划；--csv 输出结果表。
 func taskBatchRun(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
-	keys := splitCSV(flagStr(cmd, "task-keys"))
+	keys := stringx.SplitCSVNonEmpty(flagStr(cmd, "task-keys"))
 	if len(keys) == 0 {
 		if v := flagStr(cmd, "task"); v != "" {
 			keys = []string{v}
@@ -573,7 +575,7 @@ func opsMetadataRestore(c *client.Client, _ *config.Config, cmd *cobra.Command, 
 		body["snapshot_dir"] = v
 	}
 	if v := flagStr(cmd, "kinds"); v != "" {
-		body["kinds"] = splitCSV(v)
+		body["kinds"] = stringx.SplitCSVNonEmpty(v)
 	}
 	if v := flagStr(cmd, "target-owner"); v != "" {
 		body["target_owner"] = v
@@ -669,7 +671,8 @@ func jsonRawArray(items []json.RawMessage) json.RawMessage {
 	return b
 }
 
-func itoa(n int) string { return strconv.Itoa(n) }
+// itoa int → 字符串(统一走 core strutil,别在壳层再包一层 strconv)。
+func itoa(n int) string { return textutil.Itoa(n) }
 
 // opsOrgMap 调用 /ops/resolve-org-target 做 org 映射预览。
 func opsOrgMap(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {

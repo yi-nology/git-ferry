@@ -2,10 +2,11 @@ package git_sync
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/oekit/pkg/convert"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -23,7 +24,7 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	if optBool(req.All) {
+	if ptrx.Deref(req.All, false) {
 		max := int(req.Max)
 		if max <= 0 {
 			max = 5
@@ -41,17 +42,17 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
-	if optStr(req.Name) == "" {
+	if ptrx.Deref(req.Name, "") == "" {
 		response.BadRequest(c, "name is required (or set all=true)")
 		return
 	}
-	rep, err := svc.RunDRDrill(ctx, optStr(req.Name))
+	rep, err := svc.RunDRDrill(ctx, ptrx.Deref(req.Name, ""))
 	if err != nil && rep == nil {
 		response.InternalError(c, err.Error())
 		return
 	}
 	metaCheck := map[string]any{}
-	if optBoolDefault(req.WithMetadata) {
+	if ptrx.Deref(req.WithMetadata, true) {
 		rep, verr := svc.SampleMetadataVerify(ctx, "", 5)
 		if verr != nil {
 			metaCheck = map[string]any{"ok": false, "reason": verr.Error()}
@@ -59,7 +60,7 @@ func RunDRDrill(ctx context.Context, c *app.RequestContext) {
 			metaCheck = metadataVerifyMap(rep)
 		}
 	}
-	recordAudit(ctx, c, "dr_drill", "backup", optStr(req.Name), "灾备演练")
+	recordAudit(ctx, c, "dr_drill", "backup", ptrx.Deref(req.Name, ""), "灾备演练")
 	response.Success(c, map[string]any{
 		"mode":           "single",
 		"reports":        []any{rep},
@@ -82,7 +83,7 @@ func metadataVerifyMap(rep corebridge.VerifyReport) map[string]any {
 
 // DrillHistory GET /api/v1/ops/dr-drill/history?limit=
 func DrillHistory(ctx context.Context, c *app.RequestContext) {
-	limit, _ := strconv.Atoi(c.Query("limit"))
+	limit := convert.Str2Int(c.Query("limit"), 0)
 	if limit <= 0 {
 		limit = 20
 	}
@@ -111,7 +112,7 @@ func ExportDrillHistory(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "format must be json or csv")
 		return
 	}
-	limit, _ := strconv.Atoi(c.Query("limit"))
+	limit := convert.Str2Int(c.Query("limit"), 0)
 	if limit <= 0 {
 		limit = 100
 	}
@@ -177,7 +178,7 @@ func VerifyBackupManifest(ctx context.Context, c *app.RequestContext) {
 
 // RPOReport GET /api/v1/ops/rpo?max_seconds=
 func RPOReport(ctx context.Context, c *app.RequestContext) {
-	maxSec, _ := strconv.ParseInt(c.Query("max_seconds"), 10, 64)
+	maxSec := convert.Str2Int64(c.Query("max_seconds"), 0)
 	svc, ok := requireSyncService(c)
 	if !ok {
 		return

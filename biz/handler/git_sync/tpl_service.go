@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 
 	"github.com/yi-nology/git-ferry-core/tpl"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
@@ -110,7 +111,7 @@ func ApplyTemplate(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	dryRun := optBoolDefault(req.DryRun)
+	dryRun := ptrx.Deref(req.DryRun, true)
 	res, err := svc.ApplyTemplate(ctx, req.TemplateId, dryRun)
 	if err != nil {
 		response.FromError(c, err)

@@ -7,9 +7,10 @@ import (
 	"net/http/cgi" //nolint:gosec // G504: 调用本机 git http-backend；仅监听内网/灾备端口，不代理外部 CGI
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/oekit/pkg/pathx"
 )
 
 // Options 服务配置。
@@ -29,12 +30,19 @@ func Handler(opt Options) http.HandlerFunc {
 			return
 		}
 		p := strings.TrimPrefix(r.URL.Path, "/git/")
-		p = path.Clean("/" + p) // 防目录穿越
-		p = strings.TrimPrefix(p, "/")
-		if p == "" || strings.Contains(p, "..") {
+		// 归一化重复前导斜杠(与迁移前 path.Clean("/"+p) 的口径一致:
+		// "/git//host/repo.git" 与 "/git/host/repo.git" 同义),随后再判穿越。
+		p = strings.TrimLeft(p, "/")
+		// 路径穿越防线:pathx.SanitizeRelStrict 统一分隔符("/" 与 "\" 同为分隔符,
+		// 跨平台同判),拒绝显式 ".." 段、绝对路径、Windows 盘符与 UNC。
+		// 迁移前是 path.Clean("/"+p) + strings.Contains(p,"..")——后者是子串判定,
+		// 既漏了 Linux 上 "..\" 形绕过的口径不统一,又误杀 "foo..bar.git" 这类合法名字。
+		cleaned, ok := pathx.SanitizeRelStrict(p)
+		if !ok || cleaned == "" {
 			http.NotFound(w, r)
 			return
 		}
+		p = cleaned
 		// 仅允许 .git 后缀仓库路径
 		if !strings.Contains(p, ".git") {
 			http.NotFound(w, r)
@@ -51,7 +59,7 @@ func Handler(opt Options) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		// 上方 path.Clean + 拒绝 ".." + absRoot 前缀校验已封闭穿越面;
+		// 上方 SanitizeRelStrict 严格档 + absRoot 前缀校验已封闭穿越面;
 		// G703 taint 分析识别不到前缀校验即为 sanitization,此处为误报
 		if _, err := os.Stat(full); err != nil { //nolint:gosec // G703: full 已被 absRoot 前缀约束
 			http.NotFound(w, r)

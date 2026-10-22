@@ -7,7 +7,8 @@ package metrics
 import (
 	"bytes"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -158,12 +159,7 @@ func (r *Registry) WritePrometheus() string {
 }
 
 func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
+	return slices.Sorted(maps.Keys(m))
 }
 
 // ObserveHTTP 记录一次 HTTP 请求到默认注册表。

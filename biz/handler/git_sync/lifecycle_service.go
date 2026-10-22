@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -27,13 +28,13 @@ func AutoDiscover(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	filter := &corebridge.RepoImportFilter{
-		ExcludeArchived: optBoolDefault(req.ExcludeArchived),
-		ExcludeForks:    optBoolDefault(req.ExcludeForks),
+		ExcludeArchived: ptrx.Deref(req.ExcludeArchived, true),
+		ExcludeForks:    ptrx.Deref(req.ExcludeForks, true),
 		MinStars:        int(req.MinStars),
 		IncludeLanguage: req.IncludeLanguage,
 	}
 	rep, err := svc.AutoDiscover(ctx, req.PlatformKey, corebridge.AutoDiscoverOptions{
-		ImportNew: optBool(req.ImportNew),
+		ImportNew: ptrx.Deref(req.ImportNew, false),
 		Filter:    filter,
 	})
 	if err != nil {
@@ -41,7 +42,7 @@ func AutoDiscover(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	action := "auto_discover_scan"
-	if optBool(req.ImportNew) {
+	if ptrx.Deref(req.ImportNew, false) {
 		action = "auto_discover_import"
 	}
 	recordAudit(ctx, c, action, "repo", req.PlatformKey,

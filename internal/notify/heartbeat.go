@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/oekit/concurrency/loop"
@@ -95,9 +96,7 @@ func (h *Heartbeat) ping(url string) error {
 	return nil
 }
 
+// trimSlash 去掉末尾的斜杠。
 func trimSlash(s string) string {
-	for s != "" && s[len(s)-1] == '/' {
-		s = s[:len(s)-1]
-	}
-	return s
+	return strings.TrimRight(s, "/")
 }

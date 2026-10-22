@@ -12,6 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	hertzsse "github.com/hertz-contrib/sse"
+	"github.com/oekit/pkg/ptrx"
 
 	"github.com/yi-nology/git-ferry/internal/agent"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -70,11 +71,11 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 
 	store := r.Sessions()
 	var sess *agent.Session
-	if optStr(req.SessionId) == "" {
+	if ptrx.Deref(req.SessionId, "") == "" {
 		sess = store.Create()
 	} else {
 		var err error
-		sess, err = store.Get(optStr(req.SessionId))
+		sess, err = store.Get(ptrx.Deref(req.SessionId, ""))
 		if err != nil {
 			response.Error(c, consts.StatusNotFound, "会话不存在或已过期,请重新开始")
 			return

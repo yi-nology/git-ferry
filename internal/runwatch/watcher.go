@@ -11,8 +11,10 @@
 package runwatch
 
 import (
+	"cmp"
 	"context"
 	"log/slog"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -305,10 +307,10 @@ func (w *Watcher) pruneMaps(current []*corebridge.SyncRun) {
 	}
 }
 
+// sortRunsByID 按 run ID 升序排。用标准库 slices.SortFunc(O(n log n)),
+// 替代原先手写的插入排序(O(n²))。
 func sortRunsByID(runs []*corebridge.SyncRun) {
-	for i := 1; i < len(runs); i++ {
-		for j := i; j > 0 && runs[j].ID < runs[j-1].ID; j-- {
-			runs[j], runs[j-1] = runs[j-1], runs[j]
-		}
-	}
+	slices.SortFunc(runs, func(a, b *corebridge.SyncRun) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 	"github.com/oekit/concurrency/async"
+	"github.com/oekit/concurrency/syncx"
 
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
@@ -27,8 +28,12 @@ type Runner struct {
 	runner      *adk.Runner
 	reg         *tools.Registry
 	sessions    *SessionStore
-	sem         chan struct{}
-	modelName   string
+	// gate 是全局在飞闸门(并发上限 = MaxConcurrentChats)。
+	// 用 oekit concurrency/syncx.Gate 的 TryAcquire(满额即拒,不排队):
+	// 语义与迁移前的 chan 缓冲 + select/default 完全一致,
+	// 但 release 幂等(重复调用只归还一次),不会重复归还名额。
+	gate      *syncx.Gate
+	modelName string
 }
 
 // NewRunner 生产构造:OpenAI 兼容模型(BaseURL 可指内网 vLLM/Ollama)。
@@ -66,7 +71,7 @@ func NewRunnerWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *t
 	}
 	maxChats := cfg.MaxConcurrentChats
 	if maxChats <= 0 {
-		maxChats = 4
+		maxChats = defaultMaxConcurrentChats
 	}
 	r := &Runner{
 		runner: adk.NewRunner(context.Background(), adk.RunnerConfig{
@@ -75,7 +80,7 @@ func NewRunnerWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *t
 		}),
 		reg:       reg,
 		sessions:  NewSessionStore(sessionTTL, sessionMaxRounds),
-		sem:       make(chan struct{}, maxChats),
+		gate:      syncx.NewGate(maxChats),
 		modelName: cfg.Model,
 	}
 	// 进程级生命周期:回收再无人访问的过期会话,防内存慢涨
@@ -118,9 +123,9 @@ func (r *Runner) SetMemory(mem tools.MemStore, manifest string) {
 // 返回的 cancel 供消费方提前终止(如客户端断开):取消后所有事件发送与
 // 模型流读取立即收敛,goroutine 退出并释放并发信号量,不再产生 token 消耗。
 func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan Event, context.CancelFunc, error) {
-	select {
-	case r.sem <- struct{}{}:
-	default:
+	// 并发闸门:满额立即拒(ErrBusy),不排队——与迁移前的 chan + select/default 语义一致
+	release, ok := r.gate.TryAcquire()
+	if !ok {
 		return nil, nil, ErrBusy
 	}
 
@@ -149,7 +154,7 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 	async.GoSafe(func() {
 		defer close(out)
 		defer cancel()
-		defer func() { <-r.sem }()
+		defer release()
 		// 自带 recover:panic 要作为 error 事件推给客户端,不能只靠 GoSafe 的全局日志。
 		defer func() {
 			if rec := recover(); rec != nil {

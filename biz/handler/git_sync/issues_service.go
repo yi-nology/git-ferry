@@ -3,14 +3,16 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"github.com/yi-nology/git-ferry/biz/model/ops"
+	"strings"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/oekit/hertz/render"
+	"github.com/oekit/pkg/ptrx"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
@@ -54,13 +56,13 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		response.InternalError(c, err.Error())
 		return
 	}
-	issues, err := listIssues(ctx, prov, repo, optStr(req.State), max)
+	issues, err := listIssues(ctx, prov, repo, ptrx.Deref(req.State, ""), max)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}
 
-	if optBool(req.WithComments) && optStr(req.Format) != "csv" {
+	if ptrx.Deref(req.WithComments, false) && ptrx.Deref(req.Format, "") != "csv" {
 		if im, ok := prov.(sdkprov.IssueManager); ok {
 			for _, iss := range issues {
 				comments, cerr := im.ListIssueComments(ctx, repo.PlatformOwner, repo.PlatformRepo, iss.Number)
@@ -71,9 +73,8 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	if optStr(req.Format) == "csv" {
-		csv := buildIssuesCSV(issues)
-		c.Data(consts.StatusOK, "text/csv; charset=utf-8", []byte(csv))
+	if ptrx.Deref(req.Format, "") == "csv" {
+		c.Render(consts.StatusOK, render.CSV{Rows: buildIssuesCSVRows(issues)})
 		return
 	}
 	response.Success(c, map[string]any{
@@ -162,20 +163,16 @@ func toIssueRow(iss *sdkprov.Issue) *issueRow {
 	}
 }
 
-func buildIssuesCSV(issues []*issueRow) string {
-	var b []byte
-	b = append(b, []byte("number,state,author,title,labels,created_at\n")...)
+// buildIssuesCSVRows 构造 issue 导出 CSV 行(首行表头)。
+// 交给 render.CSV 走标准库 encoding/csv 序列化(RFC 4180),单元格转义由库负责。
+func buildIssuesCSVRows(issues []*issueRow) [][]string {
+	rows := make([][]string, 0, len(issues)+1)
+	rows = append(rows, []string{"number", "state", "author", "title", "labels", "created_at"})
 	for _, iss := range issues {
-		labels := ""
-		for i, l := range iss.Labels {
-			if i > 0 {
-				labels += "|"
-			}
-			labels += l
-		}
-		b = append(b, []byte(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
-			textutil.CSVEscape(iss.Number), textutil.CSVEscape(iss.State), textutil.CSVEscape(iss.Author),
-			textutil.CSVEscape(iss.Title), textutil.CSVEscape(labels), iss.CreatedAt))...)
+		rows = append(rows, []string{
+			iss.Number, iss.State, iss.Author, iss.Title,
+			strings.Join(iss.Labels, "|"), iss.CreatedAt,
+		})
 	}
-	return string(b)
+	return rows
 }

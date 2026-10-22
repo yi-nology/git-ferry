@@ -89,14 +89,7 @@ func ApproveForcePush(ctx context.Context, c *app.RequestContext) {
 // actorName 从请求头推断操作者（API Key 只保留前 8 位做展示）。
 func actorName(c *app.RequestContext) string {
 	if v := string(c.GetHeader("X-API-Key")); v != "" {
-		return "apikey:" + textutil.SanitizePathToken(v[:minInt(8, len(v))])
+		return "apikey:" + textutil.SanitizePathToken(v[:min(8, len(v))])
 	}
 	return "admin"
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
