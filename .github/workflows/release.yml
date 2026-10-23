@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# GOPRIVATE:github.com/oagentkit/* —— 自家模块系列(guardx 等)不走公开代理与
+# checksum DB,直接从 GitHub 取。前提与解封条件见 ci.yml 同名注释。
+env:
+  GOPRIVATE: github.com/oagentkit/*
+
 jobs:
   test:
     name: Test before release

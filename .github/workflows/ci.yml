@@ -9,6 +9,16 @@ on:
 permissions:
   contents: read
 
+# GOPRIVATE:github.com/oagentkit/* —— 自家模块系列(guardx 等)不走公开代理与
+# checksum DB,直接从 GitHub 取:第三方代理不参与自家模块的分发。
+#
+# ⚠️ 前提:这些仓当前是**公开**的,直连走匿名 HTTPS 即可;GOPRIVATE 同时会让 Go
+#    跳过 checksum DB(go.sum 的哈希校验仍然生效)。
+#    若将来 oagentkit 转私有,本 workflow 的 checkout 用了 persist-credentials: false
+#    (不保留 git 凭据),届时必须改成保留凭据,否则直连拉取会失败。
+env:
+  GOPRIVATE: github.com/oagentkit/*
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
