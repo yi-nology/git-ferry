@@ -23,6 +23,7 @@ cp -r skills/gitferry-* ~/.claude/skills/   # 路径按你的 Agent 调整
 | `gitferry-task` | 同步任务 CRUD、手动触发、预览 |
 | `gitferry-history` | 执行历史、失败诊断、重试 |
 | `gitferry-ops` | 运维中心：健康评分、资产盘点、RPO、漂移、审计 |
+| `gitferry-histsync` | 历史同步（双仓内容差异发布）：计划、冲突裁决、移植、推送、审计链 |
 | `gitferry-workflow` | 复合工作流：失败排查、灾备演练、平台接入 |
 
 ## 快速验证
@@ -38,3 +39,4 @@ gitferry ops +overview --format json
 - 危险操作（触发同步、连通性测试、灾备演练、重建）默认需确认，脚本场景用显式 `--yes`
 - Token / API Key 只走环境变量或配置文件，永不写入输出
 - Skills 与服务端 AI 工具（`internal/agent/tools/`）语义对齐；改一侧时同步另一侧
+- 历史同步用 `histsync` 命令组（`history` 已被「同步执行历史」占用）

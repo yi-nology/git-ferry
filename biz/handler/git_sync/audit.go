@@ -17,6 +17,14 @@ import (
 //
 // core 不感知登录态，只持久化 OperationLog.Actor。
 func recordAudit(ctx context.Context, c *app.RequestContext, action, resourceType, resourceKey, resource string) {
+	recordAuditDetail(ctx, c, action, resourceType, resourceKey, resource, "")
+}
+
+// recordAuditDetail 记录一条带明细的审计日志。
+//
+// Detail 承载结构化补充信息(如历史同步的 base_head/head/run id),
+// 它同样进入哈希链 payload —— 明细被改也会被检出。
+func recordAuditDetail(ctx context.Context, c *app.RequestContext, action, resourceType, resourceKey, resource, detail string) {
 	// 优先已认证身份(鉴权中间件写入,不可伪造)。
 	// X-User 仅在未走过鉴权中间件时兜底(兼容旧脚本),共享 API Key 场景下
 	// DefaultAPIKeyAuthMiddleware 已写入 api-key:<指纹>,此处不会再读到伪造头。
@@ -35,6 +43,7 @@ func recordAudit(ctx context.Context, c *app.RequestContext, action, resourceTyp
 		Actor:        actor,
 		IP:           c.ClientIP(),
 		Status:       corebridge.StatusSuccess,
+		Detail:       detail,
 	}
 	if svc := GetSyncService(); svc != nil {
 		if err := svc.RecordOperation(ctx, entry); err != nil {

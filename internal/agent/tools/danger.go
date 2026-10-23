@@ -13,6 +13,12 @@ var DangerTools = map[string]bool{
 	"retry_sync_run":           true,
 	"rebuild_task":             true,
 	"run_dr_drill":             true,
+	// 写裁决会改变实际发布的内容 —— 按危险工具处理,需用户确认。
+	"set_history_override": true,
+	// 一次同步会真的推送到远端 —— 危险。
+	"sync_history_channel": true,
+	// 轮换凭据会影响对外推送的认证 —— 危险。
+	"rotate_history_target_credential": true,
 }
 
 // confirmRequiredPayload 返回给模型的"需要确认"标记。

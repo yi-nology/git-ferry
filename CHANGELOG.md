@@ -4,6 +4,22 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+### Added
+
+- **历史同步（histsync）：双仓内容差异发布**——把内网源树的内容按差异移植到公开目标树。
+  与镜像中心的「身份镜像」并存，语义不同：那边是同一仓库的多个身份，
+  这边是两个各自有完整历史的仓库之间按内容差异同步。
+  - HTTP API（`biz/handler/git_sync/histsync_service.go`）：通道 CRUD、规则配置、
+    生成同步计划、裁决写入、预检、内容移植与推送。
+  - CLI（`internal/cli/commands/histsync.go`）：`gitferry histsync` 子命令。
+  - Agent 工具（`internal/agent/tools/histsync.go`）：生成同步计划、裁决冲突、
+    内容移植与推送、预检。**裁决写入按「危险工具」处理**——模型给出判定与依据 →
+    弹出确认 → 用户确认后才写入，这是「AI 建议 + 人工确认」的闭环落点。
+  - Agent Skill（`skills/gitferry-histsync/`）：触发「两棵树怎么同步 / 公开仓少了什么 /
+    哪些文件该带过去」这类场景。
+  - 审计日志补 `Detail` 明细（`recordAuditDetail`）：结构化补充信息同样进入哈希链
+    payload，明细被改也会被检出。
+
 ### Changed
 
 - **eino v0.9.19 → v0.9.22**：本仓 `internal/agent/**` 直接消费 eino

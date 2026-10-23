@@ -45,14 +45,19 @@ func (f *fakeScope) LastConfirm() (string, string, string) {
 
 func TestRegistry_AllToolsRegistered(t *testing.T) {
 	reg := NewRegistry(toolstest.NewMock())
-	// 31 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose + ops_todo + 元数据快照
-	assert.Len(t, reg.Names(), 31)
+	// 41 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose + ops_todo
+	// + 元数据快照 + 历史同步十件套(通道列表/计划/解法/执行记录/链校验/预检/裁决列表/写裁决/一次同步/凭据轮换)
+	assert.Len(t, reg.Names(), 41)
 	for _, name := range []string{
 		"list_repos", "get_repo", "list_branches", "list_tasks", "get_task",
 		"list_sync_history", "get_run_detail", "list_platforms", "list_webhook_rules",
 		"get_system_overview", "get_ops_todo", "run_task", "test_repo_connection", "test_platform_connection",
 		"get_rpo_report", "get_backup_integrity", "get_drift_report", "get_audit_chain", "run_dr_drill",
 		"get_metadata_snapshots",
+		"list_history_channels", "plan_history_channel", "resolve_history_channel",
+		"list_history_runs", "verify_history_channel_audit",
+		"list_history_overrides", "set_history_override", "preview_history_channel",
+		"sync_history_channel", "rotate_history_target_credential",
 	} {
 		assert.NotNil(t, reg.ByName(name), "缺少工具 %s", name)
 	}

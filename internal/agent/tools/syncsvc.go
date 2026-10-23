@@ -37,6 +37,19 @@ type SyncService interface {
 	HealthCheck() map[string]string
 	RunTaskWithTrigger(ctx context.Context, taskKey, trigger string, webhookEventID *uint) error
 
+	// 历史同步(histsync):**通道优先** —— 配置在通道里,执行按 channel id 进行。
+	// 与镜像中心的身份镜像模式并存,语义不同。
+	ListHistoryChannels(ctx context.Context, offset, limit int) ([]*corebridge.HistoryChannelDTO, int64, error)
+	HistoryPlan(ctx context.Context, channelID uint) (*corebridge.HistoryPlanDTO, error)
+	HistoryResolve(ctx context.Context, channelID uint) (*corebridge.HistoryPlanDTO, error)
+	ListHistoryRuns(ctx context.Context, channelID uint, offset, limit int) ([]*corebridge.HistoryRunDTO, int64, error)
+	VerifyHistoryChannelChain(ctx context.Context, channelID uint) (*corebridge.HistoryChainResult, error)
+	ListHistoryOverrides(ctx context.Context, channelID uint) ([]*corebridge.HistoryOverrideDTO, error)
+	SetHistoryOverride(ctx context.Context, channelID uint, in corebridge.HistoryOverrideInput) (*corebridge.HistoryOverrideDTO, error)
+	HistoryPreview(ctx context.Context, channelID uint) (*corebridge.PreviewReport, error)
+	HistorySync(ctx context.Context, opts corebridge.HistorySyncOptions) (*corebridge.HistorySyncReport, error)
+	RotateHistoryTargetCredential(ctx context.Context, id uint, in corebridge.HistoryCredentialInput) (*corebridge.HistoryTargetDTO, error)
+
 	// P0-P5:灾备 / RPO / 漂移 / 审计链
 	RPOReport(maxSeconds int64) (*corebridge.RPOReport, error)
 	VerifyBackupManifest() (*corebridge.ManifestVerifyResult, error)

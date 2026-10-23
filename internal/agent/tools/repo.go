@@ -44,6 +44,29 @@ func NewRegistry(svc SyncService) *Registry {
 	r.add(must(utils.InferTool("get_drift_report", "漂移检测:本地与目标远端分支是否一致", r.getDriftReport)))
 	r.add(must(utils.InferTool("get_audit_chain", "审计日志哈希链完整性校验", r.getAuditChain)))
 	r.add(must(utils.InferTool("get_metadata_snapshots", "列出冷备元数据快照(只读);回灌用 CLI ops +metadata-restore", r.getMetadataSnapshots)))
+	// 历史同步(histsync):双仓内容差异发布,**通道优先**。
+	// 只读面:apply 会产生本地提交、push 是对外可见动作,都在 CLI 侧。
+	r.add(must(utils.InferTool("list_history_channels",
+		"列出历史同步通道(DB 持久化的双仓同步配置)", r.listHistoryChannels)))
+	r.add(must(utils.InferTool("plan_history_channel",
+		"按历史同步通道生成同步计划,只读不写", r.planHistoryChannel)))
+	r.add(must(utils.InferTool("resolve_history_channel",
+		"按历史同步通道计算自动解法,并返回待人工裁决的冲突卷宗", r.resolveHistoryChannel)))
+	r.add(must(utils.InferTool("list_history_runs",
+		"列出历史同步通道的执行记录(审计留痕与回滚锚点)", r.listHistoryRuns)))
+	r.add(must(utils.InferTool("verify_history_channel_audit",
+		"校验历史同步通道内执行记录的哈希链(篡改任一审计材料都能检出)", r.verifyHistoryChannelAudit)))
+	r.add(must(utils.InferTool("preview_history_channel",
+		"历史同步预检:摊开影响面(将产生的提交/门禁结果/推送是否需强推),不推送", r.previewHistoryChannel)))
+	r.add(must(utils.InferTool("sync_history_channel",
+		"一次跑完历史同步:预检→移植→推送(危险操作,需用户确认;有阻塞项则停下)", r.syncHistoryChannel)))
+	r.add(must(utils.InferTool("rotate_history_target_credential",
+		"轮换历史同步推送目标的凭据(危险操作,需用户确认;只换密钥不动 URL)", r.rotateHistoryTargetCredential)))
+	r.add(must(utils.InferTool("list_history_overrides",
+		"列出历史同步通道的裁决(人工/AI 对 hold 文件的拍板结果)", r.listHistoryOverrides)))
+	// 写裁决会改变实际发布内容,需用户确认。
+	r.add(must(utils.InferTool("set_history_override",
+		"写入历史同步裁决(危险操作,需用户确认):keep_target|take_source|merged", r.setHistoryOverride)))
 	// 危险工具(需用户确认)
 	r.add(must(utils.InferTool("run_task", "立即执行一次同步任务(危险操作,需用户确认)", r.runTask)))
 	r.add(must(utils.InferTool("test_repo_connection", "测试仓库连通性(危险操作,需用户确认)", r.testRepoConnection)))

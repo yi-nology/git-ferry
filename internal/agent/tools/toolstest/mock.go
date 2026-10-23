@@ -173,3 +173,55 @@ func (m *Mock) BatchDRDrill(context.Context, []string, int) ([]*corebridge.Drill
 }
 
 func (m *Mock) BackupDir() string { return m.BackupDirPath }
+
+// ===== 历史同步(histsync) =====
+
+// ListHistoryChannels 返回假的历史同步通道列表。
+func (m *Mock) ListHistoryChannels(_ context.Context, _, _ int) ([]*corebridge.HistoryChannelDTO, int64, error) {
+	return []*corebridge.HistoryChannelDTO{}, 0, nil
+}
+
+// HistoryPlan 返回假的按通道计划。
+func (m *Mock) HistoryPlan(_ context.Context, _ uint) (*corebridge.HistoryPlanDTO, error) {
+	return &corebridge.HistoryPlanDTO{Summary: corebridge.HistorySummary{}}, nil
+}
+
+// HistoryResolve 返回假的按通道解法结果。
+func (m *Mock) HistoryResolve(_ context.Context, _ uint) (*corebridge.HistoryPlanDTO, error) {
+	return &corebridge.HistoryPlanDTO{Summary: corebridge.HistorySummary{}}, nil
+}
+
+// ListHistoryRuns 返回假的执行记录列表。
+func (m *Mock) ListHistoryRuns(_ context.Context, _ uint, _, _ int) ([]*corebridge.HistoryRunDTO, int64, error) {
+	return []*corebridge.HistoryRunDTO{}, 0, nil
+}
+
+// VerifyHistoryChannelChain 返回假的链校验结果。
+func (m *Mock) VerifyHistoryChannelChain(_ context.Context, _ uint) (*corebridge.HistoryChainResult, error) {
+	return &corebridge.HistoryChainResult{OK: true, Message: "audit chain intact"}, nil
+}
+
+// ListHistoryOverrides 返回假的裁决列表。
+func (m *Mock) ListHistoryOverrides(_ context.Context, _ uint) ([]*corebridge.HistoryOverrideDTO, error) {
+	return []*corebridge.HistoryOverrideDTO{}, nil
+}
+
+// SetHistoryOverride 返回假的裁决写入结果。
+func (m *Mock) SetHistoryOverride(_ context.Context, _ uint, in corebridge.HistoryOverrideInput) (*corebridge.HistoryOverrideDTO, error) { //nolint:gocritic // hugeParam: 签名由 SyncService 接口锁定,而该接口镜像 core 的 SetHistoryOverride(值类型)
+	return &corebridge.HistoryOverrideDTO{Path: in.Path, Verdict: in.Verdict}, nil
+}
+
+// HistoryPreview 返回假的预检报告。
+func (m *Mock) HistoryPreview(_ context.Context, _ uint) (*corebridge.PreviewReport, error) {
+	return &corebridge.PreviewReport{ChannelID: 0}, nil
+}
+
+// HistorySync 返回假的一次同步结果。
+func (m *Mock) HistorySync(_ context.Context, _ corebridge.HistorySyncOptions) (*corebridge.HistorySyncReport, error) {
+	return &corebridge.HistorySyncReport{}, nil
+}
+
+// RotateHistoryTargetCredential 返回假的凭据轮换结果。
+func (m *Mock) RotateHistoryTargetCredential(_ context.Context, _ uint, in corebridge.HistoryCredentialInput) (*corebridge.HistoryTargetDTO, error) {
+	return &corebridge.HistoryTargetDTO{CredType: in.CredType, HasCredential: in.Credential != ""}, nil
+}

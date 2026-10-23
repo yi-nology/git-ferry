@@ -80,6 +80,42 @@ func Register(r *server.Hertz) {
 				_mirror.GET("/runs/:id", git_sync.MirrorRunGet)
 			}
 			{
+				// 历史同步:两个各自有完整历史的仓库之间按内容差异同步
+				// (与镜像中心的身份镜像模式并存,语义不同)
+				_histsync := _v1.Group("/histsync")
+				// 通道:配置持久化(规则、两侧仓库、推送目标)
+				_histsync.GET("/channels", git_sync.HistoryChannelList)
+				_histsync.POST("/channels", git_sync.HistoryChannelCreate)
+				_histsync.GET("/channels/:id", git_sync.HistoryChannelGet)
+				_histsync.POST("/channels/:id/update", git_sync.HistoryChannelUpdate)
+				_histsync.POST("/channels/:id/delete", git_sync.HistoryChannelDelete)
+				// 推送目标(凭据加密落库;顺序 = 优先级:先留底后发布)
+				_histsync.GET("/channels/:id/targets", git_sync.HistoryTargetList)
+				_histsync.POST("/channels/:id/targets", git_sync.HistoryTargetCreate)
+				_histsync.POST("/targets/:id/update", git_sync.HistoryTargetUpdate)
+				_histsync.POST("/targets/:id/delete", git_sync.HistoryTargetDelete)
+				// 执行(通道优先,无请求体)
+				_histsync.POST("/channels/:id/plan", git_sync.HistoryChannelPlan)
+				_histsync.POST("/channels/:id/resolve", git_sync.HistoryChannelResolve)
+				_histsync.POST("/channels/:id/apply", git_sync.HistoryChannelApply)
+				// 预检:摊开影响面,不推送
+				_histsync.POST("/channels/:id/preview", git_sync.HistoryChannelPreview)
+				_histsync.GET("/channels/:id/preview.md", git_sync.HistoryChannelPreviewMarkdown)
+				_histsync.POST("/channels/:id/push", git_sync.HistoryChannelPush)
+				// 执行记录与回滚
+				_histsync.GET("/channels/:id/runs", git_sync.HistoryRunList)
+				_histsync.GET("/channels/:id/audit", git_sync.HistoryChannelAudit)
+				// 裁决覆盖:人工/AI 对 hold 文件拍板
+				_histsync.GET("/channels/:id/overrides", git_sync.HistoryOverrideList)
+				_histsync.POST("/channels/:id/overrides", git_sync.HistoryOverrideSet)
+				_histsync.POST("/overrides/:id/delete", git_sync.HistoryOverrideDelete)
+				_histsync.POST("/targets/:id/rotate", git_sync.HistoryTargetRotate)
+				// 一次命令:预检 → 移植 → 推送(有阻塞项则停下)
+				_histsync.POST("/channels/:id/sync", git_sync.HistorySync)
+				_histsync.GET("/runs/:id", git_sync.HistoryRunGet)
+				_histsync.POST("/runs/:id/rollback", git_sync.HistoryRunRollback)
+			}
+			{
 				_webhook := _v1.Group("/webhook", _webhookMw()...)
 				_webhook.GET("/events", append(_listeventsMw(), git_sync.ListEvents)...)
 				_webhook.GET("/rule", append(_rulegetMw(), git_sync.RuleGet)...)

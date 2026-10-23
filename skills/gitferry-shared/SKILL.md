@@ -108,7 +108,7 @@ gitferry auth status
 
 1. **禁止**把 API Key / token 打印到日志、回复、PR、截图
 2. **写入 / 删除 / 触发执行前必须确认用户意图**；未明确要求时不要加 `--yes`
-3. 危险命令清单：`task +run`、`task +delete`、`history +retry`、`ops +drill`、`ops +rebuild`、`platform +delete`、`repo +delete`
+3. 危险命令清单：`task +run`、`task +delete`、`history +retry`、`ops +drill`、`ops +rebuild`、`platform +delete`、`repo +delete`、`histsync +push`、`histsync +sync`、`histsync +rollback`、`histsync +override-set`、`histsync +target-rotate`
 4. 遇到 `confirm_required` 类响应时，**把确认卡片原样展示给用户**，拿到确认后再执行
 5. 不要猜测任务/仓库 key：先 `gitferry task +list` / `repo +list` 取真实 key
 
@@ -127,3 +127,4 @@ gitferry auth status
 - [gitferry-history](../gitferry-history/SKILL.md)
 - [gitferry-ops](../gitferry-ops/SKILL.md)
 - [gitferry-workflow](../gitferry-workflow/SKILL.md)
+- [gitferry-histsync](../gitferry-histsync/SKILL.md)

@@ -39,6 +39,7 @@ func NewRootCmd() *cobra.Command {
 		newRepoCmd(),
 		newTaskCmd(),
 		newHistoryCmd(),
+		newHistsyncCmd(),
 		newOpsCmd(),
 		newPlatformCmd(),
 		newWebhookCmd(),

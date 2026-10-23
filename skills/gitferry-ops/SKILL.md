@@ -135,4 +135,5 @@ gitferry ops +metadata-restore --key my-repo --kinds labels,milestones --execute
 
 - [gitferry-history](../gitferry-history/SKILL.md)
 - [gitferry-workflow](../gitferry-workflow/SKILL.md)
+- [gitferry-histsync](../gitferry-histsync/SKILL.md)
 - [gitferry-shared](../gitferry-shared/SKILL.md)
