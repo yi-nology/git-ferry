@@ -18,10 +18,11 @@ require (
 	github.com/oekit/core v0.12.0
 	github.com/oekit/hertz v0.8.3
 	github.com/oekit/metrics v0.1.9
-	github.com/oekit/pkg v0.24.0
+	github.com/oekit/pkg v0.25.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.12.0
 	github.com/yi-nology/go-git-platform v0.96.0
@@ -128,7 +129,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/studyzy/gongfeng-sdk-go v0.6.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
