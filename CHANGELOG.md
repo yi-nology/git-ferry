@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Fixed
+
+- **已存在的 pending 审批刷新到当前目标状态**（core v0.16.1）：`RequestApproval` 见到同
+  task+branch 已有 pending 就跳过 ⇒ 目标侧此后又变了（独有提交从 1 个变成 50 个）时，
+  旧 pending 仍挂着、绑的还是**旧状态** ⇒ 运维批的是一份过期的描述。
+  修法：已有 pending 时刷新它（reason / target_ref / created_at）。
+
+### Changed
+
+- core pin 抬到 **v0.16.1**（零 replace）。
+
 ## [v1.28.0] - 2026-10-25
 
 ### Fixed
