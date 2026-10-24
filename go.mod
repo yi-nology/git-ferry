@@ -16,9 +16,9 @@ require (
 	github.com/oekit/bootstrap v0.6.5
 	github.com/oekit/concurrency v0.20.4
 	github.com/oekit/core v0.12.0
-	github.com/oekit/hertz v0.8.2
+	github.com/oekit/hertz v0.8.3
 	github.com/oekit/metrics v0.1.9
-	github.com/oekit/pkg v0.23.1
+	github.com/oekit/pkg v0.24.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
