@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/pathx"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -74,7 +75,11 @@ func safeWorkDir(tempDir, taskKey string) (string, error) {
 	if taskKey == "" {
 		return "", fmt.Errorf("task_key is empty")
 	}
-	if strings.ContainsAny(taskKey, "/\\") || strings.Contains(taskKey, "..") {
+	// task_key 是单段名（拼进 workdir 文件名），不是路径——用上游
+	// pathx.IsSafeFileName 判定：拒绝路径分隔符（"/" 与 "\"）、"." / ".." 段、
+	// 绝对路径与 Windows 盘符。此前是子串判定 Contains("..")，会误杀
+	// "foo..bar" 这类合法名字。
+	if !pathx.IsSafeFileName(taskKey) {
 		return "", fmt.Errorf("task_key contains path separators")
 	}
 	dir := filepath.Join(tempDir, taskKey)
