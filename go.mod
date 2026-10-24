@@ -7,17 +7,18 @@ require (
 	github.com/cloudwego/eino v0.9.22
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/cloudwego/hertz v0.10.6
+	github.com/go-git/go-git/v5 v5.19.3
 	github.com/google/uuid v1.6.0
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oagentkit/guardx v0.14.0
-	github.com/oekit/bootstrap v0.6.4
-	github.com/oekit/concurrency v0.20.1
+	github.com/oekit/bootstrap v0.6.5
+	github.com/oekit/concurrency v0.20.4
 	github.com/oekit/core v0.12.0
-	github.com/oekit/hertz v0.8.1
+	github.com/oekit/hertz v0.8.2
 	github.com/oekit/metrics v0.1.9
-	github.com/oekit/pkg v0.22.0
+	github.com/oekit/pkg v0.23.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
@@ -64,7 +65,6 @@ require (
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.2 // indirect
-	github.com/go-git/go-git/v5 v5.19.3 // indirect
 	github.com/go-openapi/errors v0.22.9 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
 	github.com/go-openapi/strfmt v0.27.2 // indirect
@@ -109,10 +109,10 @@ require (
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/oekit/logx v0.7.1 // indirect
-	github.com/oekit/middleware v0.12.0 // indirect
-	github.com/oekit/redisx v0.10.0 // indirect
+	github.com/oekit/middleware v0.13.2 // indirect
+	github.com/oekit/redisx v0.10.4 // indirect
 	github.com/oekit/registry v0.5.0 // indirect
-	github.com/oekit/tracing v0.2.2 // indirect
+	github.com/oekit/tracing v0.3.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
