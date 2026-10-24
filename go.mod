@@ -12,7 +12,7 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oagentkit/guardx v0.14.0
+	github.com/oagentkit/guardx v0.15.0
 	github.com/oekit/bootstrap v0.6.5
 	github.com/oekit/concurrency v0.20.4
 	github.com/oekit/core v0.12.0

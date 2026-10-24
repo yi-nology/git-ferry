@@ -277,8 +277,8 @@ github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18/go.mod h1:Gvqtel
 github.com/nikolalohinski/gonja v1.5.3 h1:GsA+EEaZDZPGJ8JtpeGN78jidhOlxeJROpqMT9fTj9c=
 github.com/nikolalohinski/gonja v1.5.3/go.mod h1:RmjwxNiXAEqcq1HeK5SSMmqFJvKOfTfXhkJv6YBtPa4=
 github.com/nyaruka/phonenumbers v1.0.55/go.mod h1:sDaTZ/KPX5f8qyV9qN+hIm+4ZBARJrupC6LuhshJq1U=
-github.com/oagentkit/guardx v0.14.0 h1:F8lw9/+DHCU1ixCuCzudDhK+tlKf/7NjZi2TFNBCUYw=
-github.com/oagentkit/guardx v0.14.0/go.mod h1:vP5TRV0Muxtb8w5cpCnNhX80Lm/b9FX5el6lBuh5Ays=
+github.com/oagentkit/guardx v0.15.0 h1:IkyPq2yehC/wBuviRF2loU14xxrY78pyHGzJuAjGgjc=
+github.com/oagentkit/guardx v0.15.0/go.mod h1:+GcaTjNHL0mqClzpTSvQ242DN6ouEqk/5IeWy1PTL/I=
 github.com/oekit/bootstrap v0.6.5 h1:zXVd1dOjWU3nr97PxYqHPxq2BBSPx26Bujy5ia0Se6w=
 github.com/oekit/bootstrap v0.6.5/go.mod h1:YkLmN5GnLw8VRrWrAIxSiMAJ3Z8hfaCm4nMI1HxJnL4=
 github.com/oekit/concurrency v0.20.4 h1:5UfX/yWl3MgxQAR5l2SL+6tscXGkuB0YwvvFh9pPHvw=
