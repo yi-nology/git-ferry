@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/pkg/convert"
+	"github.com/oekit/pkg/stringx"
 	"github.com/yi-nology/git-ferry/biz/model/webhook"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -64,7 +65,7 @@ func RuleCreate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	taskKeys := splitCommaList(req.SyncTaskKeys)
+	taskKeys := stringx.SplitCSVNonEmpty(req.SyncTaskKeys)
 
 	r, err := GetSyncService().CreateRule(ctx, &corebridge.CreateRuleRequest{
 		Name: req.Name, RepoKey: req.RepoKey, EventType: req.EventType,
@@ -91,7 +92,7 @@ func RuleUpdate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	taskKeys := splitCommaList(req.SyncTaskKeys)
+	taskKeys := stringx.SplitCSVNonEmpty(req.SyncTaskKeys)
 
 	r, err := GetSyncService().UpdateRule(ctx, &corebridge.UpdateRuleRequest{
 		ID: uint(req.ID), Name: req.Name, EventType: req.EventType,
