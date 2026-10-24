@@ -99,10 +99,18 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 
 // migrationCreateErrText 近似原手写文案 "github migration create failed: status %d":
 // 平台错误带 HTTP status 时按原格式,否则透出平台错误串。
+//
+// **带上平台给的说明**:只回 "status 403" 的话,调用方看不出是自己没权限、
+// 还是组织开了迁移限制、还是 token 缺 scope —— 平台错误串里有原因。
 func migrationCreateErrText(err error) string {
 	var pe *sdkprov.ProviderError
-	if errors.As(err, &pe) && pe.StatusCode != 0 {
-		return fmt.Sprintf("github migration create failed: status %d", pe.StatusCode)
+	if errors.As(err, &pe) {
+		if pe.Cause != nil {
+			return fmt.Sprintf("github migration create failed: %v", pe)
+		}
+		if pe.StatusCode != 0 {
+			return fmt.Sprintf("github migration create failed: status %d", pe.StatusCode)
+		}
 	}
 	return "github migration create failed: " + err.Error()
 }

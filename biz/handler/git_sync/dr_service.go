@@ -2,6 +2,7 @@ package git_sync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
@@ -170,6 +171,12 @@ func VerifyBackupManifest(ctx context.Context, c *app.RequestContext) {
 	}
 	res, err := svc.VerifyBackupManifest()
 	if err != nil {
+		// 冷备没启用不是"内部错误" —— 回 400 并说清怎么开,
+		// 别让人对着 500 "internal server error" 猜。
+		if errors.Is(err, corebridge.ErrBackupDisabled) {
+			response.BadRequest(c, "冷备未启用:配置 sync.backup_dir 后再校验完整性")
+			return
+		}
 		response.InternalError(c, err.Error())
 		return
 	}

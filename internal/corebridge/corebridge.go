@@ -110,6 +110,8 @@ var (
 	ErrPlatformNotFound       = coreservice.ErrPlatformNotFound
 	ErrTargetPlatformNotFound = coreservice.ErrTargetPlatformNotFound
 	ErrMetadataValidation     = coreservice.ErrMetadataValidation
+	// ErrBackupDisabled 冷备未启用(没配 sync.backup_dir)—— 壳层据此回可读提示。
+	ErrBackupDisabled = coreservice.ErrBackupDisabled
 )
 
 // 错误到传输层的分类契约（壳 response.FromError 据此选状态码）。

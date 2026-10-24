@@ -2,6 +2,35 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Fixed
+
+- **强推放行改为一次性**（core v0.14.0）：`force_push_policy=block` 的审批，
+  契约是「Admin **一次性**放行后允许**本次** force」，此前实现是**永久有效** ——
+  一次人工放行变成该任务+分支上的常驻后门，之后每次覆盖目标侧独有提交都无人复核。
+  现在一次成功的强推之后放行即被用掉，下次同任务同分支再出现分歧必须重新审批。
+- **冷备完整性校验没清单时不再 500**：`ops +integrity` 在还没做过冷备（没有
+  `backup-manifest.json`）时返回 500 `internal server error`，看不出是「还没做冷备」
+  还是「真出事了」。现在返回可读结果并说明该先跑一次冷备。
+- **冷备未启用时给可读提示**：`ops +integrity` / 冷备相关端点在 `sync.backup_dir`
+  没配时回 400 并说明怎么开，而不是笼统的 500。
+- **仓库迁移失败时带出平台原因**：此前只回 `github migration create failed: status 403`，
+  看不出是自己没权限、组织开了迁移限制、还是 token 缺 scope；现在带上平台错误串。
+- **漂移检测的判词与计数**（core v0.14.0）：两端 ref 不等不再一律报 `diverged`，
+  区分 `local ahead` / `remote ahead` / 真 `diverged`；算不出 ahead/behind 时
+  明说 unknown，不再静默给 0/0（看着像「没有差异」）。
+
+### Changed
+
+- 失败时不再一律删掉任务工作区（core v0.14.0）：失败常与本地状态无关
+  （分歧保护拦下、鉴权失败、网络抖动），此前每次失败都把工作区删掉 ⇒ 下一次被迫全量克隆，
+  增量 fetch 的收益归零。现在工作区可用就保留（下次增量），坏了才删。
+- `make generate` 的范围说明写进 Makefile：`biz/model/{platform,repo,sync_task,git_sync,base,
+  system,webhook,operation_log}` 是**手工维护**的（文件头虽写 DO NOT EDIT，但
+  PlatformInfo 的 SSH 主机密钥钉扎 / GitHub App 字段是手工加的，Go 字段名与 optional
+  语义都和 IDL 不一致 —— IDL 重新生成会把它们冲掉）。注释说明免得有人「顺手修正」它。
+
 ## [v1.25.0] - 2026-10-24
 
 ### Fixed

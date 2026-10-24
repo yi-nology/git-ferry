@@ -87,6 +87,10 @@ generate:
 	@hz model --idl idl/mirror.thrift --module github.com/yi-nology/git-ferry --model_dir biz/model
 	@rm -rf biz/base biz/git_sync biz/operation_log biz/platform biz/repo biz/sync_task biz/system biz/webhook biz/ops biz/ai biz/mirror
 	@echo ">> generated biz/model/{ops,ai,mirror} via hz"
+	@echo ">> 注意:biz/model/{platform,repo,sync_task,git_sync,base,system,webhook,operation_log} 是**手工维护**的"
+	@echo ">>   (文件头虽写着 DO NOT EDIT,但 PlatformInfo 的 SSH 主机密钥钉扎 / GitHub App 字段"
+	@echo ">>    是手工加的:Go 字段名与 optional 语义都和 IDL 不一致 —— IDL 重新生成会把它们**冲掉**)。"
+	@echo ">>   要改这些结构,先改 IDL **再手工同步** model,并跑 go build 确认。"
 
 # 从 IDL 生成 OpenAPI 3.0 spec → docs/openapi.json(同时更新内嵌副本)
 apidoc:
