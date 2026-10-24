@@ -2848,6 +2848,10 @@ type RestoreKindStat struct {
 	Created int32 `thrift:"created,2" form:"created" json:"created" query:"created"`
 	Skipped int32 `thrift:"skipped,3" form:"skipped" json:"skipped" query:"skipped"`
 	Failed  int32 `thrift:"failed,4" form:"failed" json:"failed" query:"failed"`
+	// 5: updated —— 覆盖更新。**追加**而不是重排既有编号:
+	// 把 update 记成 created 会让报告与事实相反(说"新建 N 条"其实是"覆盖 N 条"),
+	// 但重排 3/4 会打断已有 thrift 消费者 —— 没必要。
+	Updated int32 `thrift:"updated,5" form:"updated" json:"updated" query:"updated"`
 }
 
 func NewRestoreKindStat() *RestoreKindStat {
@@ -2873,11 +2877,16 @@ func (p *RestoreKindStat) GetFailed() (v int32) {
 	return p.Failed
 }
 
+func (p *RestoreKindStat) GetUpdated() (v int32) {
+	return p.Updated
+}
+
 var fieldIDToName_RestoreKindStat = map[int16]string{
 	1: "planned",
 	2: "created",
 	3: "skipped",
 	4: "failed",
+	5: "updated",
 }
 
 func (p *RestoreKindStat) Read(iprot thrift.TProtocol) (err error) {
@@ -2926,6 +2935,14 @@ func (p *RestoreKindStat) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3004,6 +3021,17 @@ func (p *RestoreKindStat) ReadField4(iprot thrift.TProtocol) error {
 	p.Failed = _field
 	return nil
 }
+func (p *RestoreKindStat) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Updated = _field
+	return nil
+}
 
 func (p *RestoreKindStat) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3025,6 +3053,10 @@ func (p *RestoreKindStat) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -3111,6 +3143,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *RestoreKindStat) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("updated", thrift.I32, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.Updated); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
 func (p *RestoreKindStat) String() string {

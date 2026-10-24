@@ -62,6 +62,9 @@ func restoreResultToOps(r *corebridge.RestoreResult) *ops.MetadataRestoreResult 
 		stats[k] = &ops.RestoreKindStat{
 			Planned: int32(v.Planned),
 			Created: int32(v.Created),
+			// 覆盖更新单独计数:混进 created 会让报告说"新建 N 条",
+			// 实际是"改写了 N 条已存在的东西"。
+			Updated: int32(v.Updated),
 			Skipped: int32(v.Skipped),
 			Failed:  int32(v.Failed),
 		}

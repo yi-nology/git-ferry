@@ -3222,6 +3222,10 @@
           "skipped": {
             "format": "int32",
             "type": "integer"
+          },
+          "updated": {
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"

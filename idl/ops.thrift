@@ -74,6 +74,10 @@ struct RestoreKindStat {
     2: i32 created (api.json="created")
     3: i32 skipped (api.json="skipped")
     4: i32 failed (api.json="failed")
+    // 5: updated —— 覆盖更新。**追加**而不是重排既有编号:
+    // 把 update 记成 created 会让报告与事实相反(说"新建 N 条"其实是"覆盖 N 条"),
+    // 但重排 3/4 会打断已有 thrift 消费者 —— 没必要。
+    5: i32 updated (api.json="updated")
 }
 
 struct MetadataRestoreResult {
