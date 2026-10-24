@@ -93,3 +93,37 @@ func actorName(c *app.RequestContext) string {
 	}
 	return "admin"
 }
+
+// RevokeForcePush POST /api/v1/ops/force-push-approvals/revoke
+// Admin 撤销一条放行（放行不再生效）。
+//
+// 没有撤销口子时，唯一能"取消"授权的办法是等它被用掉 ——
+// 而那恰恰是最不该覆盖目标侧独有提交的时刻。
+func RevokeForcePush(ctx context.Context, c *app.RequestContext) {
+	var req struct {
+		ID string `json:"id"`
+	}
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	if req.ID == "" {
+		response.BadRequest(c, "id is required")
+		return
+	}
+	svc, ok := requireSyncService(c)
+	if !ok {
+		return
+	}
+	found, err := svc.ForcePushApprovals().Revoke(req.ID, actorName(c))
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+	if !found {
+		response.NotFound(c, "approval not found")
+		return
+	}
+	recordAudit(ctx, c, "force_push_revoke", "task", req.ID, "撤销强推放行 "+req.ID)
+	response.Success(c, map[string]any{"revoked": true, "id": req.ID})
+}

@@ -413,6 +413,7 @@ func newOpsCmd() *cobra.Command {
 		sc("+integrity", "冷备完整性校验", opsGet("/api/v1/ops/backup-manifest/verify")),
 		sc("+audit", "审计哈希链校验", opsGet("/api/v1/ops/audit-chain/verify")),
 		sc("+audit-report", "审计日志导出（--csv 下载）", opsAuditReport),
+		opsForcePushApprovalsCmd(),
 		sc("+retry-batch", "批量重试失败任务（危险）", opsRetryBatch),
 		sc("+drill", "灾备演练（危险）", opsDrill),
 		sc("+rebuild", "任务全量重建（危险）", opsRebuild),
@@ -768,4 +769,34 @@ func opsRepoFiles(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []st
 		q.Set("path", p)
 	}
 	return c.Get("/api/v1/ops/repo-files", q)
+}
+
+// opsForcePushApprovalsCmd 强推审批的列表/放行/撤销。
+//
+// 审批是"人工授权覆盖目标侧独有提交"：批了要能**收回**（revoke）——
+// 没有撤销口子的话唯一的取消办法是等它被用掉，而那正是最不该覆盖的时刻。
+func opsForcePushApprovalsCmd() *cobra.Command {
+	c := sc("+force-push-approvals", "强推审批列表/放行/撤销", opsForcePushApprovals)
+	f := c.Flags()
+	f.String("approve", "", "放行指定审批 ID")
+	f.String("revoke", "", "撤销指定审批 ID")
+	return c
+}
+
+func opsForcePushApprovals(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	if id := flagStr(cmd, "approve"); id != "" {
+		if denied := confirmDanger("放行强推审批 " + id); denied != nil {
+			return denied, nil
+		}
+		return c.Post("/api/v1/ops/force-push-approvals/approve", map[string]any{"id": id})
+	}
+	if id := flagStr(cmd, "revoke"); id != "" {
+		if denied := confirmDanger("撤销强推审批 " + id); denied != nil {
+			return denied, nil
+		}
+		return c.Post("/api/v1/ops/force-push-approvals/revoke", map[string]any{"id": id})
+	}
+	q := url.Values{}
+	setIf(cmd, q, "task", "task_key")
+	return c.Get("/api/v1/ops/force-push-approvals", q)
 }

@@ -2,6 +2,30 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Added
+
+- **强推审批可撤销**（core v0.15.0）：新增 `POST /api/v1/ops/force-push-approvals/revoke`
+  与 CLI `ops +force-push-approvals --revoke <id>`（另有 `--approve <id>` 与列表）。
+  放行是"人工授权覆盖目标侧独有提交"，批错了要在**兑现之前**收回；没有撤销口子的话，
+  唯一的"取消"办法是等它被用掉 —— 而那正是最不该覆盖的时刻。
+
+### Fixed
+
+- **backup_on_demand 兑现不了时说清楚为什么**（core v0.15.0）：该策略要求覆盖前先打回滚快照，
+  但没配 `sync.backup_dir` 就打不了。此前静默按 `block` 处理 ⇒ 策略与实际行为不符
+  （操作者以为配了"先快照再覆盖"，实际被拦下），且看不出原因，像是工具随机拦的。
+  修法：错误文案点名 `sync.backup_dir` 并说明"本次按 block 处理"。
+
+### Changed
+
+- 依赖抬版：core → **v0.15.0**，go-git-platform → **v0.97.0**（零 replace）。
+  SDK v0.97.0 给 gogit 后端的 http/https 传输加了**拨号超时 30s / 响应头超时 60s /
+  TLS 握手超时 15s** —— 此前 go-git 的默认传输（`http.DefaultTransport`）**没有任何超时**，
+  上游"连不上/连上不回"时 git 操作会一直挂着，调用方只能等自己 context 的超时兜底
+  （实测：GitHub 间歇性不可达时一次克隆卡到操作系统默认的 TCP 重试超时，约 2 分钟）。
+
 ## [v1.26.0] - 2026-10-24
 
 ### Fixed

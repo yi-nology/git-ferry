@@ -118,6 +118,7 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.GET("/force-push-approvals", git_sync.ListForcePushApprovals)
 	ops.POST("/force-push-approvals", git_sync.WriteGuard(), git_sync.RequestForcePushApproval)
 	ops.POST("/force-push-approvals/approve", git_sync.AdminGuard(), git_sync.ApproveForcePush)
+	ops.POST("/force-push-approvals/revoke", git_sync.AdminGuard(), git_sync.RevokeForcePush)
 
 	// Swagger API 文档(公开,无需鉴权)
 	r.GET("/swagger/", swagger.SwaggerUI)
