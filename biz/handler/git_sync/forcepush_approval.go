@@ -33,6 +33,11 @@ func RequestForcePushApproval(ctx context.Context, c *app.RequestContext) {
 		TaskKey string `json:"task_key"`
 		Branch  string `json:"branch"`
 		Reason  string `json:"reason"`
+		// TargetRef 目标分支当前的 HEAD SHA。
+		//
+		// 放行会**绑定**到这个状态:目标侧此后若又变了,旧放行不再适用,
+		// 必须重新审批。手工申请时带上它(同步引擎自动申请时自带)。
+		TargetRef string `json:"target_ref"`
 	}
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -46,7 +51,7 @@ func RequestForcePushApproval(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	item, err := svc.ForcePushApprovals().Request(req.TaskKey, req.Branch, req.Reason)
+	item, err := svc.ForcePushApprovals().Request(req.TaskKey, req.Branch, req.Reason, req.TargetRef)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
