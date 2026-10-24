@@ -23,7 +23,9 @@ type (
 	MirrorVersionTarget      = coreservice.MirrorVersionTarget
 	CreateMirrorChannelInput = coreservice.CreateMirrorChannelInput
 	MirrorTargetInput        = coreservice.MirrorTargetInput
-	ExecuteMirrorRunInput    = coreservice.ExecuteMirrorRunInput
+	// MirrorScrubRuleInput 痕迹清理规则的入参(镜像发布用)。
+	MirrorScrubRuleInput  = coreservice.MirrorScrubRuleInput
+	ExecuteMirrorRunInput = coreservice.ExecuteMirrorRunInput
 )
 
 // 镜像常量

@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 // 历史同步(histsync)工具:两个各自有完整历史的仓库之间按内容差异同步。
@@ -20,22 +22,63 @@ import (
 // 工具面只暴露只读动作 —— apply 会产生本地提交、push 是对外可见动作,
 // 二者都留在 CLI 与人工确认路径上。
 
-// historyChannelInput 是按通道操作的入参。
-type historyChannelInput struct {
+// historyChannelRef 是「按通道查」类工具的入参(只读)。
+//
+// **只读工具不要带写参数**:入参 schema 是模型看到的唯一契约 ——
+// 给 list/plan/preview 带一个 force_push,模型会以为它有用,
+// 实际被静默忽略;而给 list_history_overrides 强制要求 path/verdict,
+// 这个只读工具对模型直接不可用(必填参数缺失 → schema 校验失败)。
+type historyChannelRef struct {
 	ChannelID uint `json:"channel_id" jsonschema:"历史同步通道 ID"`
 }
 
-// listHistoryChannels 列出历史同步通道。
-func (r *Registry) listHistoryChannels(ctx context.Context, in historyChannelInput) (map[string]any, error) {
-	list, total, err := r.svc.ListHistoryChannels(ctx, 0, 100)
+// historyChannelInput 是「会改变对外状态」的工具的入参(仅 sync 用)。
+type historyChannelInput struct {
+	ChannelID uint `json:"channel_id" jsonschema:"历史同步通道 ID"`
+	// ForcePush 强制推送:远端与本次移植的基线已分叉也照样覆盖。
+	//
+	// 默认不强制 —— 强推会把远端已有的提交**静默丢掉**。
+	ForcePush bool `json:"force_push,omitempty" jsonschema:"强制推送(覆盖远端已有提交,危险)"`
+}
+
+// listHistoryChannelsInput 是「列出通道」的入参。
+//
+// **刻意不带 channel_id**:列全部通道不需要指定某个通道 ——
+// 复用 historyChannelRef 会让 schema 把 channel_id 标成**必填**
+// (json tag 没有 omitempty),而这个工具根本用不上它:
+// 模型只能被迫随便填一个 id,或者干脆调不通这个工具。
+//
+// 顺带把**硬编码的 100 条上限**换成真分页 ——
+// 通道多了以后,模型看到的是被静默截断的列表(它并不知道还有下一页)。
+type listHistoryChannelsInput struct {
+	Page  int `json:"page,omitempty" jsonschema:"页码,从 1 开始,默认 1"`
+	Limit int `json:"limit,omitempty" jsonschema:"每页条数,默认 20,最大 100"`
+}
+
+// listHistoryChannels 列出历史同步通道(分页)。
+func (r *Registry) listHistoryChannels(ctx context.Context, in listHistoryChannelsInput) (map[string]any, error) {
+	page := in.Page
+	if page <= 0 {
+		page = 1
+	}
+	limit := in.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	list, total, err := r.svc.ListHistoryChannels(ctx, (page-1)*limit, limit)
 	if err != nil {
 		return nil, fmt.Errorf("列出历史同步通道失败: %w", err)
 	}
-	return map[string]any{"total": total, "channels": list}, nil
+	return map[string]any{
+		"total": total, "page": page, "limit": limit, "channels": list,
+	}, nil
 }
 
 // planHistoryChannel 按通道生成同步计划(只读)。
-func (r *Registry) planHistoryChannel(ctx context.Context, in historyChannelInput) (map[string]any, error) {
+func (r *Registry) planHistoryChannel(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	plan, err := r.svc.HistoryPlan(ctx, in.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("按通道生成历史同步计划失败: %w", err)
@@ -52,7 +95,7 @@ func (r *Registry) planHistoryChannel(ctx context.Context, in historyChannelInpu
 //
 // 这就是「AI 建议器」的输入:卷宗里给出基点/目标侧/源侧三方内容,
 // AI 据此给出判定与依据,人工确认后才应用。
-func (r *Registry) resolveHistoryChannel(ctx context.Context, in historyChannelInput) (map[string]any, error) {
+func (r *Registry) resolveHistoryChannel(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	plan, err := r.svc.HistoryResolve(ctx, in.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("按通道计算历史同步解法失败: %w", err)
@@ -70,7 +113,7 @@ func (r *Registry) resolveHistoryChannel(ctx context.Context, in historyChannelI
 }
 
 // listHistoryRuns 列出通道的执行记录(审计与回滚锚点)。
-func (r *Registry) listHistoryRuns(ctx context.Context, in historyChannelInput) (map[string]any, error) {
+func (r *Registry) listHistoryRuns(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	list, total, err := r.svc.ListHistoryRuns(ctx, in.ChannelID, 0, 50)
 	if err != nil {
 		return nil, fmt.Errorf("列出历史同步执行记录失败: %w", err)
@@ -79,7 +122,7 @@ func (r *Registry) listHistoryRuns(ctx context.Context, in historyChannelInput) 
 }
 
 // verifyHistoryChannelAudit 校验通道内执行记录的哈希链。
-func (r *Registry) verifyHistoryChannelAudit(ctx context.Context, in historyChannelInput) (map[string]any, error) {
+func (r *Registry) verifyHistoryChannelAudit(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	res, err := r.svc.VerifyHistoryChannelChain(ctx, in.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("校验历史同步执行记录链失败: %w", err)
@@ -93,6 +136,11 @@ func (r *Registry) verifyHistoryChannelAudit(ctx context.Context, in historyChan
 	}, nil
 }
 
+// historyOverrideListInput 是「列裁决」的入参(只读,只要通道 ID)。
+type historyOverrideListInput struct {
+	ChannelID uint `json:"channel_id" jsonschema:"历史同步通道 ID"`
+}
+
 // historyOverrideInput 是裁决写入的入参。
 type historyOverrideInput struct {
 	ChannelID uint   `json:"channel_id" jsonschema:"历史同步通道 ID"`
@@ -104,7 +152,7 @@ type historyOverrideInput struct {
 }
 
 // listHistoryOverrides 列出通道的裁决。
-func (r *Registry) listHistoryOverrides(ctx context.Context, in historyOverrideInput) (map[string]any, error) { //nolint:gocritic // hugeParam: eino utils.InferTool 要求入参是结构体值,指针会破坏入参 schema 推断
+func (r *Registry) listHistoryOverrides(ctx context.Context, in historyOverrideListInput) (map[string]any, error) { //nolint:gocritic // hugeParam: eino utils.InferTool 要求入参是结构体值,指针会破坏入参 schema 推断
 	list, err := r.svc.ListHistoryOverrides(ctx, in.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("列出历史同步裁决失败: %w", err)
@@ -118,7 +166,7 @@ func (r *Registry) listHistoryOverrides(ctx context.Context, in historyOverrideI
 // 模型给出判定与依据 → 弹出确认 → 用户确认后才写入。
 // 这正是「AI 建议 + 人工确认」的闭环落点。
 func (r *Registry) setHistoryOverride(ctx context.Context, in historyOverrideInput) (string, error) { //nolint:gocritic // hugeParam: 同上——工具入参形状由 eino 的 schema 推断决定
-	return r.dangerGuard(ctx, "set_history_override", marshalJSON(in), func(ctx context.Context, args string) (string, error) {
+	return r.dangerGuard(ctx, "set_histsync_override", marshalJSON(in), func(ctx context.Context, args string) (string, error) {
 		var in historyOverrideInput
 		if err := json.Unmarshal([]byte(args), &in); err != nil {
 			return marshalJSON(map[string]any{"status": "failed", "error": "参数解析失败: " + err.Error()}), nil
@@ -145,7 +193,7 @@ func (r *Registry) setHistoryOverride(ctx context.Context, in historyOverrideInp
 //
 // 报告含:计划统计、将产生的提交、将改动的文件、**门禁结果(推出去能不能编译)**、
 // 每个推送目标的 ref 变化与是否需要强推、待人工裁决的冲突。
-func (r *Registry) previewHistoryChannel(ctx context.Context, in historyChannelInput) (map[string]any, error) {
+func (r *Registry) previewHistoryChannel(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	rep, err := r.svc.HistoryPreview(ctx, in.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("历史同步预检失败: %w", err)
@@ -173,26 +221,65 @@ func (r *Registry) previewHistoryChannel(ctx context.Context, in historyChannelI
 // 服务端在有阻塞项(门禁不过 / 有待裁决冲突 / 需强推)时会停下并报告,
 // 不擅自往下走。
 func (r *Registry) syncHistoryChannel(ctx context.Context, in historyChannelInput) (string, error) {
-	return r.dangerGuard(ctx, "sync_history_channel", marshalJSON(in), func(ctx context.Context, args string) (string, error) {
+	// **强制推送要 admin**:它会覆盖远端已有的提交。
+	// 之前这条只在 HTTP handler 判过,MCP / AI 助手两条路没判 ——
+	// operator 就能强推覆盖掉远端别人的提交。
+	//
+	// 判在**登记确认之前**:没权限就别让用户走完确认流程才发现。
+	role := authz.RoleFromContext(ctx)
+	if in.ForcePush && !authz.IsAdmin(role) {
+		return marshalJSON(map[string]any{
+			"status": "failed",
+			"error":  "forbidden: 强制推送需要 admin 角色(当前:" + string(role) + ")",
+		}), nil
+	}
+	return r.dangerGuard(ctx, "sync_histsync_channel", marshalJSON(in), func(ctx context.Context, args string) (string, error) {
 		var in historyChannelInput
 		if err := json.Unmarshal([]byte(args), &in); err != nil {
 			return marshalJSON(map[string]any{"status": "failed", "error": "参数解析失败: " + err.Error()}), nil
 		}
-		rep, err := r.svc.HistorySync(ctx, corebridge.HistorySyncOptions{ChannelID: in.ChannelID})
+		// 再判一次(防止将来有人绕过外层的检查)。
+		role := authz.RoleFromContext(ctx)
+		if in.ForcePush && !authz.IsAdmin(role) {
+			return marshalJSON(map[string]any{
+				"status": "failed",
+				"error":  "forbidden: 强制推送需要 admin 角色(当前:" + string(role) + ")",
+			}), nil
+		}
+		rep, err := r.svc.HistorySync(ctx, corebridge.HistorySyncOptions{
+			ChannelID: in.ChannelID, ForcePush: in.ForcePush,
+			// core 只认「有人批准过」这个事实。
+			ForcePushApprovedBy: "role:" + string(role),
+		})
 		if err != nil {
 			return marshalJSON(map[string]any{"status": "failed", "error": err.Error()}), nil
 		}
 		if len(rep.Blocked) > 0 {
+			var summary any
+			if rep.Preview != nil {
+				summary = rep.Preview.Summary
+			}
 			return marshalJSON(map[string]any{
 				"status": "blocked", "message": "预检发现阻塞项,未执行移植与推送",
 				"blocked": rep.Blocked,
-				"summary": rep.Preview.Summary,
+				"summary": summary,
 			}), nil
+		}
+		// 不假设 Push / Preview 非空:报告是可选的,崩在这里等于整个工具不可用。
+		var heads map[string]string
+		var pushed []string
+		if rep.Push != nil {
+			heads = rep.Push.Heads
+			pushed = rep.Push.Pushed
+		}
+		var summary any
+		if rep.Preview != nil {
+			summary = rep.Preview.Summary
 		}
 		return marshalJSON(map[string]any{
 			"status": "ok", "message": "同步完成",
-			"head": rep.Push.Heads, "pushed": rep.Push.Pushed,
-			"summary": rep.Preview.Summary,
+			"head": heads, "pushed": pushed,
+			"summary": summary,
 		}), nil
 	})
 }

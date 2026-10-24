@@ -10,6 +10,8 @@ import (
 
 	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 func TestGetSyncHealth_ReturnsLevels(t *testing.T) {
@@ -57,7 +59,7 @@ func TestRetrySyncRun_RequiresConfirmFirst(t *testing.T) {
 	m := toolstest.NewMock()
 	reg := NewRegistry(m)
 	sc := &fakeScope{}
-	ctx := WithScope(context.Background(), sc)
+	ctx := WithScope(authz.WithRole(context.Background(), authz.RoleAdmin), sc)
 	out, err := reg.ByName("retry_sync_run").InvokableRun(ctx, `{"task_key":"t1"}`)
 	require.NoError(t, err)
 	assert.Contains(t, out, "confirmation_required")
@@ -78,9 +80,27 @@ func TestPlanMode_ReturnsSteps(t *testing.T) {
 	assert.Contains(t, out, "need_confirm")
 }
 
+// TestRememberWithoutStore 未接记忆库时的提示。
+//
+// 注意:现在记忆工具走 dangerGuard,**角色闸门在「记忆库未启用」之前**
+// (先判权限,再判依赖)—— 所以这里给 operator 角色。
 func TestRememberWithoutStore(t *testing.T) {
 	reg := NewRegistry(toolstest.NewMock())
-	out, err := reg.ByName("remember").InvokableRun(context.Background(), `{"kind":"fact","content":"x"}`)
+	ctx := WithScope(authz.WithRole(context.Background(), authz.RoleOperator), &fakeScope{})
+	out, err := reg.ByName("remember").InvokableRun(ctx, `{"kind":"fact","content":"x"}`)
 	require.NoError(t, err)
-	assert.Contains(t, out, "记忆库未启用")
+	assert.Contains(t, out, "confirmation_required",
+		"写记忆要走确认链路:%s", out)
+}
+
+// TestMemoryToolsRequireWritableRole 回归:记忆是**跨会话持久化的提示注入通道**
+// (记忆会进每次会话的 system prompt),所以只读角色不许写/删。
+func TestMemoryToolsRequireWritableRole(t *testing.T) {
+	reg := NewRegistry(toolstest.NewMock())
+	for _, tool := range []string{"remember", "forget_memory"} {
+		out, err := reg.ByName(tool).InvokableRun(context.Background(), `{"kind":"fact","content":"x","id":"m1"}`)
+		require.NoError(t, err)
+		assert.Contains(t, out, "forbidden",
+			"只读角色不得调用 %s:%s", tool, out)
+	}
 }

@@ -51,9 +51,35 @@ func toMirrorTargetInputs(reqs []*mirrormodel.MirrorTargetReq) []corebridge.Mirr
 			CredType:     r.CredType,
 			Credential:   r.Credential,
 			Username:     r.Username,
+			// SSH 主机密钥钉扎:目标侧之前没法钉 ——
+			// 于是同一次发布里「检查路径」fail-closed、「推送路径」TOFU。
+			InsecureSkipTLS:    r.InsecureSkipTLS,
+			HostKeyFingerprint: strings.TrimSpace(r.HostKeyFingerprint),
+			KnownHostsPath:     strings.TrimSpace(r.KnownHostsPath),
 		})
 	}
 	return inputs
+}
+
+// toMirrorScrubRuleInputs 把痕迹规则入参转成 core 的入参。
+//
+// 痕迹规则在**创建通道时**就校验(正则编不过直接拒),
+// 不会拖到发布那一刻才炸。
+func toMirrorScrubRuleInputs(reqs []*mirrormodel.MirrorScrubRuleReq) []corebridge.MirrorScrubRuleInput {
+	out := make([]corebridge.MirrorScrubRuleInput, 0, len(reqs))
+	for _, r := range reqs {
+		if r == nil {
+			continue
+		}
+		out = append(out, corebridge.MirrorScrubRuleInput{
+			Name:        strings.TrimSpace(r.Name),
+			Category:    strings.TrimSpace(r.Category),
+			Pattern:     r.Pattern,
+			Severity:    strings.TrimSpace(r.Severity),
+			Replacement: r.Replacement,
+		})
+	}
+	return out
 }
 
 // ===== 通道 =====
@@ -75,10 +101,11 @@ func MirrorChannelCreate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	ch, err := GetSyncService().Mirror().CreateMirrorChannel(ctx, corebridge.CreateMirrorChannelInput{
-		Name:    req.Name,
-		Mode:    req.Mode,
-		RepoKey: req.RepoKey,
-		Targets: toMirrorTargetInputs(req.Targets),
+		Name:       req.Name,
+		Mode:       req.Mode,
+		RepoKey:    req.RepoKey,
+		Targets:    toMirrorTargetInputs(req.Targets),
+		ScrubRules: toMirrorScrubRuleInputs(req.ScrubRules),
 	})
 	if err != nil {
 		response.InternalError(c, err.Error())
@@ -131,6 +158,10 @@ func MirrorTargetUpdate(ctx context.Context, c *app.RequestContext) {
 		CredType:     req.CredType,
 		Credential:   req.Credential,
 		Username:     req.Username,
+		// SSH 主机密钥钉扎(与创建同一套字段)。
+		InsecureSkipTLS:    req.InsecureSkipTLS,
+		HostKeyFingerprint: strings.TrimSpace(req.HostKeyFingerprint),
+		KnownHostsPath:     strings.TrimSpace(req.KnownHostsPath),
 	})
 	if err != nil {
 		response.InternalError(c, err.Error())

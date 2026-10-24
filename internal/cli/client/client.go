@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -21,12 +22,30 @@ type Client struct {
 	HTTP    *http.Client
 }
 
+// defaultTimeout 是 CLI 的默认请求超时。
+//
+// **不能太短**:历史同步在真实双仓上的耗时是分钟级的 ——
+// 实测 review-service 的 resolve 要 50s、preview 要 70s(跑完整树的内容差异
+// 判定 + 三向合并 + GOWORK=off 全量类型门禁)。
+// 60s 的超时会让「服务端已成功、客户端先超时」——
+// 看着像失败,其实变更已经发生(最坏情况:用户重试一次,重复执行)。
+const defaultTimeout = 10 * time.Minute
+
+// timeoutEnvVar 允许按需覆盖超时(如连远端服务时调短)。
+const timeoutEnvVar = "GITFERRY_TIMEOUT"
+
 func New(baseURL, apiKey string) *Client {
 	baseURL = strings.TrimRight(baseURL, "/")
+	timeout := defaultTimeout
+	if v := os.Getenv(timeoutEnvVar); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			timeout = d
+		}
+	}
 	return &Client{
 		BaseURL: baseURL,
 		APIKey:  apiKey,
-		HTTP:    &http.Client{Timeout: 60 * time.Second},
+		HTTP:    &http.Client{Timeout: timeout},
 	}
 }
 

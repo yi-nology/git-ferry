@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -33,7 +34,9 @@ func newRepoCmd() *cobra.Command {
 
 func repoList(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
 	q := url.Values{}
-	setIf(cmd, q, "keyword", "keyword")
+	// 服务端 ListReposReq 的查询参数叫 search(不是 keyword)。
+	// 传 keyword 会被服务端忽略 ⇒ --keyword 看着传了,其实没过滤。
+	setIf(cmd, q, "keyword", "search")
 	setIf(cmd, q, "platform", "platform")
 	if flagBool(cmd, "all") {
 		items, err := c.PaginateAll("/api/v1/repos", q)
@@ -128,7 +131,9 @@ func newTaskCmd() *cobra.Command {
 
 func taskList(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
 	q := url.Values{}
-	setIf(cmd, q, "keyword", "keyword")
+	// 服务端 ListTasksReq 只有 repo_key / page / page_size;
+	// keyword / status 不是它的字段,传过去会被忽略。
+	setIf(cmd, q, "keyword", "repo_key")
 	setIf(cmd, q, "status", "status")
 	if flagBool(cmd, "all") {
 		items, err := c.PaginateAll("/api/v1/sync/tasks", q)
@@ -398,24 +403,43 @@ func newOpsCmd() *cobra.Command {
 	cmd.AddCommand(
 		sc("+overview", "系统概览", opsGet("/api/v1/ops/overview")),
 		sc("+todo", "统一待办队列（健康/孤儿/RPO）", opsGet("/api/v1/ops/todo")),
-		sc("+push-backup", "推送到备份远端 github/gitlab", opsPushBackup),
-		sc("+repo-files", "浏览任务 workdir 文件", opsRepoFiles),
 		sc("+trends", "同步成功率/耗时趋势", opsTrends),
 		sc("+git-url", "打印 Git Smart HTTP clone URL", opsGitURL),
 		sc("+org-map", "按策略解析目标仓 key（preserve/single/flat/mixed）", opsOrgMap),
 		sc("+health", "健康评分（--with-drift 折入漂移）", opsHealth),
 		sc("+inventory", "资产盘点（孤儿仓库）", opsGet("/api/v1/ops/inventory")),
 		sc("+rpo", "RPO/RTO 观测", opsRPO),
-		sc("+drift", "漂移检测", opsGet("/api/v1/ops/drift")),
+		sc("+drift", "漂移检测", opsPost("/api/v1/ops/drift")),
 		sc("+integrity", "冷备完整性校验", opsGet("/api/v1/ops/backup-manifest/verify")),
 		sc("+audit", "审计哈希链校验", opsGet("/api/v1/ops/audit-chain/verify")),
 		sc("+audit-report", "审计日志导出（--csv 下载）", opsAuditReport),
 		sc("+retry-batch", "批量重试失败任务（危险）", opsRetryBatch),
 		sc("+drill", "灾备演练（危险）", opsDrill),
 		sc("+rebuild", "任务全量重建（危险）", opsRebuild),
+		opsPushBackupCmd(),
+		opsRepoFilesCmd(),
 		opsMetadataRestoreCmd(),
 	)
 	return cmd
+}
+
+// opsPushBackupCmd 注册 push-backup 自己的 flag。
+// --remote 是这个命令的必填参数,之前没有注册 ⇒ 命令永远报"缺少必填参数 --remote";
+// --refspec 同理没注册,会被 flagStr 静默吞掉(用户以为传了,其实没生效)。
+func opsPushBackupCmd() *cobra.Command {
+	c := sc("+push-backup", "推送到备份远端 github/gitlab", opsPushBackup)
+	f := c.Flags()
+	f.String("remote", "", "备份远端地址(https://…/repo.git 或 git@host:owner/repo.git)")
+	f.String("refspec", "", "要推送的 refspec(默认 refs/heads/*:refs/heads/*)")
+	return c
+}
+
+// opsRepoFilesCmd 注册 repo-files 自己的 flag。
+// --path 没注册时会被 flagStr 静默吞掉,文件过滤形同虚设。
+func opsRepoFilesCmd() *cobra.Command {
+	c := sc("+repo-files", "浏览任务 workdir 文件", opsRepoFiles)
+	c.Flags().String("path", "", "只显示该路径下的文件(前缀过滤)")
+	return c
 }
 
 func opsMetadataRestoreCmd() *cobra.Command {
@@ -435,6 +459,18 @@ func opsGet(path string) runFunc {
 		setIf(cmd, q, "task", "task_key")
 		setIf(cmd, q, "limit", "limit")
 		return c.Get(path, q)
+	}
+}
+
+// opsPost 走 POST 的 ops 端点。
+// 有些 ops 端点只注册了 POST(如 /api/v1/ops/drift),CLI 用 GET 会拿到 404,
+// 命令看起来存在却永远调不通。
+func opsPost(path string) runFunc {
+	return func(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+		q := url.Values{}
+		setIf(cmd, q, "task", "task_key")
+		setIf(cmd, q, "limit", "limit")
+		return c.Do(http.MethodPost, path, nil, q)
 	}
 }
 
@@ -642,11 +678,16 @@ func platformSyncRepos(c *client.Client, _ *config.Config, cmd *cobra.Command, _
 func newWebhookCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "webhook", Short: "Webhook 规则与事件"}
 	cmd.AddCommand(
-		sc("+rules", "Webhook 规则列表", func(c *client.Client, _ *config.Config, _ *cobra.Command, _ []string) (*output.Envelope, error) {
-			return c.Get("/api/v1/webhook/rules", nil)
+		sc("+rules", "Webhook 规则列表", func(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+			q := url.Values{}
+			// 服务端 ListRulesReq 要求 repo_key(缺了直接 400),CLI 必须带上。
+			setIf(cmd, q, "key", "repo_key")
+			return c.Get("/api/v1/webhook/rules", q)
 		}),
 		sc("+events", "Webhook 事件列表", func(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
 			q := url.Values{}
+			// 服务端 ListEventsReq 同样要求 repo_key(缺了 400)。
+			setIf(cmd, q, "key", "repo_key")
 			setIf(cmd, q, "limit", "limit")
 			return c.Get("/api/v1/webhook/events", q)
 		}),

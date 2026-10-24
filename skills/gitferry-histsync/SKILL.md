@@ -78,6 +78,12 @@ gitferry histsync +apply --channel-id $CH --format json
 ```bash
 gitferry histsync +push --channel-id $CH --format json
 ```
+**推送前服务端会做分叉检查**：远端出现了本次移植不知道的提交时，推送**直接被拒**
+（报「已分叉」），不会把远端的提交覆盖掉。
+确实要覆盖时，显式加 `--force-push`（**这会丢掉远端的提交，必须先向用户确认**）。
+
+> `--force-push` **只允许 admin 角色**（HTTP / MCP / AI 助手三条入口一致）——
+> 覆盖远端别人的提交是破坏性动作，operator 也不行。
 ⑧ **校验与审计**
 ```bash
 gitferry histsync +channel-audit --channel-id $CH --format json   # 通道执行链
@@ -114,7 +120,12 @@ gitferry histsync +run-detail --run-id <RUN_ID> --format json     # 审计材料
 | `public_asset` | 目标侧含公开资产（license 副本 / badge / 公共镜像源 / 多平台）而源侧没有 | 保留目标侧（源侧是旧版） |
 | `placeholder_domain` | 源侧用真实对外域名，目标侧已脱敏为示例域名 | 保留目标侧 |
 
-**开启判据后先 `resolve` 看还剩几个** —— 实测 9 个真冲突里 8 个被自动解掉。
+**开启判据后先 `resolve` 看还剩几个** —— 实测 11 个真冲突里 9 个被自动解掉。
+
+> 基线是 11 不是 9：合并算法修好之后，有两个配置文件
+> （`etc/config-dev.yaml` / `etc/config-prod.yaml`）从「假合并干净」变成了**真冲突** ——
+> 之前源侧的真实域名会覆盖目标侧已脱敏的域名，然后跟着发布到公开仓。
+> 这两个文件需要人裁决：保留目标侧的脱敏域名（`keep_target`）。
 剩下的是「两版功能都全、只是新旧不同」的真语义判断，**那才是你该管的**。
 
 ### 冲突裁决
@@ -170,7 +181,19 @@ gitferry histsync +sync --channel-id $CH --format json
 这三件都不是程序能替用户决定的 —— **停下让人看，比推上去再回滚便宜**。
 `--force` 可以让阻塞项也继续（推送本身仍需确认）。
 
-### 3.6 凭据轮换
+### 3.6 门禁：哪些是 CI 会跑的，哪些要手工跑
+
+| 门禁 | 什么时候跑 | 守什么 |
+|---|---|---|
+| `merge3_fuzz_test.go`（随机对拍） | `go test ./...`（CI 会跑） | 合并结果不丢内容、不重复内容 |
+| `merge3_oracle_test.go`（与 `git merge-file` 逐字对拍） | `go test ./...` | 合并语义与 git 一致 |
+| `history_e2e_test.go`（端到端演练） | `go test ./...` | 建通道→裁决→预检→移植→推送→回滚→再推 整条流水线 |
+| `live_test.go` / `merge3_live_test.go`（实仓） | **手工**：设 `HISTORY_LIVE_SRC` / `HISTORY_LIVE_TGT` | 真实双仓的基线与「公开树不得含真实域名」 |
+
+实仓那两条**需要环境变量才会跑**（没设就 skip）——不是 CI 门禁，
+但它是唯一能在**真实仓库**上验证「公开树不含内网真实域名」的门禁，值得定期手工跑。
+
+### 3.7 凭据轮换
 
 ```bash
 gitferry histsync +target-rotate --target-id <ID> \
@@ -186,11 +209,33 @@ gitferry histsync +target-rotate --target-id <ID> \
    推送顺序固定为「先留底后发布」：留底失败则不发布。
 2. **`+rollback` 会强推目标分支** —— 会把公开仓退回某个 ref。必须先确认，并展示影响面
    （当前 HEAD → 目标 ref）。
-3. **`+override-set` 改变发布内容** —— 需用户确认（MCP 工具侧已标为危险操作）。
+3. **`+override-set` 改变发布内容** —— 需用户确认。
+   CLI 侧（`+override-set` / `+channel-create` / `+channel-update` / `+target-create` / `+apply`）
+   由服务端要求确认，脚本/自动化场景统一加 `--yes` 跳过。
+
+   **各入口的确认口径**（确认在哪一侧做、谁负责角色）：
+
+   | 入口 | 确认由谁做 | 服务端的闸门 |
+   |---|---|---|
+   | CLI | 服务端（`--yes` 跳过） | 角色 + `force_push` 要 admin |
+   | 内置 AI 助手 | 服务端（会话内登记待确认） | 角色 + `force_push` 要 admin |
+   | MCP（Claude Code / Cursor 等） | **客户端**（MCP 无状态，服务端登记的令牌无处可去） | 角色 + `force_push` 要 admin |
+   | HTTP API | 调用方自理 | 角色 + `force_push` 要 admin |
+
+   MCP 路径曾经**危险工具一律不可用**（缺会话 scope → 直接拒绝），
+   现已可用：确认交给客户端，服务端只管角色与强推授权。
+
+   **另有两类工具也在服务端闸门内**（与历史同步无关，但同属 agent 工具面）：
+   - `remember` / `forget_memory`：记忆会进**每次会话的 system prompt** ⇒
+     跨会话持久化的提示注入通道，故按危险工具处理（需确认 + 只读角色一律拒绝）。
+   - `set_permission_mode`：切换工具权限档是**治理动作** ⇒ 需确认 +
+     **只有 admin 能拨**，且档位是**会话级**的（一个会话切只读，不影响其他会话）。
 4. **凭据不落命令行** —— 推送目标的密钥用 `--credential-file` 传，不要用 `--credential`
    （会进 shell 历史）。服务端的凭据是**加密落库**的，响应里不回显。
 5. **不要自己改 `preserve` 的文件** —— 它们是公开树独有的资产（截图、license、Gerrit 集成），
    覆盖会丢东西。
+6. **推送被「已分叉」拦下时，先查清远端多出来的提交是谁的** —— 不要顺手 `--force-push`。
+   强推会把远端的提交**静默丢掉**（没有别的痕迹）。
 
 ## 5. 常见陷阱
 
@@ -198,11 +243,15 @@ gitferry histsync +target-rotate --target-id <ID> \
 |---|---|---|
 | 预检报 `needs_force` | 远端与本地基线已分叉 | **停下来问用户**：要强推覆盖远端，还是先重新计划 |
 | 预检报门禁不通过 | 物化结果没通过 gofmt / 类型检查 | **不要 apply** —— 把门禁错误原样给用户，它指出具体文件与行号 |
+| apply 报「门禁未通过」 | 产物那棵树编译不过 | **不要 push** —— 门禁结论已落进执行记录，推送侧会独立核对并拒绝；改完源仓重新 apply |
+| push 报「门禁未通过」/「产物 HEAD 与执行记录不一致」 | 产物在 apply 之后被改过，或执行记录里没有通过的门禁结论 | 重新 apply 生成新的产物，**不要**手改产物目录 |
 | 预检的 new_head 与 apply 后不一致 | 正常：预检是快照 | 以 apply 的实际结果为准；不一致说明期间仓库变了，重新预检 |
 |---|---|---|
 | `hold` 全是「措辞差异」 | 两棵树是同源改写副本，措辞不同但意思一样 | 多数应在 `take_ours` / `take_theirs` 里自动解掉；仍冲突才需你判 |
 | apply 报编译不过 | port 的文件依赖某个还在 `hold` 的文件 | `resolve` 看 `blocked`/依赖关系；先解掉那个 hold |
 | push 报认证失败 | 目标的凭据不对 | `histsync +target-list` 看 `has_credential`；更新目标后重试 |
+| push 报「已分叉」 | 远端比本次移植的基线新（有别人推的提交） | **不要直接 `--force-push`** —— 先更新目标仓、重新 `+resolve` / `+apply`；确实要覆盖再问用户 |
+| rollback 报「解析回滚目标失败」 | 给的 ref 既不是留底上的分支，也不是仓库里的提交 | 用 commit hash（`+runs` 里的 `base_head` / `head`）或留底上的分支名 |
 | 想「撤销」一次发布 | 误推了 | `+rollback --run-id <ID> --ref <commit>`（留底里仍有内容，可再推回） |
 | 通道改了但计划没变 | 改了配置没重新 resolve | 计划是**快照**，每次都重新 resolve |
 
@@ -217,7 +266,16 @@ gitferry histsync +channel-create \
   --module-to github.com/yi-nology/code-review-service \
   --host-from git.enjoye.top --host-to github.com \
   --path-rules "docs/internal=docs/archive" \
-  --target-ref main --format json
+  --target-ref main \
+  --author-name "Zhangyi" --author-email "zhangyi@example.com" \
+  --format json
+
+# `--source-dir` / `--target-dir` 必须指向**真实的 git 仓库**
+# （不能是 /etc、~/.ssh 这类位置 —— 那是凭据与系统配置，不是待发布的代码）。
+#
+# `--author-name` / `--author-email` 是**公开树里新提交的作者身份**。
+# 不填则用中性身份 `git-ferry <git-ferry@users.noreply.github.com>` ——
+# **源提交的作者不会被继承**（源侧是内网开发者，继承等于把内网人员信息发到公开仓）。
 
 # 推送目标：第一个是留底（裸镜像），其后才是发布
 gitferry histsync +target-create --channel-id $CH \

@@ -18,6 +18,8 @@ import (
 	"github.com/yi-nology/git-ferry/internal/agent"
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
+
+	"github.com/cloudwego/hertz/pkg/app"
 )
 
 // ===== 未启用降级(ut 即可,无流式) =====
@@ -54,6 +56,12 @@ func startAITestServer(t *testing.T, runner *agent.Runner) string {
 	require.NoError(t, l.Close())
 
 	h := hertzserver.Default(hertzserver.WithHostPorts(fmt.Sprintf("127.0.0.1:%d", port)))
+	// 鉴权中间件会设角色;这里直接给 admin ——
+	// 工具层的角色闸门按角色决定能不能执行写操作。
+	h.Use(func(ctx context.Context, c *app.RequestContext) {
+		SetAuthRole(c, RoleAdmin)
+		c.Next(ctx)
+	})
 	h.GET("/api/v1/ai/status", AIStatus)
 	h.POST("/api/v1/ai/chat", AIChat)
 	go h.Spin()

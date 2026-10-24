@@ -56,7 +56,16 @@ func (d *decoratedTool) InvokableRun(ctx context.Context, argsJSON string, opts 
 	}
 	// 超大输出落盘,只回预览(控制上下文成本)
 	out = persistResult(d.name, out)
-	if tools.DangerTools[d.name] && strings.Contains(out, `"status":"confirmation_required"`) {
+	// **以工具自己的回答为准**,不再查危险工具清单。
+	//
+	// 工具没通过确认时返回的就是 `{"status":"confirmation_required",…}` ——
+	// 那才是「需要确认」的事实。查清单是**另一份事实源**:
+	// 清单漏了这个工具时,前端收不到确认事件 ⇒ 模型等在那里,
+	// 工具永远不执行(卡住),而用户界面上一片安静。
+	//
+	// 清单仍然用于**展示层**(tools/list 过滤、system prompt 的清单),
+	// 执行层的闸门由 dangerGuard 自己的角色检查兜底(与清单无关)。
+	if strings.Contains(out, `"status":"confirmation_required"`) {
 		ev := Event{Type: "tool_confirm", Tool: d.name, Args: textutil.Truncate(argsJSON, 300)}
 		if sc := tools.ScopeFrom(ctx); sc != nil {
 			if name, token, args := sc.LastConfirm(); name == d.name {

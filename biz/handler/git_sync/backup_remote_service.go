@@ -43,7 +43,9 @@ func PushBackup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	workDir := svc.GetTempDir(req.TaskKey)
+	// 必须是**仓库目录**(<tempDir>/<taskKey>/repo),不是父目录 ——
+	// 父目录不是 git 仓库,gitbackend 会报 "repository does not exist"。
+	workDir := svc.GetRepoDir(req.TaskKey)
 	if _, err := os.Stat(workDir); err != nil {
 		response.BadRequest(c, "workdir missing (run the task first): "+workDir)
 		return

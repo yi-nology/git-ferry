@@ -1,30 +1,23 @@
 package converter
 
 import (
-	"time"
-
 	"github.com/yi-nology/git-ferry-core/model"
 	repomodel "github.com/yi-nology/git-ferry/biz/model/repo"
 )
 
+// repoInfoSpec:core Repo → DTO RepoInfo 的搬运契约。
+var repoInfoSpec = fieldSpec{
+	layout: layoutRFC3339,
+}
+
+// ToRepoInfo 把 core 的 Repo 转成对外的 RepoInfo。
 func ToRepoInfo(r *model.Repo) *repomodel.RepoInfo {
 	if r == nil {
 		return nil
 	}
-	return &repomodel.RepoInfo{
-		ID:            SafeUintToInt64(r.ID),
-		Key:           r.Key,
-		Name:          r.Name,
-		Platform:      r.Platform,
-		PlatformOwner: r.PlatformOwner,
-		PlatformRepo:  r.PlatformRepo,
-		CloneUrl:      r.CloneURL,
-		SshUrl:        r.SSHURL,
-		DefaultBranch: r.DefaultBranch,
-		Status:        r.Status,
-		// 用 RFC3339 与 platform 响应统一,且能被 JS new Date() 可靠解析
-		CreatedAt: r.CreatedAt.Format(time.RFC3339),
-	}
+	info := &repomodel.RepoInfo{}
+	mapFields(info, r, repoInfoSpec)
+	return info
 }
 
 func ToRepoInfoList(repos []*model.Repo) []*repomodel.RepoInfo {

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -30,21 +31,36 @@ type rememberInput struct {
 	Tags    []string `json:"tags,omitempty" jsonschema:"标签,便于检索"`
 }
 
+// rememberIn 写入长期记忆。
+//
+// **走 dangerGuard**(需用户确认 + 角色闸门):记忆会被拼进
+// **每次会话的 system prompt**(见 agent.BuildPrompt / MemoryManifest),
+// 所以「写记忆」是一条**跨会话持久化的提示注入通道** ——
+// 模型被诱导写一条记忆,之后每个新会话都带着它。
+//
+// 之前它是裸工具:只读角色也能写。
 func (r *Registry) rememberIn(ctx context.Context, in rememberInput) (string, error) {
-	if r.mem == nil {
-		return errJSON("记忆库未启用", nil), nil
-	}
-	kind := in.Kind
-	switch kind {
-	case "preference", "pattern", "fact", "task":
-	default:
-		kind = "fact"
-	}
-	id, err := r.mem.Remember(kind, in.Content, in.Tags)
-	if err != nil {
-		return errJSON("写入记忆失败", err), nil
-	}
-	return marshalJSON(map[string]any{"status": "ok", "id": id, "kind": kind}), nil
+	return r.dangerGuard(ctx, "remember", marshalJSON(in),
+		func(_ context.Context, args string) (string, error) {
+			var in rememberInput
+			if err := json.Unmarshal([]byte(args), &in); err != nil {
+				return errJSON("参数解析失败", err), nil
+			}
+			if r.mem == nil {
+				return errJSON("记忆库未启用", nil), nil
+			}
+			kind := in.Kind
+			switch kind {
+			case "preference", "pattern", "fact", "task":
+			default:
+				kind = "fact"
+			}
+			id, err := r.mem.Remember(kind, in.Content, in.Tags)
+			if err != nil {
+				return errJSON("写入记忆失败", err), nil
+			}
+			return marshalJSON(map[string]any{"status": "ok", "id": id, "kind": kind}), nil
+		})
 }
 
 type recallInput struct {
@@ -70,15 +86,25 @@ type forgetInput struct {
 	ID string `json:"id" jsonschema:"要删除的记忆 ID"`
 }
 
-func (r *Registry) forgetIn(_ context.Context, in forgetInput) (string, error) {
-	if r.mem == nil {
-		return errJSON("记忆库未启用", nil), nil
-	}
-	if strings.TrimSpace(in.ID) == "" {
-		return errJSON("id 不能为空", nil), nil
-	}
-	ok := r.mem.Forget(in.ID)
-	return marshalJSON(map[string]any{"deleted": ok}), nil
+// forgetIn 删除一条记忆。
+//
+// 删除同样是写操作(而且不可撤销),走 dangerGuard:需用户确认 + 角色闸门。
+func (r *Registry) forgetIn(ctx context.Context, in forgetInput) (string, error) {
+	return r.dangerGuard(ctx, "forget_memory", marshalJSON(in),
+		func(_ context.Context, args string) (string, error) {
+			var in forgetInput
+			if err := json.Unmarshal([]byte(args), &in); err != nil {
+				return errJSON("参数解析失败", err), nil
+			}
+			if r.mem == nil {
+				return errJSON("记忆库未启用", nil), nil
+			}
+			if strings.TrimSpace(in.ID) == "" {
+				return errJSON("id 不能为空", nil), nil
+			}
+			ok := r.mem.Forget(in.ID)
+			return marshalJSON(map[string]any{"deleted": ok}), nil
+		})
 }
 
 // diagnoseInput 诊断一次失败执行。

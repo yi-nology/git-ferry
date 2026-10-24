@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 type stubTool struct{ result string }
@@ -37,6 +39,7 @@ type fakeScope struct {
 	lastTool     string
 	lastToken    string
 	lastArgs     string
+	permMode     string
 }
 
 func (f *fakeScope) SetPending(string, string) (string, error) { return "tok123", nil }
@@ -56,6 +59,8 @@ func (f *fakeScope) SetLastConfirm(toolName, token, argsJSON string) {
 func (f *fakeScope) LastConfirm() (string, string, string) {
 	return f.lastTool, f.lastToken, f.lastArgs
 }
+func (f *fakeScope) SetPermissionMode(mode string) bool { f.permMode = mode; return true }
+func (f *fakeScope) PermissionMode() string             { return f.permMode }
 
 func collectSink(store *[]Event) context.Context {
 	return withEventSink(context.Background(), func(e Event) { *store = append(*store, e) })
@@ -82,7 +87,7 @@ func TestDecorator_DangerTool_Confirm(t *testing.T) {
 
 	sc := &fakeScope{}
 	sc.SetLastConfirm("run_task", "tok123", `{"task_key":"t1"}`) // dangerGuard 正常会先登记
-	ctx := tools.WithScope(collectSink(&events), sc)
+	ctx := tools.WithScope(authz.WithRole(collectSink(&events), authz.RoleAdmin), sc)
 	out, err := dt.InvokableRun(ctx, `{"task_key":"t1"}`)
 	require.NoError(t, err)
 	assert.Contains(t, out, "confirmation_required")

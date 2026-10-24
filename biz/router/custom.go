@@ -26,7 +26,11 @@ func CustomizedRegister(r *server.Hertz) {
 	r.GET("/metrics", hertzmetrics.MetricsHandler())
 
 	// Webhook 接收端点（带速率限制，不走 API 鉴权）
-	r.POST("/api/webhook/receive/:repoKey", git_sync.RateLimitMiddleware(), git_sync.ReceiveWebhook)
+	//
+	// 用 catch-all(*repoKey)而不是 :repoKey:仓库 key 的标准形态是 "owner/repo"
+	// (含斜杠),而 :repoKey 只匹配**单段**路径 —— owner/repo 的 webhook 会直接 404,
+	// 也就是"在平台侧注册了 webhook,平台推过来却被路由丢掉"。
+	r.POST("/api/webhook/receive/*repoKey", git_sync.RateLimitMiddleware(), git_sync.ReceiveWebhook)
 
 	// AI 助手（未启用时 handler 返回 501;鉴权与业务 API 同强度）
 	ai := r.Group("/api/v1/ai", routergitsync.AuthMiddleware())

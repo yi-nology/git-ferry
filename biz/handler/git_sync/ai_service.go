@@ -16,6 +16,8 @@ import (
 
 	"github.com/yi-nology/git-ferry/internal/agent"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 var (
@@ -53,6 +55,9 @@ func AIStatus(ctx context.Context, c *app.RequestContext) {
 // AIChat POST /api/v1/ai/chat —— SSE 流式响应。
 // 事件:start(含 session_id)→ delta* / tool_start / tool_end / tool_confirm → done|error。
 func AIChat(ctx context.Context, c *app.RequestContext) {
+	// 角色**跟着 ctx 往后走**:助手链路的工具是进程内直调 core service,
+	// 不过路由守卫 —— 工具层要自己判角色(尤其「强制推送」要 admin)。
+	ctx = authz.WithRole(ctx, GetAuthRole(c))
 	r := getAgentRunner()
 	if r == nil {
 		response.Error(c, consts.StatusNotImplemented, "ai_disabled")

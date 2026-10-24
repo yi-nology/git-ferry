@@ -5,15 +5,20 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 // Role 访问角色(RBAC 最小集)。
-type Role string
+//
+// 别名到 authz 包:工具层要判角色,而工具包不能反向依赖 biz/handler
+// (会成环)—— 角色类型与 ctx 传递都放在 internal/pkg/authz。
+type Role = authz.Role
 
 const (
-	RoleAdmin    Role = "admin"
-	RoleOperator Role = "operator"
-	RoleReadonly Role = "readonly"
+	RoleAdmin    = authz.RoleAdmin
+	RoleOperator = authz.RoleOperator
+	RoleReadonly = authz.RoleReadonly
 )
 
 // roleKey 请求上下文角色键。
@@ -36,14 +41,7 @@ func GetAuthRole(c *app.RequestContext) Role {
 
 // ParseRole 解析角色字符串;非法回落 readonly。
 func ParseRole(s string) Role {
-	switch Role(strings.ToLower(strings.TrimSpace(s))) {
-	case RoleAdmin:
-		return RoleAdmin
-	case RoleOperator:
-		return RoleOperator
-	default:
-		return RoleReadonly
-	}
+	return authz.ParseRole(strings.ToLower(strings.TrimSpace(s)))
 }
 
 // requireWriteRole 写操作放行:admin/operator。
@@ -65,6 +63,14 @@ func requireAdminRole(c *app.RequestContext) bool {
 	c.JSON(403, map[string]string{"error": "forbidden: admin role required"})
 	c.Abort()
 	return false
+}
+
+// CanWriteRole 判断角色能否执行写操作(admin/operator)。
+//
+// 给**绕过路由层**的调用方用(MCP 端点与 AI 助手直接调 core service,
+// 不过路由的 WriteGuard)—— 那条路上没有中间件兜底,只能就地判。
+func CanWriteRole(r Role) bool {
+	return authz.CanWrite(r)
 }
 
 // WriteGuard 写操作 RBAC 中间件(挂到 POST/PUT/DELETE 路由)。

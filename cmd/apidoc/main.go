@@ -441,7 +441,7 @@ func main() {
 	}
 
 	// 手动追加自定义路由(非 IDL 定义)
-	addCustomPaths(paths)
+	addCustomPaths(paths, schemas)
 
 	// 排序 paths key
 	pathKeys := make([]string, 0, len(paths))
@@ -513,8 +513,8 @@ func guessTag(path string) string {
 	}
 }
 
-// addCustomPaths 追加非 IDL 定义的端点(AI/Mirror/Health/Webhook receive)。
-func addCustomPaths(paths map[string]any) {
+// addCustomPaths 追加非 IDL 定义的端点(AI/Mirror/Health/Webhook receive/HistorySync)。
+func addCustomPaths(paths map[string]any, schemas map[string]any) {
 	// Health
 	paths["/health"] = map[string]any{
 		"get": map[string]any{
@@ -669,4 +669,10 @@ func addCustomPaths(paths map[string]any) {
 			},
 		}
 	}
+
+	// 历史同步(histsync):路由同样是手写的(见 biz/router/git_sync/git_sync.go),
+	// 但请求/响应结构比上面那些精细,单独在 histsync.go 里声明。
+	addHistorySyncPaths(paths, schemas)
+	// 镜像中心:同样是「非 IDL 定义端点」(路由手写),契约在 cmd/apidoc/mirror.go。
+	addMirrorPaths(paths, schemas)
 }

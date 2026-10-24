@@ -276,6 +276,25 @@ v2 把 40 个 hold 全部交给人工裁决。实测发现**其中 31 个可以�
   实测会多判 18 个冲突。
 - 三向合并是**纯 Go 的 diff3 实现**(`mirror/history/merge.go`),不依赖外部 git 进程。
 
+#### 合并算法与 git 的关系(2026-10-23 补充)
+
+三向合并的**冲突粒度**取决于 diff 的对齐方式:内容重复时最短编辑脚本不唯一,
+git 的 xdiff 与 go-diff 会选**不同的等价脚本**,于是同一处改动被归到不同的
+base 位置,区域划分不同,冲突块数也就不同。这是实现细节,不是语义差异。
+
+实测(`mirror/history/merge3_fuzz_test.go` 随机对拍 + `merge3_live_test.go` 实仓):
+
+| 维度 | 结论 |
+|---|---|
+| 静默丢内容 | **0**(不变式兜底:合并结果必须包含两侧各自新增的行,违反即升级为整文件冲突) |
+| 同一处插入被应用两遍 | 已修:两侧内容相同、位置相邻的插入区域**合成一块** |
+| 末尾换行/空行丢失 | 已修:末行是空行时,靠「拼出来是否以 \n 结尾」判断会少一个换行 |
+| 与 git 的冲突数差异 | 实仓 36 个可合并文件里仅 1 个有差异(git 更保守:它把两边其实收敛的改动也报冲突) |
+
+冲突标记用 **git 原生标签**(`ours` / `base` / `theirs`):
+`git mergetool`、`git checkout --conflict=diff3` 这类人工裁决流程才认得,
+自定义中文标签会让它们解析失败。
+
 **为什么不用提交级原子组**:提交组确实自带依赖自洽
 (实测 `d9bb3a3` 正好改了那 3 个文件),但它只是**移植单元**的选择,
 解决不了「两边内容混合」的文件(源侧 +129 / 目标侧 +6 的 `checks.go` 仍需合并)。
@@ -317,7 +336,7 @@ apply → 用裁决内容
 ```
 
 **裁决只对 `hold` 生效**;其余文件仍走确定性判定。
-**裁决改变实际发布内容** ⇒ MCP 工具侧标为危险操作(`set_history_override`),需用户确认。
+**裁决改变实际发布内容** ⇒ MCP 工具侧标为危险操作(`set_histsync_override`),需用户确认。
 
 **实测**:写回一条 `keep_target` 裁决后,重新 resolve:
 `summary.resolved` 0 → 1,该文件解法 `conflict` → `take_ours`,
@@ -385,7 +404,19 @@ apply 后的新 HEAD **保留**了目标侧的 Gerrit 集成(未被源侧覆盖)
 - 边界用例:`github.com/a/b/pkg` 正确改写;`github.com/a/b-extra`、`github.com/a/b.cool` **不被误改**。
 - `biz/model/*` 与 `idl/*.thrift` 不被改动(实测零命中)。
 - 改写后自动执行 **gofmt 归一化**(实测:改写后 50 个文件违反 gofmt,两棵树原始都是 0)。
-- 8MB 以上 blob 与二进制文件原样保留。
+- **克隆 URL(带 `.git` 后缀)必须整体改写**:`https://git.enjoye.top/enjoydream/app.git`
+  里的 `.git` 是 git 协议后缀,不是 module path 的延续 —— 不特判则边界不成立,
+  整条内网克隆 URL 原样进公开仓(且是「半改半留」:同一文件里不带 `.git` 的那行改了,
+  带 `.git` 的那行没改)。scp 形式(`git@host:org/repo.git`)同理:路径分隔符是 `:`,
+  module 规则按 `/` 匹配压根碰不到它,故 module 规则额外编译一个 scp 变体。
+- **符号链接的目标也要过改写**:symlink 的 blob 内容就是目标路径串,里面同样可能写着
+  内网 module path。
+- **8MB 以上 blob 与二进制文件:原样保留,但必须检测残留**。残留判据不是「文件大不大」,
+  而是「**规则本该改写这里、却没改写**」(`Rewriter.Pending`)—— 命中即**中止发布**
+  (不推送)并列出文件。原实现把「原样保留」当成了「里面没有内网标识」,
+  于是二进制里的内网 module path 原样进了公开仓,报告还写着「二进制被排除在改写之外」。
+- **改写清单只列「内容真的变了」的文件**:旧实现无条件记账,一个因边界不成立而原样
+  保留的文件也会被列进「已改写」—— 报告说改了,实际没改。
 
 > **已实现**:`mirror.Rewriter`(module/host/literal 三种边界语义 + 剥离语义),
 > 既有 `rewriteModulePath` 已改为薄封装,`TestRewriteIdentitiesMatchesLegacyRegex`
@@ -397,6 +428,13 @@ apply 后的新 HEAD **保留**了目标侧的 Gerrit 集成(未被源侧覆盖)
 
 **验收标准**:
 - 门禁在**推送前**执行,不通过则中止且**不产生任何推送**。
+  - 门禁跑在 **apply 的产物**上(不是源树、不是预检的临时目录):推出去的就是那棵树。
+  - 结论(ok / head / 失败细节)以**结构化**形式写进执行记录(`gate_report`)。
+  - 推送前**重新核对**「执行记录的门禁结论 + 产物路径 + 产物 HEAD」三者一致:
+    一致 ⇒ 门禁验过的就是即将推出去的那棵树(不必重跑一次完整类型检查);
+    任一不一致 ⇒ 中止,不推送(产物被改过 / 结论不通过 / 没有结论)。
+  - **门禁不可被绕过**:`Force`(忽略阻塞项)与 `ForcePush`(覆盖远端)都不越过它 ——
+    编译不过的树永远推不出去。
 - 门禁在 `GOWORK=off` 下运行。
 - 错误信息定位到 `file:line:col`。
 - **门禁必须跑在「按计划应用后的目标树」上**,不是源树 —— 源树本来就编译通过,
@@ -459,7 +497,7 @@ apply 后的新 HEAD **保留**了目标侧的 Gerrit 集成(未被源侧覆盖)
 - 推送顺序可配置,默认**先留底后发布**。
 - 任一远端失败时**不推送其余远端**。
 - 推送使用 `gitbackend`,不执行动态参数子进程。
-- 推送前**必须**通过 F4 门禁与 F5 检测。
+- 推送前**必须**通过 F4 门禁与 F5 检测(门禁以「执行记录的结论 + 产物 HEAD 一致」为准)。
 
 ### F8 预检与确认(DryRun / Confirm)
 
@@ -556,7 +594,7 @@ apply 后的新 HEAD **保留**了目标侧的 Gerrit 集成(未被源侧覆盖)
 | HTTP | `/api/v1/histsync/channels/...`(含 `targets`、`runs`)+ `/api/v1/histsync/runs/:id/rollback` |
 | CLI | `gitferry histsync` 共 22 个子命令:`+channel-{list,create,update,delete}` / `+target-{list,create,delete}` / `+override-{list,set,delete}` / `+plan` / `+resolve` / `+apply` / `+push` / `+runs` / `+run-detail` / `+rollback` / `+channel-audit` / `+preview` / `+sync` / `+target-rotate` |
 | Agent Skill | `skills/gitferry-histsync/` —— 标准流程、**AI 职责边界**、冲突裁决手册(词表 + 真实实例) |
-| MCP 工具 | `list_history_channels` / `plan_history_channel` / `resolve_history_channel` / `list_history_runs` / `verify_history_channel_audit` / `list_history_overrides` / `set_history_override` / `preview_history_channel` / `sync_history_channel` / `rotate_history_target_credential`(共 41 个工具) |
+| MCP 工具 | `list_histsync_channels` / `plan_histsync_channel` / `resolve_histsync_channel` / `list_histsync_runs` / `verify_histsync_channel_audit` / `list_histsync_overrides` / `set_histsync_override` / `preview_histsync_channel` / `sync_histsync_channel` / `rotate_history_target_credential`(共 41 个工具) |
 
 **推送不在 MCP 工具面内** —— 推送要远端 URL 与凭据,是对外可见动作,
 留在 CLI 与人工确认路径上。通道的建/删同样留在 CLI。

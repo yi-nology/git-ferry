@@ -24,7 +24,7 @@ cd git-ferry-core
 HISTORY_LIVE_SRC=/Users/zhangyi/my_project/review-service \
 HISTORY_LIVE_TGT=/Users/zhangyi/my_project/code-review-service \
 HISTORY_LIVE_REPORT=/tmp/history-baseline.md \
-HISTORY_LIVE_EXPECT="port=3,port_with_scrub=0,hold=40,exclude=0,preserve=39,same=609" \
+HISTORY_LIVE_EXPECT="port=3,port_with_scrub=0,hold=38,exclude=0,preserve=39,same=611" \
 go test -tags history_live -run TestLiveHistoryPlan -v ./mirror/history/
 ```
 
@@ -37,16 +37,25 @@ go test -tags history_live -run TestLiveHistoryPlan -v ./mirror/history/
 
 | 处置 | 含义 | 数量 |
 |---|---|---|
-| `same` | 经身份改写 + gofmt 归一化后两侧一致 | **609** |
-| `hold` | 两侧各有独有内容,需人工/AI 判定 | **40** |
+| `same` | 经身份改写 + gofmt 归一化后两侧一致 | **611** |
+| `hold` | 两侧各有独有内容,需人工/AI 判定 | **38** |
 | `preserve` | 受保护,移植时不得覆盖 | **39** |
 | `port` | 源侧为超集,以源侧内容覆盖 | **3** |
 | `port_with_scrub` | 需清理痕迹后移植 | 0 |
 | `exclude` | 命中排除规则 | 0 |
 
 - 参与比对的路径总数:**691**(源侧 ∪ 目标侧)
-- 相对目标侧:**+1052 / -974** 行
+- 相对目标侧:**+1007 / -953** 行
 - 痕迹命中:**10 处**,集中在 3 个文件
+
+> **基线随实仓演进而变**(每次漂移都要复核,不能直接改数字):
+> - `hold` 40 → 38、`same` 609 → 611:两侧都提交了同一批 oekit 依赖升级
+>   (`go.mod` / `go.sum` 两边一致了 ⇒ 从 hold 变成 same)。
+> - 「仍待人工」11 → 9:少了 `AGENTS.md` 与 `internal/service/provider/service.go`。
+>   前者是**改写修复的收益**:源侧那行内网克隆 URL
+>   (`ssh://git.enjoye.top/enjoydream/code-review-service.git`)以前改不掉
+>   (`.git` 被当成 module path 的延续字符)⇒ 与目标侧不一致 ⇒ 假冲突;
+>   改写修好后两边一致 ⇒ 自动合并。后者是上面的依赖升级带来的。
 
 ### 2.1 需要移植(3)
 
@@ -114,7 +123,8 @@ go test -tags history_live -run TestLiveHistoryPlan -v ./mirror/history/
 | **内部树经身份改写后** | **50** |
 
 不归一化就比对,每个引用了模块路径的文件都留下一处 1 行的假差异。
-实测:归一化前 `hold=86`,归一化后 **`hold=40`** —— **46 个假差异被消除**。
+实测:归一化前 `hold=86`,归一化后 **`hold=40`**(该次实测的实仓状态)——
+**46 个假差异被消除**。当前实仓状态为 `hold=38`(见 §2 的漂移说明)。
 
 > 设计稿 F3 已要求「改写后自动执行 gofmt」,但 F2(差异判定)未提及,顺序未定义。
 > 正确顺序:**改写 → gofmt 归一化 → 差异判定**。
@@ -227,27 +237,61 @@ M2 拦下移植后,M2.5 把「hold 全部交人工」改成「**先机械解,剩
 
 ⇒ **31/40(77.5%)机械解决**,需人工收敛到 **9 个**,且全是配置/文档/部署/测试文件。
 
-仍需人工的 9 个:
+> ⚠️ **本节数字已被 2026-10-23 的合并算法修复推翻:9 → 11。**
+>
+> 原来的 9 个是**漏判**的结果。三向合并的区域划分把
+> 「插入点落在对方改动边界上」当成了不重叠,于是
+> `etc/config-dev.yaml` 与 `etc/config-prod.yaml` 被判成「合并干净」——
+> 实际合并出来的是**源侧的真实域名**(`code-review.me`)覆盖了目标侧
+> 已脱敏的 `review.example.com`,而且那一行注释**重复了两次**。
+>
+> 修复后(区域按闭区间相交分组 + 与 `git merge-file --diff3` 逐字对拍校准):
+> 待人工 **11** 个 = 真冲突 **7** + 无基点 **4**;
+> `etc/config-dev.yaml`、`etc/config-prod.yaml` 归入真冲突。
+> 已用 `git merge-file --diff3` 单独验证:git 也判这两个文件是冲突,
+> 修复后的实现输出与 git **逐字一致**。
+> **回归门禁分两层**:
+> - `mirror/history/merge3_fuzz_test.go` —— 随机对拍(默认 500 组,`go test ./...` 就会跑):
+>   断言「合并结果不丢任何一侧新增的行」。**这一层是 CI 门禁**。
+> - `mirror/history/live_test.go` —— 实仓门禁,需要 `HISTORY_LIVE_SRC` / `HISTORY_LIVE_TGT`
+>   两个环境变量才会跑(否则 skip)。它含「公开树不得含真实域名」的断言,
+>   但**不是 CI 门禁**,只能手工跑或由部署方在流水线里注入环境变量。
+
+仍需人工的 **9 个**(★ = 本次修复新增的真冲突):
 
 | 文件 | 解法 |
 |---|---|
-| `AGENTS.md` | 真冲突(2 处) |
-| `Dockerfile` | 真冲突(5 处) |
-| `README.md` | 真冲突(15 处) |
-| `deploy/Dockerfile.frontend` | 真冲突(6 处) |
-| `internal/service/provider/service.go` | 真冲突(10 处) |
+| `Dockerfile` | 真冲突(4 处) |
+| `README.md` | 真冲突(3 处) |
+| `deploy/Dockerfile.frontend` | 真冲突(2 处) |
+| ★ `etc/config-dev.yaml` | 真冲突(1 处:脱敏域名 vs 真实域名) |
+| ★ `etc/config-prod.yaml` | 真冲突(1 处:脱敏域名 vs 真实域名) |
 | `Dockerfile.local` | 无共同版本 |
 | `README.zh-CN.md` | 无共同版本 |
 | `docs/archive/README.md` | 无共同版本 |
 | `internal/service/statuscheck/poster_test.go` | 无共同版本 |
 
+> 曾经的 11 个里还有 `AGENTS.md` 与 `internal/service/provider/service.go`:
+> 前者因**内网克隆 URL 改写修复**而自动合并(见 §2 的说明),
+> 后者因两侧 oekit 依赖升级一致而不再冲突。
+> **`etc/config-dev.yaml` / `etc/config-prod.yaml` 始终在列** ——
+> 这两个才是门禁要盯的:它们一旦被「合并干净」地写出去,源侧真实域名就进公开仓。
+
 ### 6.3 端到端:应用解法后门禁通过
 
 ```
-物化: 文件 691,port 应用 3,解法写入 5,保留目标侧 26,仍待人工 9,受保护 39
+物化: 文件 691,port 应用 3,解法写入 4,保留目标侧 25,仍待人工 9,受保护 39
 gofmt 违规: 0
 类型门禁: 通过
 ```
+
+> ⚠️ 上面这行是**修复前**的产物(待人工 9,但构成不同:
+> 那两个配置文件被「合并干净」地写了出去)。
+> 修复后同一命令的输出是:
+> `物化: 文件 691,port 应用 3,解法写入 3,保留目标侧 26,仍待人工 11,受保护 39`
+> ——「解法写入」从 5 降到 3(那两个配置文件不再被「合并干净」地写出去),
+> 「仍待人工」从 9 升到 11。
+> **当前基线是 9**,构成见 §6.2(两个文件因改写修复与依赖升级不再需要人工)。
 
 M2 拦下的那个依赖(`internal/modules/server.go` 依赖 hold 的 `internal/readiness/checks.go`)
 被「取源侧」解法一并解决 —— **3 个 port 文件至此全部可移植**。
@@ -343,7 +387,7 @@ fix(statuscheck): target_url 相对路径导致 GitLab 拒写门禁 status——
 | 仓库解析 | `sourceRepoKey`/`targetRepoKey` → 克隆到 `Git.TempDir/history/channel-N/{source,target}`(增量 fetch,失败重建);或 `sourceDir`/`targetDir` 直连 |
 | HTTP | `/api/v1/histsync/channels/{,/:id,/:id/update,/:id/delete,/:id/plan,/:id/resolve,/:id/apply,/:id/push}` |
 | CLI | `+channel-list / +channel-create / +channel-delete / +channel-plan / +channel-resolve / +channel-apply / +channel-push` |
-| MCP | `list_history_channels` / `plan_history_channel` / `resolve_history_channel`(只读面,共 37 个工具) |
+| MCP | `list_histsync_channels` / `plan_histsync_channel` / `resolve_histsync_channel`(只读面,共 37 个工具) |
 
 **实测**:新建通道 → 规则经 DB JSON 往返 → 按通道出的计划与解法分布,
 与直接传参**完全一致**:
@@ -446,7 +490,7 @@ history.channel.create 创建历史同步通道 cr
 **接入面**:
 - HTTP `GET /histsync/channels/:id/audit` —— 通道链校验
 - CLI `gitferry histsync +channel-audit` —— 同上(共 16 个子命令)
-- MCP `verify_history_channel_audit` —— 同上(共 36 个工具)
+- MCP `verify_histsync_channel_audit` —— 同上(共 36 个工具)
 
 **单测**:`TestHistoryRunChain`(含篡改检出)、`TestHistoryRunChainSkipsInflight`
 (执行中的记录跳过而不打断链)、`TestHistoryRunChainIsolatedPerChannel`(通道间互不干扰)。
@@ -481,7 +525,7 @@ apply 后       新 HEAD 保留目标侧的 Gerrit 集成(未被源侧覆盖) �
 ```
 
 **裁决只对 `hold` 生效**;其余文件仍走确定性判定。
-**裁决改变实际发布内容** ⇒ MCP 工具侧标为危险操作(`set_history_override`),需用户确认。
+**裁决改变实际发布内容** ⇒ MCP 工具侧标为危险操作(`set_histsync_override`),需用户确认。
 
 ### 7.10 Agent Skill 手册
 

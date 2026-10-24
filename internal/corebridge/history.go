@@ -33,6 +33,8 @@ type (
 	HistoryRunDTO = coreservice.HistoryRunDTO
 	// HistoryPushDTO 推送结果。
 	HistoryPushDTO = coreservice.HistoryPushDTO
+	// HistoryPushOptions 推送选项。
+	HistoryPushOptions = coreservice.HistoryPushOptions
 	// HistoryRollbackDTO 回滚结果。
 	HistoryRollbackDTO = coreservice.HistoryRollbackDTO
 	// HistoryChainResult 通道内执行记录链的校验结果。

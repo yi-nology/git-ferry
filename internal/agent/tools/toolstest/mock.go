@@ -217,8 +217,15 @@ func (m *Mock) HistoryPreview(_ context.Context, _ uint) (*corebridge.PreviewRep
 }
 
 // HistorySync 返回假的一次同步结果。
+//
+// **Push / Preview 必须非 nil**:调用方会直接取 rep.Push.Heads / rep.Preview.Summary
+// (空报告会空指针崩掉)。这正是之前 mock 返回空结构体时踩的坑。
 func (m *Mock) HistorySync(_ context.Context, _ corebridge.HistorySyncOptions) (*corebridge.HistorySyncReport, error) {
-	return &corebridge.HistorySyncReport{}, nil
+	return &corebridge.HistorySyncReport{
+		Preview: &corebridge.PreviewReport{},
+		Apply:   &corebridge.HistoryRunDTO{},
+		Push:    &corebridge.HistoryPushDTO{Heads: map[string]string{}},
+	}, nil
 }
 
 // RotateHistoryTargetCredential 返回假的凭据轮换结果。

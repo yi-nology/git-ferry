@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"github.com/oagentkit/guardx/permgate"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 // Action 工具动作分级(借鉴 zcode permission capability groups)。
@@ -60,11 +62,28 @@ func (p *Policy) SetMode(mode string) {
 	p.mode = mode
 }
 
-// Mode 当前模式。
+// Mode 当前模式(进程级默认档)。
 func (p *Policy) Mode() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.mode
+}
+
+// ModeFor 取本次调用生效的权限模式。
+//
+// **会话优先**:会话里显式切过的档只影响这个会话 ——
+// 之前档位是**进程级单例**,一个会话切成 readonly,
+// 会连带把**其他所有会话**的写操作都拒掉(跨会话 DoS)。
+// 会话没设过就用进程级默认档。
+func (p *Policy) ModeFor(ctx context.Context) string {
+	if ctx != nil {
+		if sc := ScopeFrom(ctx); sc != nil {
+			if m := sc.PermissionMode(); m != "" {
+				return m
+			}
+		}
+	}
+	return p.Mode()
 }
 
 // Override 单独覆盖某工具动作。
@@ -75,6 +94,10 @@ func (p *Policy) Override(tool string, act Action) {
 }
 
 // Classify 判定工具动作。
+//
+// danger:该工具是否需要用户确认 —— **由调用方(Registry)传入**。
+// Policy 不再自己查任何全局集合:「哪些工具危险」的事实源在注册处
+// (repo.go 的 addDanger 标注),由 Registry 用 r.IsDanger() 取出来传进来。
 //
 // 映射关系(与迁移前的本地 switch 逐档等价):
 //   - 危险工具 → Capability{AlwaysAsk} → permgate 裁决 Ask  → ActionConfirm
@@ -89,17 +112,17 @@ func (p *Policy) Override(tool string, act Action) {
 // 只读拦截段,checkStandard 把只读拦截插在 project ask 之前),本地不再兜底。
 // 上游口径:会话授权在只读档仍放行(是用户已给出的决定,不是「问」)——
 // 本仓从不调用 AllowForSession,故无行为差异。
-func (p *Policy) Classify(tool string) Action {
+func (p *Policy) Classify(ctx context.Context, tool string, danger bool) Action {
 	p.mu.RLock()
 	override, hasOverride := p.overrides[tool]
-	mode := p.mode
 	p.mu.RUnlock()
 
 	if hasOverride {
 		return override
 	}
 
-	danger := DangerTools[tool]
+	// **会话级模式优先**:会话里显式切过的档只影响这个会话。
+	mode := p.ModeFor(ctx)
 	d := p.gate.Check(context.Background(), tool, nil, permgateMode(mode), toolCapability(danger))
 	switch d.Behavior {
 	case permgate.Allow:
@@ -134,15 +157,24 @@ func (r *Registry) SetPolicy(p *Policy) { r.policy = p }
 func (r *Registry) Policy() *Policy { return r.policy }
 
 // guardByPolicy 在 dangerGuard 之前套一层权限检查。
-func (r *Registry) guardByPolicy(toolName string) (Action, string) {
+//
+// 「该工具是否危险」由 **r.IsDanger()** 提供(事实源在注册处),Policy 自己不查集合。
+func (r *Registry) guardByPolicy(ctx context.Context, toolName string) (Action, string) {
+	danger := r.IsDanger(toolName)
 	if r.policy == nil {
-		if DangerTools[toolName] {
+		if danger {
 			return ActionConfirm, ""
 		}
 		return ActionReadOnly, ""
 	}
-	act := r.policy.Classify(toolName)
+	act := r.policy.Classify(ctx, toolName, danger)
 	if act == ActionDenied {
+		// **权限模式切换工具不受只读档拦截**:
+		// 否则成了一条单行道(切到只读之后就再也切不回来)。
+		// 它的安全性由 admin 角色闸门兜底(在工具内部判)。
+		if toolName == ToolSetPermissionMode {
+			return ActionConfirm, ""
+		}
 		return act, marshalJSON(map[string]any{
 			"status":  "denied",
 			"message": fmt.Sprintf("当前为只读模式,%s 被拒绝", toolName),
@@ -156,17 +188,52 @@ type setModeInput struct {
 	Mode string `json:"mode" jsonschema:"default|readonly|audit"`
 }
 
-func (r *Registry) setModeIn(_ context.Context, in setModeInput) (string, error) {
-	if r.policy == nil {
-		return errJSON("权限策略未启用", nil), nil
-	}
+// setModeIn 切换**本会话**的工具权限模式。
+//
+// 三道闸门(之前一道都没有):
+//   - **角色闸门**:只有 admin 能拨这个档(见 dangerGuard 的角色检查
+//     与下面的 admin 检查)。档位拨错会拒掉写操作,这是治理动作。
+//   - **确认**:走 dangerGuard —— 需要用户点头。
+//   - **会话级**:档位落在会话上,不影响其他会话。
+func (r *Registry) setModeIn(ctx context.Context, in setModeInput) (string, error) {
+	// **参数与角色先判,再进确认链路**。
+	//
+	// 顺序很重要:否则 operator 会先看到一个确认弹窗,确认完才被告知
+	// 「你没权限」—— 白白打扰用户,还让人以为闸门形同虚设。
 	switch in.Mode {
 	case ModeDefault, ModeReadOnly, ModeAudit:
-		r.policy.SetMode(in.Mode)
-		return marshalJSON(map[string]any{"status": "ok", "mode": in.Mode}), nil
 	default:
 		return errJSON("mode 必须是 default|readonly|audit", nil), nil
 	}
+	// **只有 admin 能拨这个档**。
+	//
+	// 之前这个工具既没有角色闸门也没有确认:模型自己就能把档位拨成
+	// readonly,而档位对象是**进程级单例** —— 一个会话拨了,
+	// 其他会话的写操作全被拒(跨会话影响)。
+	role := authz.RoleFromContext(ctx)
+	if !authz.IsAdmin(role) {
+		return errJSON("forbidden: 切换工具权限模式需要 admin 角色(当前:"+
+			string(role)+")", nil), nil
+	}
+	return r.dangerGuard(ctx, ToolSetPermissionMode, marshalJSON(in),
+		func(ctx context.Context, args string) (string, error) {
+			var in setModeInput
+			if err := json.Unmarshal([]byte(args), &in); err != nil {
+				return errJSON("参数解析失败", err), nil
+			}
+			if r.policy == nil {
+				return errJSON("权限策略未启用", nil), nil
+			}
+			// **档位落在会话上,不是进程上**。
+			sc := ScopeFrom(ctx)
+			if sc == nil || !sc.SetPermissionMode(in.Mode) {
+				return errJSON("权限模式是**会话级**设置,当前调用链路没有可写的会话上下文"+
+					"(如无状态的 MCP 端点):请用 CLI 或内置 AI 助手切换", nil), nil
+			}
+			return marshalJSON(map[string]any{
+				"status": "ok", "mode": in.Mode, "scope": "session",
+			}), nil
+		})
 }
 
 // json 占位

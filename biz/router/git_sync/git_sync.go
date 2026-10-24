@@ -64,17 +64,22 @@ func Register(r *server.Hertz) {
 			}
 			{
 				// 镜像中心:开源发布 / 仓库备份
+				//
+				// **RBAC**:与历史同步同一套口径 ——
+				// 写操作要 WriteGuard(建/删通道、改推送目标、执行镜像跑)。
+				// 没有守卫的话,OIDC 的默认角色 readonly 也能改推送目标
+				// 与执行镜像跑 —— 内容会发到调用方指定的远端。
 				_mirror := _v1.Group("/mirror")
 				_mirror.GET("/channels", git_sync.MirrorChannelList)
-				_mirror.POST("/channels", git_sync.MirrorChannelCreate)
+				_mirror.POST("/channels", git_sync.WriteGuard(), git_sync.MirrorChannelCreate)
 				_mirror.GET("/channels/:id", git_sync.MirrorChannelGet)
-				_mirror.POST("/channels/:id/delete", git_sync.MirrorChannelDelete)
+				_mirror.POST("/channels/:id/delete", git_sync.WriteGuard(), git_sync.MirrorChannelDelete)
 				_mirror.GET("/channels/:id/versions", git_sync.MirrorVersions)
 				_mirror.POST("/channels/:id/preview", git_sync.MirrorPreview)
-				_mirror.POST("/channels/:id/runs", git_sync.MirrorRunCreate)
+				_mirror.POST("/channels/:id/runs", git_sync.WriteGuard(), git_sync.MirrorRunCreate)
 				_mirror.GET("/channels/:id/runs", git_sync.MirrorRunList)
-				_mirror.POST("/targets/:id/update", git_sync.MirrorTargetUpdate)
-				_mirror.POST("/targets/:id/delete", git_sync.MirrorTargetDelete)
+				_mirror.POST("/targets/:id/update", git_sync.WriteGuard(), git_sync.MirrorTargetUpdate)
+				_mirror.POST("/targets/:id/delete", git_sync.WriteGuard(), git_sync.MirrorTargetDelete)
 				_mirror.POST("/targets/:id/test", git_sync.MirrorTargetTest)
 				_mirror.POST("/channels/:id/verify", git_sync.MirrorVerify)
 				_mirror.GET("/runs/:id", git_sync.MirrorRunGet)
@@ -82,38 +87,50 @@ func Register(r *server.Hertz) {
 			{
 				// 历史同步:两个各自有完整历史的仓库之间按内容差异同步
 				// (与镜像中心的身份镜像模式并存,语义不同)
+				//
+				// **RBAC**:按「效果」分级 ——
+				//   - 只读(GET / plan / resolve / preview):不改状态,放开;
+				//   - 写(增删改通道与推送目标、裁决、apply):WriteGuard;
+				//   - 发布(push / sync):WriteGuard —— 会把内容推到远端;
+				//   - 回滚(强推、覆盖已发布内容):AdminGuard。
+				//
+				// 没有守卫的话,OIDC 的默认角色 readonly 也能强推/回滚/删通道/
+				// 改推送目标 —— 凭据与内容会外泄到攻击者指定的远端。
+				//
+				// 注意:本文件由 hz 生成,重新生成会覆盖这里的自定义 ——
+				// 镜像中心的路由也是同样处理(见上),改动要一起重新落一遍。
 				_histsync := _v1.Group("/histsync")
 				// 通道:配置持久化(规则、两侧仓库、推送目标)
 				_histsync.GET("/channels", git_sync.HistoryChannelList)
-				_histsync.POST("/channels", git_sync.HistoryChannelCreate)
+				_histsync.POST("/channels", git_sync.WriteGuard(), git_sync.HistoryChannelCreate)
 				_histsync.GET("/channels/:id", git_sync.HistoryChannelGet)
-				_histsync.POST("/channels/:id/update", git_sync.HistoryChannelUpdate)
-				_histsync.POST("/channels/:id/delete", git_sync.HistoryChannelDelete)
+				_histsync.POST("/channels/:id/update", git_sync.WriteGuard(), git_sync.HistoryChannelUpdate)
+				_histsync.POST("/channels/:id/delete", git_sync.WriteGuard(), git_sync.HistoryChannelDelete)
 				// 推送目标(凭据加密落库;顺序 = 优先级:先留底后发布)
 				_histsync.GET("/channels/:id/targets", git_sync.HistoryTargetList)
-				_histsync.POST("/channels/:id/targets", git_sync.HistoryTargetCreate)
-				_histsync.POST("/targets/:id/update", git_sync.HistoryTargetUpdate)
-				_histsync.POST("/targets/:id/delete", git_sync.HistoryTargetDelete)
+				_histsync.POST("/channels/:id/targets", git_sync.WriteGuard(), git_sync.HistoryTargetCreate)
+				_histsync.POST("/targets/:id/update", git_sync.WriteGuard(), git_sync.HistoryTargetUpdate)
+				_histsync.POST("/targets/:id/delete", git_sync.WriteGuard(), git_sync.HistoryTargetDelete)
 				// 执行(通道优先,无请求体)
 				_histsync.POST("/channels/:id/plan", git_sync.HistoryChannelPlan)
 				_histsync.POST("/channels/:id/resolve", git_sync.HistoryChannelResolve)
-				_histsync.POST("/channels/:id/apply", git_sync.HistoryChannelApply)
+				_histsync.POST("/channels/:id/apply", git_sync.WriteGuard(), git_sync.HistoryChannelApply)
 				// 预检:摊开影响面,不推送
 				_histsync.POST("/channels/:id/preview", git_sync.HistoryChannelPreview)
 				_histsync.GET("/channels/:id/preview.md", git_sync.HistoryChannelPreviewMarkdown)
-				_histsync.POST("/channels/:id/push", git_sync.HistoryChannelPush)
+				_histsync.POST("/channels/:id/push", git_sync.WriteGuard(), git_sync.HistoryChannelPush)
 				// 执行记录与回滚
 				_histsync.GET("/channels/:id/runs", git_sync.HistoryRunList)
 				_histsync.GET("/channels/:id/audit", git_sync.HistoryChannelAudit)
 				// 裁决覆盖:人工/AI 对 hold 文件拍板
 				_histsync.GET("/channels/:id/overrides", git_sync.HistoryOverrideList)
-				_histsync.POST("/channels/:id/overrides", git_sync.HistoryOverrideSet)
-				_histsync.POST("/overrides/:id/delete", git_sync.HistoryOverrideDelete)
-				_histsync.POST("/targets/:id/rotate", git_sync.HistoryTargetRotate)
+				_histsync.POST("/channels/:id/overrides", git_sync.WriteGuard(), git_sync.HistoryOverrideSet)
+				_histsync.POST("/overrides/:id/delete", git_sync.WriteGuard(), git_sync.HistoryOverrideDelete)
+				_histsync.POST("/targets/:id/rotate", git_sync.WriteGuard(), git_sync.HistoryTargetRotate)
 				// 一次命令:预检 → 移植 → 推送(有阻塞项则停下)
-				_histsync.POST("/channels/:id/sync", git_sync.HistorySync)
+				_histsync.POST("/channels/:id/sync", git_sync.WriteGuard(), git_sync.HistorySync)
 				_histsync.GET("/runs/:id", git_sync.HistoryRunGet)
-				_histsync.POST("/runs/:id/rollback", git_sync.HistoryRunRollback)
+				_histsync.POST("/runs/:id/rollback", git_sync.AdminGuard(), git_sync.HistoryRunRollback)
 			}
 			{
 				_webhook := _v1.Group("/webhook", _webhookMw()...)

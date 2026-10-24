@@ -2,6 +2,235 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Fixed
+
+本轮在「GitHub ↔ 自建 Forgejo 双向同步」实测中定位并修掉的缺陷。前三条是
+**报成功但数据错**级别：任务状态显示成功，目标侧实际没前进 / 目标侧独有提交被覆盖。
+
+- **增量同步永不前进**（core `executor.fetchRepo`）：`git fetch` 只更新
+  `refs/remotes/origin/<branch>`，**本地分支仍停在旧提交**；而 push 推的是
+  `refs/heads/<branch>`（本地）。于是目标侧永不更新，git 回 `already up-to-date`
+  被当成成功 —— **首次克隆正常，第二次起每次都空转**。
+  修法：fetch 之后把本地分支对齐到源端 ref（HEAD 在该分支上用 `reset --hard`，
+  否则用 `update-ref` 只动 ref，不牵动别的分支）。
+- **分歧保护自我失效**（core `executor.checkDivergencePolicy`）：检查目标分叉时
+  fetch **没带凭证**（自建实例/私有仓/过期证书连不上），而 fetch 失败被当作
+  「无分歧风险」直接放行 ⇒ 目标侧独有提交被 force push 覆盖，**任务仍报成功**。
+  修法：fetch 带上平台凭证；连不上时**fail-closed**（本地若已有该目标分支的
+  远端跟踪 ref，说明目标确实有这个分支，必须报错让人工介入）。
+- **部分更新静默禁用任务**（`idl/sync_task.thrift` + 壳层 handler）：
+  `UpdateTaskReq` 的 bool 字段曾是非 optional，壳层用 `&req.Enabled` 取地址传给
+  core ⇒ 指针恒非 nil，core 的「nil 即不修改」形同虚设。
+  `gitferry task +update --cron "0 3 * * *"` 会把任务**禁用**并清空所有布尔开关。
+  修法：IDL 改 `optional bool`，壳层直传指针；core 侧语义不变。
+- **cron 锁 TTL 与续期间隔冲突**（core `service/concurrency.go`）：续期间隔是
+  **锁级固定值**，而 cron 锁 TTL 曾等于续期间隔 ⇒ 第一次续期就撞上 key 过期，
+  锁从未被续上；锁只在前 10 秒有效，之后多实例可并发跑同一任务。
+  修法：cron 锁 TTL 提到 `3×renewInterval`，**并在本次执行结束后显式释放**
+  （不释放 = 续期成永久锁 ⇒ 之后每次 tick 都拿不到，cron 静默停摆）。
+- **执行结束回写状态抹掉并发修改**（core `service/task_service.go`）：
+  回写用整行 `Save(task)`，而 task 是**执行开始时**的快照 ⇒ 执行期间运维改的
+  `force_push_policy` / `cron` / 开关会被旧快照悄悄改回去（实测：一次 cron 执行
+  把刚改的 `force_push_policy=allow` 还原成 `block`，表现为「改了没生效」）。
+  修法：回写只碰自己拥有的两列（`last_run_at` / `last_status`）。
+- **已设的 cron 清不掉**（`idl/sync_task.thrift` + core）：`cron` 曾是普通 string，
+  空串与「没传」不可区分 ⇒ 一旦设了 cron 就再也改不掉（只能删任务重建）。
+  修法：改 `optional string`（nil=不修改 / 空串=清空），core 侧同步改指针语义。
+- **`git_tags=true` 从来没把 tag 推到目标端**（core `executor.push`）：主推送只带
+  分支 refspec，tag 只在 fetch / bundle / backup-remote 里被用到。修法：tag 单独推
+  （不覆盖已存在的 tag，等同 `git push --tags`）；批量失败时退化成**逐个推** ——
+  git 的批量 push 是全有全无，一个冲突的 tag 会把其它本来没问题的 tag 一起挡住。
+- **分歧错误文案里的「独有提交数」是错的**（core `executor.divergentError`）：
+  用的是**有上限截断的展示列表长度**（maxDivergentLog=5），目标侧只有 1 个独有提交时
+  文案写「has 5 commit(s)」。修法：改用 rev-list 的真实 behind 计数。
+- **`GetAPIURL` 把 github.com 拼成 `github.com/api/v3`**（core `model/platform.go`）：
+  那是 **GitHub Enterprise** 的路径，github.com 的 REST API 在 `api.github.com`
+  ⇒ 按旧逻辑建出来的 GitHub 平台必坏（连通性检测直接 404）。修法：已知 SaaS 实例
+  用整域名基址表（与 SDK 的 `knownHostPlatforms` 对齐），并加交叉校验测试。
+- **glob 多分支两处非法 refspec**（core `executor`）：`git clone --branch 'release/*'`
+  与 `git fetch origin 'release/*'` 都不是合法用法 ⇒ 多分支任务从来跑不起来。
+  修法：多分支走全量 clone / 全量 fetch，再按 glob 建出本地分支。
+- **镜像引擎增量 fetch 不更新工作区**（core `service/mirror_service.go`）：
+  镜像发布从**工作区**取材，fetch 后工作区还是旧的 ⇒ 每次发旧快照。
+  修法：fetch 之后把工作区对齐到源端默认分支。
+- **镜像发布没把平台 TLS 设置传给 go-git 传输**（core `mirror` + `service`）：
+  `TransportAuth()` 只产出 `transport.AuthMethod`，不带 TLS 开关 ⇒ 自建实例
+  （自签/过期证书）的「远端一致性检查」必然失败、发布直接中止。
+  修法：显式传 `InsecureSkipTLS`，并按 host 找回目标所属平台补上它的 TLS 策略。
+- **webhook 接收路由接不住 `owner/repo`**（`biz/router/custom.go`）：`:repoKey`
+  只匹配**单段**路径，而仓库 key 的标准形态含斜杠 ⇒ 平台推过来的 webhook 直接 404。
+  修法：改用 catch-all `*repoKey`。
+- **备份推送把父目录当仓库**（`biz/handler/git_sync/backup_remote_service.go`）：
+  传的是 `<tempDir>/<taskKey>`，真正的 git 仓库在 `.../repo` ⇒ 必然
+  「repository does not exist」。修法：core 新增 `GetRepoDir`，并把「repo」子目录名
+  收成单源（`model.RepoDirName`）。
+- **CLI 六个命令的参数/flag 对不上服务端**（`internal/cli/commands/domains.go`）：
+  `ops +drift` 用 GET 而路由只注册 POST（永远 404）；`ops +push-backup` /
+  `ops +repo-files` 的必填 flag 没注册（命令永远跑不了，`--refspec`/`--path` 被
+  `flagStr` 静默吞掉）；`repo +list --keyword` 传 `keyword` 而服务端要 `search`
+  （静默不过滤）；`task +list --keyword` 同样传错；`webhook +rules`/`+events` 不传
+  服务端必填的 `repo_key`（永远 400）。
+
+### Added
+
+- **GitHub ↔ 自建 Forgejo 双向同步的完整实测**：两条对向任务 + 镜像发布通道 +
+  webhook 规则 + 强推审批流 + cron 定时同步，全部在真实两端跑通并留证。
+
+### Added
+
+- **MCP 端的写工具恢复可用**（`internal/agent/tools/scope_client.go`、
+  `internal/mcp/server.go`）：新增 `ClientConfirmedScope` —— **确认交给客户端**，
+  服务端只管角色与强推授权。
+  - 起因：MCP 是**无状态**协议，服务端「登记待确认」的令牌无处可去 ——
+    于是 `sync_history_channel` / `set_history_override` /
+    `rotate_history_target_credential` 三个写工具在 MCP 上**一律不可用**
+    （缺会话 scope → 直接拒绝）。而 MCP 客户端（Claude Code / Cursor）在把工具调用
+    发过来之前**自己就已经向用户展示并征求过同意**了 —— 确认本来就发生在客户端那一侧。
+  - **不绕过什么**：角色闸门照旧（`dangerGuard` 的角色检查在 scope 检查**之前**，
+    fail-closed）；`force_push` 的 admin 闸门照旧（core 层的批准者校验）；审计链照旧。
+  - 口径对齐：MCP 路径与 HTTP 路径一致（客户端负责确认、服务端负责角色）；
+    CLI 与内置 AI 助手是本进程 agent，服务端必须自己加确认闸 —— 那条差异有理由。
+- **`internal/pkg/authz`**：访问角色（admin / operator / readonly）与它在 Go context 里的
+  传递。角色原本只存在 hertz 的 `RequestContext` 上，而**工具层要判角色** ——
+  MCP 端点与 AI 助手都是进程内直调 core service，不过 HTTP 路由。
+- **历史同步的 HTTP 层端到端测试**（`biz/router/git_sync/histsync_e2e_test.go`）：
+  真实 hertz 引擎 + API Key 鉴权 + 全部路由 —— 建通道 → 配两个推送目标 → 预检 →
+  移植 → 推送 → 公开仓真的前进 → 审计链 `"ok":true`。
+- **历史同步的 RBAC 与强推测试**（`biz/router/git_sync/histsync_rbac_test.go`、
+  `biz/handler/git_sync/histsync_force_test.go`、`internal/mcp/rbac_test.go`）：
+  只读/operator/admin 三档角色 × 写工具 × 强推授权的边界。
+- **CLI 的历史同步测试**（`internal/cli/commands/histsync_test.go`）与
+  **histsync 技能文档的确认口径表**（`skills/gitferry-histsync/SKILL.md`）：
+  逐入口写清「确认在哪一侧做、谁负责角色」。
+
+- **镜像通道支持痕迹清理规则**（`CreateMirrorChannelReq.scrubRules`）与
+  **镜像目标支持 SSH 主机密钥钉扎**（`insecureSkipTLS` / `hostKeyFingerprint` /
+  `knownHostsPath`）：镜像发布的产物是**对外可见的公开 module** ——
+  身份改写只管 module path，内容里的内网 registry / 部署代号 / 令牌原样进公开仓就是泄漏；
+  而目标侧之前没法钉主机密钥，于是同一次发布里「检查路径」fail-closed、
+  「推送路径」TOFU，两套策略相反。两项都在 core 落地后经 thrift 契约暴露
+  （`idl/mirror.thrift` → `hz model` 重新生成 `biz/model/mirror`，字段 ID 只追加不重排 ⇒ 向后兼容）。
+- **histsync 与镜像中心的 37 条 HTTP 端点进入公开 API 契约**（`cmd/apidoc/histsync.go`、
+  `cmd/apidoc/mirror.go`）：此前这 37 条路由是**手写**的、不在任何契约里
+  ⇒ `gitferry schema`（Agent 自 introspect 的入口）完全看不到它们。
+  契约按路由表**逐条声明**（路径/方法/入参/出参），请求与响应字段与 core 的
+  json tag 对齐；两份产物（`docs/openapi.json` 与内嵌副本）都由 `make apidoc` 生成。
+  - **没有新建 thrift 文件**：thriftgo 只编译 `git_sync.thrift`（含其 include），
+    新文件既不生成代码也不受校验，只是一份没人验证的副本；而且请求/响应结构体
+    的真相在 core 的 Go struct 里，thrift 再抄一份 = 第二份真相，core 改字段时
+    契约反而开始骗人。
+  - **防漂移门禁**（`internal/pkg/swagger/{histsync,mirror}_contract_test.go`）：
+    解析路由注册源文件的 AST（还原 hertz 分组前缀）拿到**实际注册的路由集合**，
+    断言契约覆盖它 —— 以后加/改路由忘了更新契约，测试立刻红。
+    不用运行时 `hertz.Register` + `engine.Routes()`：那会把整个 handler 依赖链
+    拖进底层包的测试里，别人改坏一个包就会让这条门禁跟 histsync 无关地红。
+- **危险工具改成单一事实源**（`internal/agent/tools/danger.go`、`repo.go`）：
+  危险标注写在**注册处**（`addDanger`），原先那是**另一份手写清单**
+  （`DangerTools` map）—— 两份清单漂移时，执行层安全不受影响
+  （`dangerGuard` 自己有角色闸），但 **tools/list 过滤**与
+  **system prompt 的危险工具清单**会说谎。
+  - `Policy.Classify(ctx, tool, danger bool)` 改由调用方传入「是否危险」，
+    策略层不再引用全局集合。
+  - 包级 `DangerToolNames()` / `IsDangerTool()` 从同一份注册代码派生
+    （提示词是包级变量、init 阶段就要成形，那时还没有 Registry 实例）。
+  - **防漂移门禁**（`internal/agent/tools/danger_drift_test.go`）：静态扫描本包源码里
+    所有 `dangerGuard(ctx, "<名字>", ...)` 调用，断言它们都在危险集合里 ——
+    新增危险工具忘了标注就红。
+
+
+### Changed
+
+- **MCP 的历史同步工具统一加 `histsync_` 前缀**（`internal/agent/tools/repo.go`）：
+  旧名 `list_history_*` 与既有的 `list_sync_history`（「查询任务最近同步执行历史」）
+  **前缀相反、语义打架** —— 模型看到 `list_history_runs` 会合理地以为它是同步执行历史,
+  实际是 histsync 的执行记录。CLI 侧早就为同一件事绕开了(`histsync` 而非 `history`),
+  工具层没跟上。现在两边命名一致:
+  `list_histsync_channels` / `plan_histsync_channel` / `resolve_histsync_channel` /
+  `list_histsync_runs` / `verify_histsync_channel_audit` / `list_histsync_overrides` /
+  `set_histsync_override` / `preview_histsync_channel` / `sync_histsync_channel`。
+  （仓外引用面已核实为**零**：npm-pkg / skills 都没有引用这些工具名。）
+- **`list_histsync_channels` 的入参形状修正**：它此前复用 `historyChannelRef`,
+  而那个结构的 `channel_id` 没有 `omitempty` ⇒ schema 把它标成**必填** ——
+  列全部通道根本用不上它,模型只能被迫随便填一个 id。
+  现在它有自己的入参(分页),并去掉了硬编码的 100 条上限(通道多了以后,
+  模型看到的是被静默截断的列表,而它并不知道还有下一页)。
+- **`/push` 的 `force` 改名为 `force_push`**（`biz/handler/git_sync/histsync_service.go`）：
+  同一个键 `force` 在 `/sync` 表示「忽略阻塞项继续」、在 `/push` 却表示「强制推送」——
+  **语义相反的同名键**迟早被用错,CLI 被迫写一层手工转译(`--force-push` 传过去叫 `force`),
+  传错键还会被服务端静默丢弃。现在两个端点都用 `force_push`;
+  旧键 `force` **明确报错并指路**(而不是静默忽略 —— 旧调用方以为强推了、实际没推,
+  比推不动更危险)。
+- **审计明细不再落本机绝对路径**（通道创建的 audit detail）：
+  明细进**不可篡改的哈希链** —— 写进去就等于永久提交(事后想改会让整条链报「被篡改」),
+  而绝对路径把执行机的目录结构与操作者用户名永久写进了审计记录。
+  现在降级为「目录名 + 短哈希」:能与通道配置对照,又不泄露本机布局。
+  （上一轮已把元数据快照的绝对路径改成相对路径,这条是同类的最后一处。）
+
+- **CLI 的 histsync 子命令不再静默丢弃参数**（`internal/cli/commands/histsync.go`）：
+  CLI 过去把 29 个 flag 撒在**每个**子命令上，于是 `+plan --force-push`、
+  `+channel-list --verdict merged` 这类无效参数**被静默接受**（实测 21 个命令
+  共 **578 处静默丢弃**）—— 用户以为设上了，服务端根本没收到。
+  静默丢弃比报错危险：它让人以为操作生效了。
+  现在每个命令声明自己**真正会读**的 flag 集，cobra 的 `PreRunE` 统一拦：
+  任何「不属于本命令」的参数一旦被显式设置就报错退出。
+  （上一轮只给 `+push --force` 单独补了报错，同一个病在另外 18 个命令上还在。）
+- **MCP 的工具结果同时给出结构化内容**（`internal/mcp/server.go`）：
+  工具内部返回的本来就是结构化 JSON，但在 MCP 边界上只包成了文本块 ⇒
+  客户端（Claude Code / Cursor）只能自己解析字符串。
+  现在按规范补上 `structuredContent`（与 `content` 并列）；
+  老客户端不认识会忽略（行为退化成现状，无破坏）。
+
+- **工具权限模式改为会话级**（`internal/agent/tools/permission.go`、
+  `internal/agent/session.go`）：之前档位对象是**进程级单例** —— 一个会话把全局切成
+  readonly，会连带把**其他所有会话**的写操作全拒（跨会话影响）。现在档位落在会话上。
+- **`set_permission_mode` 补齐三道闸门**：参数与角色**先判、再进确认链路**（否则
+  operator 会先看到一个确认弹窗，确认完才被告知「你没权限」）；**只有 admin 能拨**
+  （拨档是治理动作）；需用户确认（走 `dangerGuard`）。
+  该工具**不受只读档拦截** —— 否则成了一条单行道（切到只读之后再也切不回来）。
+- **`remember` / `forget_memory` 按危险工具处理**（`internal/agent/tools/memory.go`）：
+  记忆会拼进**每次会话的 system prompt** ⇒ 跨会话持久化的**提示注入通道**；
+  之前是裸工具，只读角色也能写。现在需用户确认 + 只读角色一律拒绝。
+- **元数据快照只报相对路径**（`internal/agent/tools/backup_dr.go`）：快照的绝对目录是
+  服务器本机布局，对使用者没有价值，却会一路流进模型上下文。
+- **`internal/converter` 的手工字段搬运清零**（77 → 0 逐字段拷贝）：
+  改成一个可复用的反射式字段搬运器（`mapper.go`）+ 每个家族一份「例外契约」
+  （`fieldSpec`：名字不同的构、该跳过的字段、要算出来的派生字段）。
+  core 加字段时理想情况只改 core 与 thrift 两处，转换层不动。
+  - **JSON 形状逐字不变**：新增黄金 JSON 测试（18 个样本，期望值取自重构前的实现）+
+    字段覆盖度测试（每个 DTO 字段要么被自动搬走、要么显式声明），两个安全网都做了
+    反向验证。
+  - 仍然必须逐字段的只有 `ApplyPlatformUpdate`（那是**更新策略**不是字段搬运：
+    哪些字段允许改、各字段的「未更新」哨兵不统一，强行统一会改行为）。
+  - core ↔ thrift ↔ agent 三层的字段名对照（含 `source_repo_key` vs agent 的
+    `source_repo` 这类差异）记在 `internal/converter/doc.go`；
+    **agent 侧的字段名统一**未做（会对模型看到的 JSON 形状是破坏性变更，需上层拍板）。
+- **`UpdateTaskReq` 的 bool 字段改为 optional**（`idl/sync_task.thrift`）：
+  原来它们是必填 ⇒ **部分更新必须把所有 bool 都重传一遍**，漏一个就 400。
+  改成 optional 后，未传的字段表示「不更新」。
+  HTTP 侧是**宽松化**（老客户端照常传即可，向后兼容）；Go 侧是破坏性的
+  （生成类型 `bool` → `*bool`），仓内已适配。
+
+
+### Fixed
+
+- **确认流不再依赖「危险工具清单」**（`internal/agent/decorator.go`）：
+  工具没通过确认时返回的就是 `{"status":"confirmation_required",…}` ——
+  那才是「需要确认」的事实。装饰器此前查的是**另一份事实源**(危险工具清单):
+  清单漏了这个工具时,前端收不到确认事件 ⇒ 模型等在那里、工具永远不执行,
+  而用户界面上一片安静。现在以工具自己的回答为准。
+  （顺带澄清:执行层的角色闸在 `dangerGuard` 里,**独立于**那份清单 ——
+  清单漏了不会让只读角色执行写工具,只影响展示层与提示词层。）
+
+- **MCP 路径上危险工具被「会话上下文缺失」整体挡死**（第四轮复核发现）：确认机制与
+  角色闸门混在一起，导致 MCP 上三个写工具全不可用（见上「Added」）。
+- **CLI 的 `histsync +push --force` 是哑弹**：它的语义其实是 sync 的「忽略阻塞项」，
+  与「覆盖远端已有提交」不是一回事 —— 静默丢弃会让用户以为覆盖了分叉检查。
+  现在直接报错并指向 `--force-push`。
+- **凭据参数只挂 `target-*` 子命令**（`internal/cli/commands/histsync.go`）：
+  避免凭据出现在无关命令的 flag 列表里。
+
 ## [v1.24.0] - 2026-10-23
 
 > 依赖 git-ferry-core **v0.12.0**（新增 `mirror/history` 包：历史同步引擎；

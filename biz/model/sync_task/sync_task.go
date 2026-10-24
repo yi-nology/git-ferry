@@ -3180,25 +3180,27 @@ func (p *CreateTaskResp) String() string {
 }
 
 type UpdateTaskReq struct {
-	Key                string  `thrift:"key,1" form:"key" json:"key" query:"key"`
-	Name               string  `thrift:"name,2" form:"name" json:"name" query:"name"`
-	SourceBranch       string  `thrift:"sourceBranch,3" form:"source_branch" json:"source_branch" query:"source_branch"`
-	TargetBranch       string  `thrift:"targetBranch,4" form:"target_branch" json:"target_branch" query:"target_branch"`
-	SyncMode           string  `thrift:"syncMode,5" form:"sync_mode" json:"sync_mode" query:"sync_mode"`
-	Cron               string  `thrift:"cron,6" form:"cron" json:"cron" query:"cron"`
-	Enabled            bool    `thrift:"enabled,7" form:"enabled" json:"enabled" query:"enabled"`
-	GitTags            bool    `thrift:"gitTags,8" form:"git_tags" json:"git_tags" query:"git_tags"`
-	GitForce           bool    `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
-	GitPrune           bool    `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
-	GitLfs             bool    `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
-	GitPushPrune       bool    `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
+	Key          string `thrift:"key,1" form:"key" json:"key" query:"key"`
+	Name         string `thrift:"name,2" form:"name" json:"name" query:"name"`
+	SourceBranch string `thrift:"sourceBranch,3" form:"source_branch" json:"source_branch" query:"source_branch"`
+	TargetBranch string `thrift:"targetBranch,4" form:"target_branch" json:"target_branch" query:"target_branch"`
+	SyncMode     string `thrift:"syncMode,5" form:"sync_mode" json:"sync_mode" query:"sync_mode"`
+	// optional:不传=不修改;传空串=**清空定时**(之前非 optional,空串与"没传"不可区分
+	// ⇒ 一旦设了 cron 就再也改不掉,只能删任务重建)。
+	Cron               *string `thrift:"cron,6,optional" form:"cron" json:"cron,omitempty" query:"cron"`
+	Enabled            *bool   `thrift:"enabled,7,optional" form:"enabled" json:"enabled,omitempty" query:"enabled"`
+	GitTags            *bool   `thrift:"gitTags,8,optional" form:"git_tags" json:"git_tags,omitempty" query:"git_tags"`
+	GitForce           *bool   `thrift:"gitForce,9,optional" form:"git_force" json:"git_force,omitempty" query:"git_force"`
+	GitPrune           *bool   `thrift:"gitPrune,10,optional" form:"git_prune" json:"git_prune,omitempty" query:"git_prune"`
+	GitLfs             *bool   `thrift:"gitLfs,15,optional" form:"git_lfs" json:"git_lfs,omitempty" query:"git_lfs"`
+	GitPushPrune       *bool   `thrift:"gitPushPrune,16,optional" form:"git_push_prune" json:"git_push_prune,omitempty" query:"git_push_prune"`
 	KeepDivergent      *bool   `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 	ForcePushPolicy    *string `thrift:"forcePushPolicy,18,optional" form:"force_push_policy" json:"force_push_policy,omitempty" query:"force_push_policy"`
 	IncludeBranches    *string `thrift:"includeBranches,19,optional" form:"include_branches" json:"include_branches,omitempty" query:"include_branches"`
 	ExcludeRefPatterns *string `thrift:"excludeRefPatterns,20,optional" form:"exclude_ref_patterns" json:"exclude_ref_patterns,omitempty" query:"exclude_ref_patterns"`
-	SyncWiki           bool    `thrift:"syncWiki,21" form:"sync_wiki" json:"sync_wiki" query:"sync_wiki"`
-	GitBundle          bool    `thrift:"gitBundle,22" form:"git_bundle" json:"git_bundle" query:"git_bundle"`
-	Submodules         bool    `thrift:"submodules,23" form:"submodules" json:"submodules" query:"submodules"`
+	SyncWiki           *bool   `thrift:"syncWiki,21,optional" form:"sync_wiki" json:"sync_wiki,omitempty" query:"sync_wiki"`
+	GitBundle          *bool   `thrift:"gitBundle,22,optional" form:"git_bundle" json:"git_bundle,omitempty" query:"git_bundle"`
+	Submodules         *bool   `thrift:"submodules,23,optional" form:"submodules" json:"submodules,omitempty" query:"submodules"`
 }
 
 func NewUpdateTaskReq() *UpdateTaskReq {
@@ -3228,32 +3230,67 @@ func (p *UpdateTaskReq) GetSyncMode() (v string) {
 	return p.SyncMode
 }
 
+var UpdateTaskReq_Cron_DEFAULT string
+
 func (p *UpdateTaskReq) GetCron() (v string) {
-	return p.Cron
+	if !p.IsSetCron() {
+		return UpdateTaskReq_Cron_DEFAULT
+	}
+	return *p.Cron
 }
+
+var UpdateTaskReq_Enabled_DEFAULT bool
 
 func (p *UpdateTaskReq) GetEnabled() (v bool) {
-	return p.Enabled
+	if !p.IsSetEnabled() {
+		return UpdateTaskReq_Enabled_DEFAULT
+	}
+	return *p.Enabled
 }
+
+var UpdateTaskReq_GitTags_DEFAULT bool
 
 func (p *UpdateTaskReq) GetGitTags() (v bool) {
-	return p.GitTags
+	if !p.IsSetGitTags() {
+		return UpdateTaskReq_GitTags_DEFAULT
+	}
+	return *p.GitTags
 }
+
+var UpdateTaskReq_GitForce_DEFAULT bool
 
 func (p *UpdateTaskReq) GetGitForce() (v bool) {
-	return p.GitForce
+	if !p.IsSetGitForce() {
+		return UpdateTaskReq_GitForce_DEFAULT
+	}
+	return *p.GitForce
 }
+
+var UpdateTaskReq_GitPrune_DEFAULT bool
 
 func (p *UpdateTaskReq) GetGitPrune() (v bool) {
-	return p.GitPrune
+	if !p.IsSetGitPrune() {
+		return UpdateTaskReq_GitPrune_DEFAULT
+	}
+	return *p.GitPrune
 }
+
+var UpdateTaskReq_GitLfs_DEFAULT bool
 
 func (p *UpdateTaskReq) GetGitLfs() (v bool) {
-	return p.GitLfs
+	if !p.IsSetGitLfs() {
+		return UpdateTaskReq_GitLfs_DEFAULT
+	}
+	return *p.GitLfs
 }
 
+var UpdateTaskReq_GitPushPrune_DEFAULT bool
+
 func (p *UpdateTaskReq) GetGitPushPrune() (v bool) {
-	return p.GitPushPrune
+	if !p.IsSetGitPushPrune() {
+		return UpdateTaskReq_GitPushPrune_DEFAULT
+	}
+	return *p.GitPushPrune
 }
 
 var UpdateTaskReq_KeepDivergent_DEFAULT bool
@@ -3292,16 +3329,31 @@ func (p *UpdateTaskReq) GetExcludeRefPatterns() (v string) {
 	return *p.ExcludeRefPatterns
 }
 
+var UpdateTaskReq_SyncWiki_DEFAULT bool
+
 func (p *UpdateTaskReq) GetSyncWiki() (v bool) {
-	return p.SyncWiki
+	if !p.IsSetSyncWiki() {
+		return UpdateTaskReq_SyncWiki_DEFAULT
+	}
+	return *p.SyncWiki
 }
+
+var UpdateTaskReq_GitBundle_DEFAULT bool
 
 func (p *UpdateTaskReq) GetGitBundle() (v bool) {
-	return p.GitBundle
+	if !p.IsSetGitBundle() {
+		return UpdateTaskReq_GitBundle_DEFAULT
+	}
+	return *p.GitBundle
 }
 
+var UpdateTaskReq_Submodules_DEFAULT bool
+
 func (p *UpdateTaskReq) GetSubmodules() (v bool) {
-	return p.Submodules
+	if !p.IsSetSubmodules() {
+		return UpdateTaskReq_Submodules_DEFAULT
+	}
+	return *p.Submodules
 }
 
 var fieldIDToName_UpdateTaskReq = map[int16]string{
@@ -3326,6 +3378,34 @@ var fieldIDToName_UpdateTaskReq = map[int16]string{
 	23: "submodules",
 }
 
+func (p *UpdateTaskReq) IsSetCron() bool {
+	return p.Cron != nil
+}
+
+func (p *UpdateTaskReq) IsSetEnabled() bool {
+	return p.Enabled != nil
+}
+
+func (p *UpdateTaskReq) IsSetGitTags() bool {
+	return p.GitTags != nil
+}
+
+func (p *UpdateTaskReq) IsSetGitForce() bool {
+	return p.GitForce != nil
+}
+
+func (p *UpdateTaskReq) IsSetGitPrune() bool {
+	return p.GitPrune != nil
+}
+
+func (p *UpdateTaskReq) IsSetGitLfs() bool {
+	return p.GitLfs != nil
+}
+
+func (p *UpdateTaskReq) IsSetGitPushPrune() bool {
+	return p.GitPushPrune != nil
+}
+
 func (p *UpdateTaskReq) IsSetKeepDivergent() bool {
 	return p.KeepDivergent != nil
 }
@@ -3340,6 +3420,18 @@ func (p *UpdateTaskReq) IsSetIncludeBranches() bool {
 
 func (p *UpdateTaskReq) IsSetExcludeRefPatterns() bool {
 	return p.ExcludeRefPatterns != nil
+}
+
+func (p *UpdateTaskReq) IsSetSyncWiki() bool {
+	return p.SyncWiki != nil
+}
+
+func (p *UpdateTaskReq) IsSetGitBundle() bool {
+	return p.GitBundle != nil
+}
+
+func (p *UpdateTaskReq) IsSetSubmodules() bool {
+	return p.Submodules != nil
 }
 
 func (p *UpdateTaskReq) Read(iprot thrift.TProtocol) (err error) {
@@ -3599,77 +3691,77 @@ func (p *UpdateTaskReq) ReadField5(iprot thrift.TProtocol) error {
 }
 func (p *UpdateTaskReq) ReadField6(iprot thrift.TProtocol) error {
 
-	var _field string
+	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Cron = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField7(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Enabled = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField8(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.GitTags = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField9(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.GitForce = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField10(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.GitPrune = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField15(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.GitLfs = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField16(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.GitPushPrune = _field
 	return nil
@@ -3720,33 +3812,33 @@ func (p *UpdateTaskReq) ReadField20(iprot thrift.TProtocol) error {
 }
 func (p *UpdateTaskReq) ReadField21(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.SyncWiki = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField22(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.GitBundle = _field
 	return nil
 }
 func (p *UpdateTaskReq) ReadField23(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Submodules = _field
 	return nil
@@ -3938,14 +4030,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField6(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("cron", thrift.STRING, 6); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.Cron); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetCron() {
+		if err = oprot.WriteFieldBegin("cron", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cron); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -3955,14 +4049,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField7(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 7); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.Enabled); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetEnabled() {
+		if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Enabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -3972,14 +4068,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField8(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitTags", thrift.BOOL, 8); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitTags); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetGitTags() {
+		if err = oprot.WriteFieldBegin("gitTags", thrift.BOOL, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GitTags); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -3989,14 +4087,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField9(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitForce", thrift.BOOL, 9); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitForce); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetGitForce() {
+		if err = oprot.WriteFieldBegin("gitForce", thrift.BOOL, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GitForce); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4006,14 +4106,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField10(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitPrune", thrift.BOOL, 10); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitPrune); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetGitPrune() {
+		if err = oprot.WriteFieldBegin("gitPrune", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GitPrune); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4023,14 +4125,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField15(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitLfs", thrift.BOOL, 15); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitLfs); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetGitLfs() {
+		if err = oprot.WriteFieldBegin("gitLfs", thrift.BOOL, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GitLfs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4040,14 +4144,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField16(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitPushPrune", thrift.BOOL, 16); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitPushPrune); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetGitPushPrune() {
+		if err = oprot.WriteFieldBegin("gitPushPrune", thrift.BOOL, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GitPushPrune); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4133,14 +4239,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField21(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("syncWiki", thrift.BOOL, 21); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.SyncWiki); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetSyncWiki() {
+		if err = oprot.WriteFieldBegin("syncWiki", thrift.BOOL, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SyncWiki); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4150,14 +4258,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField22(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitBundle", thrift.BOOL, 22); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitBundle); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetGitBundle() {
+		if err = oprot.WriteFieldBegin("gitBundle", thrift.BOOL, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GitBundle); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4167,14 +4277,16 @@ WriteFieldEndError:
 }
 
 func (p *UpdateTaskReq) writeField23(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("submodules", thrift.BOOL, 23); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.Submodules); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetSubmodules() {
+		if err = oprot.WriteFieldBegin("submodules", thrift.BOOL, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Submodules); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:

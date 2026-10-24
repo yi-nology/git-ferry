@@ -140,9 +140,15 @@ func (r *Registry) getMetadataSnapshots(_ context.Context, in metadataSnapInput)
 		if in.RepoKey != "" && snap.RepoKey != in.RepoKey {
 			return nil
 		}
+		// **只报相对路径**:快照的绝对目录是服务器本机布局,
+		// 对使用者没有价值,却会一路流进模型上下文。
+		relDir := ""
+		if rel, rerr := filepath.Rel(root, filepath.Dir(path)); rerr == nil {
+			relDir = filepath.ToSlash(rel)
+		}
 		items = append(items, map[string]any{
 			"repo_key": snap.RepoKey, "platform": snap.Platform,
-			"created_at": snap.CreatedAt, "counts": snap.Counts, "dir": snap.Dir,
+			"created_at": snap.CreatedAt, "counts": snap.Counts, "dir": relDir,
 		})
 		return nil
 	})

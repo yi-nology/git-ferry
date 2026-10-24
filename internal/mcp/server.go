@@ -7,10 +7,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	gitsync "github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
@@ -38,6 +41,16 @@ type rpcError struct {
 // Handler POST /mcp — JSON-RPC（initialize / tools/list / tools/call / ping）。
 func Handler(reg *tools.Registry) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
+		// 角色**跟着 ctx 往后走**:工具层要判角色
+		// (危险工具、强制推送都需要知道调用者是谁)。
+		ctx = authz.WithRole(ctx, gitsync.GetAuthRole(c))
+		// **确认由客户端负责**:MCP 客户端在把工具调用发过来之前,
+		// 自己就已经向用户展示并征求过同意了;MCP 又是无状态的,
+		// 服务端这边「登记待确认」的令牌无处可去,危险工具会直接不可用。
+		//
+		// 注意:这只放行**确认**这一步 —— 角色闸门与强制推送的 admin 闸门
+		// 都照旧生效(见 tools.ClientConfirmedScope 的说明)。
+		ctx = tools.WithClientConfirmedScope(ctx)
 		var req jsonrpcReq
 		body, berr := c.Body()
 		if berr != nil {
@@ -58,8 +71,26 @@ func Handler(reg *tools.Registry) app.HandlerFunc {
 		case "notifications/initialized", "notifications/cancelled":
 			c.SetStatusCode(http.StatusAccepted)
 		case "tools/list":
-			writeRPC(c, req.ID, map[string]any{"tools": listTools(ctx, reg)}, nil)
+			writeRPC(c, req.ID, map[string]any{"tools": listTools(ctx, reg, gitsync.GetAuthRole(c))}, nil)
 		case "tools/call":
+			// **危险工具要写角色**。
+			//
+			// MCP 端点只有鉴权、没有路由层的 RBAC —— 工具是直接调 core
+			// service 的,绕开了 HTTP 路由的 WriteGuard/AdminGuard。
+			// 危险工具(会改对外状态:推送到远端、写裁决、轮换凭据)
+			// 对只读角色必须关掉,否则 OIDC 的默认 readonly 用户
+			// 确认一下就能把内容推到远端。
+			//
+			// 「是否危险」由注册表派生(reg.IsDanger)—— 事实源在工具注册处。
+			if name := mcpToolName(req.Params); name != "" && reg.IsDanger(name) {
+				if role := gitsync.GetAuthRole(c); !gitsync.CanWriteRole(role) {
+					writeRPC(c, req.ID, nil, &rpcError{
+						Code:    -32603,
+						Message: "forbidden: role " + string(role) + " cannot run " + name,
+					})
+					return
+				}
+			}
 			result, rpcErr := callTool(ctx, reg, req.Params)
 			writeRPC(c, req.ID, result, rpcErr)
 		case "ping":
@@ -81,13 +112,20 @@ func Status(reg *tools.Registry) app.HandlerFunc {
 	}
 }
 
-func listTools(ctx context.Context, reg *tools.Registry) []map[string]any {
+// listTools 列出工具清单。
+//
+// **按角色裁剪**:只读角色不该看见写工具 ——
+// 看得见、点一下却被拒,比看不见更让人困惑。
+func listTools(ctx context.Context, reg *tools.Registry, role gitsync.Role) []map[string]any {
 	names := reg.Names()
 	sort.Strings(names)
 	out := make([]map[string]any, 0, len(names))
 	for _, n := range names {
 		t := reg.ByName(n)
 		if t == nil {
+			continue
+		}
+		if reg.IsDanger(n) && !gitsync.CanWriteRole(role) {
 			continue
 		}
 		schema := map[string]any{"type": "object", "properties": map[string]any{}}
@@ -124,6 +162,20 @@ func listTools(ctx context.Context, reg *tools.Registry) []map[string]any {
 	return out
 }
 
+// mcpToolName 从 tools/call 参数里取工具名(取不到返回空串)。
+func mcpToolName(params json.RawMessage) string {
+	var p struct {
+		Name string `json:"name"`
+	}
+	if len(params) == 0 {
+		return ""
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return ""
+	}
+	return p.Name
+}
+
 func callTool(ctx context.Context, reg *tools.Registry, params json.RawMessage) (any, *rpcError) {
 	var p struct {
 		Name      string          `json:"name"`
@@ -153,9 +205,40 @@ func callTool(ctx context.Context, reg *tools.Registry, params json.RawMessage) 
 			"isError": true,
 		}, nil
 	}
-	return map[string]any{
+	// **同时给出结构化结果**。
+	//
+	// 工具内部返回的本来就是结构化 JSON(marshalJSON / map[string]any),
+	// 但 MCP 边界上只包成了文本块 ⇒ 客户端(Claude Code / Cursor)只能
+	// 自己去解析字符串。`structuredContent` 是 MCP 规范里与 content 并列的字段,
+	// 老客户端不认识会忽略(行为退化成现状,无破坏)。
+	//
+	// 保留 content 文本块是为了兼容:不是所有客户端都读 structuredContent。
+	result := map[string]any{
 		"content": []map[string]any{{"type": "text", "text": out}},
-	}, nil
+	}
+	if structured, ok := decodeJSONObject(out); ok {
+		result["structuredContent"] = structured
+	}
+	return result, nil
+}
+
+// decodeJSONObject 尝试把工具输出解析成 JSON 对象。
+//
+// 只有**对象**才给 structuredContent:数组/标量在 MCP 规范里
+// 要求 structuredContent 是 object,给错类型比不给更糟。
+func decodeJSONObject(out string) (any, bool) {
+	trimmed := strings.TrimSpace(out)
+	if !strings.HasPrefix(trimmed, "{") {
+		return nil, false
+	}
+	var v any
+	if err := json.Unmarshal([]byte(trimmed), &v); err != nil {
+		return nil, false
+	}
+	if _, ok := v.(map[string]any); !ok {
+		return nil, false
+	}
+	return v, true
 }
 
 func writeRPC(c *app.RequestContext, id json.RawMessage, result any, rpcErr *rpcError) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	handler "github.com/yi-nology/git-ferry/biz/handler/git_sync"
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 // AuthMiddlewareProvider 允许壳层（公网 / 内网）替换默认 X-API-Key 鉴权，
@@ -56,8 +57,11 @@ func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {
 		// 写入不可伪造的审计身份:共享 API Key 场景下客户端 X-User 可信度为零,
 		// 若不在此覆盖,任何持 key 的调用方都能冒充任意操作人。
 		handler.SetAuthUser(c, "api-key:"+keyFingerprint(serverKey))
-		handler.SetAuthRole(c, handler.ParseRole(handler.GetAPIKeyRole()))
-		c.Next(ctx)
+		role := handler.ParseRole(handler.GetAPIKeyRole())
+		handler.SetAuthRole(c, role)
+		// 角色**跟着 ctx 往后走**:工具层要判角色,
+		// 而进程内直调 core service 的入口(MCP / AI 助手)不过路由守卫。
+		c.Next(authz.WithRole(ctx, role))
 	}
 }
 

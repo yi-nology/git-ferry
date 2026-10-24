@@ -80,20 +80,22 @@ struct UpdateTaskReq {
     3: string sourceBranch (api.json="source_branch")
     4: string targetBranch (api.json="target_branch")
     5: string syncMode (api.json="sync_mode")
-    6: string cron (api.json="cron")
-    7: bool enabled (api.json="enabled")
-    8: bool gitTags (api.json="git_tags")
-    9: bool gitForce (api.json="git_force")
-    10: bool gitPrune (api.json="git_prune")
-    15: bool gitLfs (api.json="git_lfs")
-    16: bool gitPushPrune (api.json="git_push_prune")
+    // optional:不传=不修改;传空串=**清空定时**(之前非 optional,空串与"没传"不可区分
+    // ⇒ 一旦设了 cron 就再也改不掉,只能删任务重建)。
+    6: optional string cron (api.json="cron")
+    7: optional bool enabled (api.json="enabled")
+    8: optional bool gitTags (api.json="git_tags")
+    9: optional bool gitForce (api.json="git_force")
+    10: optional bool gitPrune (api.json="git_prune")
+    15: optional bool gitLfs (api.json="git_lfs")
+    16: optional bool gitPushPrune (api.json="git_push_prune")
     17: optional bool keepDivergent (api.json="keep_divergent")
     18: optional string forcePushPolicy (api.json="force_push_policy")
     19: optional string includeBranches (api.json="include_branches")
     20: optional string excludeRefPatterns (api.json="exclude_ref_patterns")
-    21: bool syncWiki (api.json="sync_wiki")
-    22: bool gitBundle (api.json="git_bundle")
-    23: bool submodules (api.json="submodules")
+    21: optional bool syncWiki (api.json="sync_wiki")
+    22: optional bool gitBundle (api.json="git_bundle")
+    23: optional bool submodules (api.json="submodules")
 }
 
 struct UpdateTaskResp {

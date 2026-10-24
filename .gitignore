@@ -90,3 +90,6 @@ go.work*
 /npm-pkg
 *.tgz
 /gitferry
+
+# 本地编译产物(cmd/apidoc 生成的 OpenAPI 文档工具)
+/apidoc

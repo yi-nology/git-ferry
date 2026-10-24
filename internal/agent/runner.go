@@ -143,6 +143,9 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 	}
 	ctx = withEventSink(ctx, func(e Event) { emit(e) })
 	ctx = tools.WithScope(ctx, sess)
+	// 角色由入口放进 ctx(HTTP 的 AI chat 经鉴权中间件设角色)。
+	// **这里不做「无角色当 admin」的兜底** —— 那会让「某个入口忘了设角色」
+	// 变成「以管理员身份运行」。缺角色就只能是只读(安全侧)。
 
 	r.sessions.Append(sess, "user", userMsg)
 	// 上下文压缩:超过阈值丢弃远古细节

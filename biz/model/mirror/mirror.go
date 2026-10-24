@@ -16,6 +16,11 @@ type MirrorTargetReq struct {
 	CredType     string `thrift:"credType,4" form:"credType" json:"credType" query:"credType"`
 	Credential   string `thrift:"credential,5" form:"credential" json:"credential" query:"credential"`
 	Username     string `thrift:"username,6" form:"username" json:"username" query:"username"`
+	// SSH 主机密钥钉扎:目标侧之前没法钉,于是同一次发布里
+	// 「检查路径」fail-closed、「推送路径」TOFU,两套策略相反。
+	InsecureSkipTLS    bool   `thrift:"insecureSkipTLS,7" form:"insecureSkipTLS" json:"insecureSkipTLS" query:"insecureSkipTLS"`
+	HostKeyFingerprint string `thrift:"hostKeyFingerprint,8" form:"hostKeyFingerprint" json:"hostKeyFingerprint" query:"hostKeyFingerprint"`
+	KnownHostsPath     string `thrift:"knownHostsPath,9" form:"knownHostsPath" json:"knownHostsPath" query:"knownHostsPath"`
 }
 
 func NewMirrorTargetReq() *MirrorTargetReq {
@@ -49,6 +54,18 @@ func (p *MirrorTargetReq) GetUsername() (v string) {
 	return p.Username
 }
 
+func (p *MirrorTargetReq) GetInsecureSkipTLS() (v bool) {
+	return p.InsecureSkipTLS
+}
+
+func (p *MirrorTargetReq) GetHostKeyFingerprint() (v string) {
+	return p.HostKeyFingerprint
+}
+
+func (p *MirrorTargetReq) GetKnownHostsPath() (v string) {
+	return p.KnownHostsPath
+}
+
 var fieldIDToName_MirrorTargetReq = map[int16]string{
 	1: "remote",
 	2: "repoUrl",
@@ -56,6 +73,9 @@ var fieldIDToName_MirrorTargetReq = map[int16]string{
 	4: "credType",
 	5: "credential",
 	6: "username",
+	7: "insecureSkipTLS",
+	8: "hostKeyFingerprint",
+	9: "knownHostsPath",
 }
 
 func (p *MirrorTargetReq) Read(iprot thrift.TProtocol) (err error) {
@@ -120,6 +140,30 @@ func (p *MirrorTargetReq) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -220,6 +264,39 @@ func (p *MirrorTargetReq) ReadField6(iprot thrift.TProtocol) error {
 	p.Username = _field
 	return nil
 }
+func (p *MirrorTargetReq) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsecureSkipTLS = _field
+	return nil
+}
+func (p *MirrorTargetReq) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.HostKeyFingerprint = _field
+	return nil
+}
+func (p *MirrorTargetReq) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.KnownHostsPath = _field
+	return nil
+}
 
 func (p *MirrorTargetReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -249,6 +326,18 @@ func (p *MirrorTargetReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -371,6 +460,57 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *MirrorTargetReq) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insecureSkipTLS", thrift.BOOL, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.InsecureSkipTLS); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *MirrorTargetReq) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("hostKeyFingerprint", thrift.STRING, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.HostKeyFingerprint); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *MirrorTargetReq) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("knownHostsPath", thrift.STRING, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.KnownHostsPath); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
 func (p *MirrorTargetReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -384,6 +524,10 @@ type CreateMirrorChannelReq struct {
 	Mode    string             `thrift:"mode,2" form:"mode" json:"mode" query:"mode"`
 	RepoKey string             `thrift:"repoKey,3" form:"repoKey" json:"repoKey" query:"repoKey"`
 	Targets []*MirrorTargetReq `thrift:"targets,4,default,list<MirrorTargetReq>" form:"targets" json:"targets" query:"targets"`
+	// 痕迹清理规则:发布前把内容里的内网痕迹清掉。
+	// 身份改写只管 module path;内网 registry / 部署代号 / 令牌
+	// 原样进公开 module 就是泄漏。
+	ScrubRules []*MirrorScrubRuleReq `thrift:"scrubRules,5,default,list<MirrorScrubRuleReq>" form:"scrubRules" json:"scrubRules" query:"scrubRules"`
 }
 
 func NewCreateMirrorChannelReq() *CreateMirrorChannelReq {
@@ -409,11 +553,16 @@ func (p *CreateMirrorChannelReq) GetTargets() (v []*MirrorTargetReq) {
 	return p.Targets
 }
 
+func (p *CreateMirrorChannelReq) GetScrubRules() (v []*MirrorScrubRuleReq) {
+	return p.ScrubRules
+}
+
 var fieldIDToName_CreateMirrorChannelReq = map[int16]string{
 	1: "name",
 	2: "mode",
 	3: "repoKey",
 	4: "targets",
+	5: "scrubRules",
 }
 
 func (p *CreateMirrorChannelReq) Read(iprot thrift.TProtocol) (err error) {
@@ -462,6 +611,14 @@ func (p *CreateMirrorChannelReq) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -552,6 +709,29 @@ func (p *CreateMirrorChannelReq) ReadField4(iprot thrift.TProtocol) error {
 	p.Targets = _field
 	return nil
 }
+func (p *CreateMirrorChannelReq) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*MirrorScrubRuleReq, 0, size)
+	values := make([]MirrorScrubRuleReq, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ScrubRules = _field
+	return nil
+}
 
 func (p *CreateMirrorChannelReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -573,6 +753,10 @@ func (p *CreateMirrorChannelReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -669,6 +853,31 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
+func (p *CreateMirrorChannelReq) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("scrubRules", thrift.LIST, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ScrubRules)); err != nil {
+		return err
+	}
+	for _, v := range p.ScrubRules {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *CreateMirrorChannelReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -677,13 +886,341 @@ func (p *CreateMirrorChannelReq) String() string {
 
 }
 
+// 痕迹清理规则。severity=mandatory 表示命中即中止发布(密钥类)。
+type MirrorScrubRuleReq struct {
+	Name        string `thrift:"name,1" form:"name" json:"name" query:"name"`
+	Category    string `thrift:"category,2" form:"category" json:"category" query:"category"`
+	Pattern     string `thrift:"pattern,3" form:"pattern" json:"pattern" query:"pattern"`
+	Severity    string `thrift:"severity,4" form:"severity" json:"severity" query:"severity"`
+	Replacement string `thrift:"replacement,5" form:"replacement" json:"replacement" query:"replacement"`
+}
+
+func NewMirrorScrubRuleReq() *MirrorScrubRuleReq {
+	return &MirrorScrubRuleReq{}
+}
+
+func (p *MirrorScrubRuleReq) InitDefault() {
+}
+
+func (p *MirrorScrubRuleReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *MirrorScrubRuleReq) GetCategory() (v string) {
+	return p.Category
+}
+
+func (p *MirrorScrubRuleReq) GetPattern() (v string) {
+	return p.Pattern
+}
+
+func (p *MirrorScrubRuleReq) GetSeverity() (v string) {
+	return p.Severity
+}
+
+func (p *MirrorScrubRuleReq) GetReplacement() (v string) {
+	return p.Replacement
+}
+
+var fieldIDToName_MirrorScrubRuleReq = map[int16]string{
+	1: "name",
+	2: "category",
+	3: "pattern",
+	4: "severity",
+	5: "replacement",
+}
+
+func (p *MirrorScrubRuleReq) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MirrorScrubRuleReq[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *MirrorScrubRuleReq) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Category = _field
+	return nil
+}
+func (p *MirrorScrubRuleReq) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Pattern = _field
+	return nil
+}
+func (p *MirrorScrubRuleReq) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Severity = _field
+	return nil
+}
+func (p *MirrorScrubRuleReq) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Replacement = _field
+	return nil
+}
+
+func (p *MirrorScrubRuleReq) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MirrorScrubRuleReq"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Name); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("category", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Category); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("pattern", thrift.STRING, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Pattern); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("severity", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Severity); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("replacement", thrift.STRING, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Replacement); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *MirrorScrubRuleReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MirrorScrubRuleReq(%+v)", *p)
+
+}
+
 type UpdateMirrorTargetReq struct {
-	Remote       string `thrift:"remote,1" form:"remote" json:"remote" query:"remote"`
-	RepoUrl      string `thrift:"repoUrl,2" form:"repoUrl" json:"repoUrl" query:"repoUrl"`
-	TargetModule string `thrift:"targetModule,3" form:"targetModule" json:"targetModule" query:"targetModule"`
-	CredType     string `thrift:"credType,4" form:"credType" json:"credType" query:"credType"`
-	Credential   string `thrift:"credential,5" form:"credential" json:"credential" query:"credential"`
-	Username     string `thrift:"username,6" form:"username" json:"username" query:"username"`
+	Remote             string `thrift:"remote,1" form:"remote" json:"remote" query:"remote"`
+	RepoUrl            string `thrift:"repoUrl,2" form:"repoUrl" json:"repoUrl" query:"repoUrl"`
+	TargetModule       string `thrift:"targetModule,3" form:"targetModule" json:"targetModule" query:"targetModule"`
+	CredType           string `thrift:"credType,4" form:"credType" json:"credType" query:"credType"`
+	Credential         string `thrift:"credential,5" form:"credential" json:"credential" query:"credential"`
+	Username           string `thrift:"username,6" form:"username" json:"username" query:"username"`
+	InsecureSkipTLS    bool   `thrift:"insecureSkipTLS,7" form:"insecureSkipTLS" json:"insecureSkipTLS" query:"insecureSkipTLS"`
+	HostKeyFingerprint string `thrift:"hostKeyFingerprint,8" form:"hostKeyFingerprint" json:"hostKeyFingerprint" query:"hostKeyFingerprint"`
+	KnownHostsPath     string `thrift:"knownHostsPath,9" form:"knownHostsPath" json:"knownHostsPath" query:"knownHostsPath"`
 }
 
 func NewUpdateMirrorTargetReq() *UpdateMirrorTargetReq {
@@ -717,6 +1254,18 @@ func (p *UpdateMirrorTargetReq) GetUsername() (v string) {
 	return p.Username
 }
 
+func (p *UpdateMirrorTargetReq) GetInsecureSkipTLS() (v bool) {
+	return p.InsecureSkipTLS
+}
+
+func (p *UpdateMirrorTargetReq) GetHostKeyFingerprint() (v string) {
+	return p.HostKeyFingerprint
+}
+
+func (p *UpdateMirrorTargetReq) GetKnownHostsPath() (v string) {
+	return p.KnownHostsPath
+}
+
 var fieldIDToName_UpdateMirrorTargetReq = map[int16]string{
 	1: "remote",
 	2: "repoUrl",
@@ -724,6 +1273,9 @@ var fieldIDToName_UpdateMirrorTargetReq = map[int16]string{
 	4: "credType",
 	5: "credential",
 	6: "username",
+	7: "insecureSkipTLS",
+	8: "hostKeyFingerprint",
+	9: "knownHostsPath",
 }
 
 func (p *UpdateMirrorTargetReq) Read(iprot thrift.TProtocol) (err error) {
@@ -788,6 +1340,30 @@ func (p *UpdateMirrorTargetReq) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -888,6 +1464,39 @@ func (p *UpdateMirrorTargetReq) ReadField6(iprot thrift.TProtocol) error {
 	p.Username = _field
 	return nil
 }
+func (p *UpdateMirrorTargetReq) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InsecureSkipTLS = _field
+	return nil
+}
+func (p *UpdateMirrorTargetReq) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.HostKeyFingerprint = _field
+	return nil
+}
+func (p *UpdateMirrorTargetReq) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.KnownHostsPath = _field
+	return nil
+}
 
 func (p *UpdateMirrorTargetReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -917,6 +1526,18 @@ func (p *UpdateMirrorTargetReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -1037,6 +1658,57 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *UpdateMirrorTargetReq) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("insecureSkipTLS", thrift.BOOL, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.InsecureSkipTLS); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *UpdateMirrorTargetReq) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("hostKeyFingerprint", thrift.STRING, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.HostKeyFingerprint); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *UpdateMirrorTargetReq) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("knownHostsPath", thrift.STRING, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.KnownHostsPath); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
 func (p *UpdateMirrorTargetReq) String() string {

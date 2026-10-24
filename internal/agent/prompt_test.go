@@ -18,10 +18,15 @@ func TestBuildPrompt_NoMemory(t *testing.T) {
 }
 
 // TestPrompt_ListsEveryDangerTool 提示词里的危险工具清单必须与
-// tools.DangerTools 一致——此前提示词手写了一份只列 3 个,而代码里有 6 个,
+// **注册处标注**的危险工具一致——此前提示词手写了一份只列 3 个,而代码里有 6 个,
 // retry_sync_run / rebuild_task / run_dr_drill 同样要走确认链路却没告诉模型。
+//
+// 危险工具的**唯一事实源**是注册处(repo.go 的 addDanger);
+// tools.DangerToolNames() 是从它派生的 ⇒ 提示词不会与代码漂移。
 func TestPrompt_ListsEveryDangerTool(t *testing.T) {
-	for name := range tools.DangerTools {
+	names := tools.DangerToolNames()
+	require.NotEmpty(t, names, "危险工具清单不能为空")
+	for _, name := range names {
 		assert.Contains(t, Prompt, name, "危险工具 %s 未出现在 system prompt 中", name)
 	}
 }

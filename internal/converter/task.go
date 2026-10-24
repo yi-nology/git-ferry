@@ -6,28 +6,45 @@ import (
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
+// syncTaskInfoSpec:core SyncTask → DTO SyncTaskInfo 的搬运契约。
+var syncTaskInfoSpec = fieldSpec{
+	layout: layoutDateTime,
+	// WebhookToken 不下发:字段已无消费点(webhook 鉴权走平台签名),
+	// 避免每次列表把 secret 形态的 token 拖给所有调用方。
+	skip: map[string]bool{"webhooktoken": true},
+}
+
+// syncRunInfoSpec:core SyncRun → DTO SyncRunInfo 的搬运契约。
+var syncRunInfoSpec = fieldSpec{
+	layout: layoutDateTime,
+}
+
+// syncRunInfoLightSpec:列表视图专用,与完整视图同一套契约,只是省掉大字段。
+//
+// 完整视图与列表视图共用一份契约,core 给 SyncRun 加字段时两处一起生效,
+// 不再像以前那样要在两个函数里各抄一遍。
+var syncRunInfoLightSpec = fieldSpec{
+	layout: layoutDateTime,
+	// 列表视图省略 Details 与 Steps(响应体积的大头),顺带省掉 WebhookEventId。
+	skip: map[string]bool{"details": true, "steps": true, "webhookeventid": true},
+}
+
+// syncRunStepInfoSpec:core SyncRunStep → DTO SyncRunStepInfo 的搬运契约。
+var syncRunStepInfoSpec = fieldSpec{
+	layout: layoutDateTime,
+}
+
+// ToTaskInfo 把 core 的 SyncTask 转成对外的 SyncTaskInfo。
+//
+// 字段搬运由 syncTaskInfoSpec 声明,core 加字段时这里不用改;
+// 只有"不搬"(secret)或"要算"(派生)才需要在契约里写一句。
 func ToTaskInfo(t *model.SyncTask) *taskmodel.SyncTaskInfo {
 	if t == nil {
 		return nil
 	}
-	lastRunAt := ""
-	if t.LastRunAt != nil {
-		lastRunAt = t.LastRunAt.Format("2006-01-02 15:04:05")
-	}
-	return &taskmodel.SyncTaskInfo{
-		ID: SafeUintToInt64(t.ID), Key: t.Key, Name: t.Name,
-		SourceRepoKey: t.SourceRepoKey, SourceBranch: t.SourceBranch,
-		TargetRepoKey: t.TargetRepoKey, TargetBranch: t.TargetBranch,
-		SyncMode: t.SyncMode, Cron: t.Cron,
-		// WebhookToken 不下发:字段已无消费点(webhook 鉴权走平台签名),
-		// 避免每次列表把 secret 形态的 token 拖给所有调用方
-		Enabled: t.Enabled, GitTags: t.GitTags, GitForce: t.GitForce,
-		GitPrune: t.GitPrune,
-		GitLfs:   t.GitLFS, SyncWiki: t.SyncWiki, GitBundle: t.GitBundle, Submodules: t.Submodules, GitPushPrune: t.GitPushPrune, KeepDivergent: t.KeepDivergent,
-		ForcePushPolicy: t.ForcePushPolicy, IncludeBranches: t.IncludeBranches, ExcludeRefPatterns: t.ExcludeRefPatterns,
-		LastRunAt: lastRunAt, LastStatus: t.LastStatus,
-		CreatedAt: t.CreatedAt.Format("2006-01-02 15:04:05"),
-	}
+	info := &taskmodel.SyncTaskInfo{}
+	mapFields(info, t, syncTaskInfoSpec)
+	return info
 }
 
 func ToTaskInfoList(tasks []*model.SyncTask) []*taskmodel.SyncTaskInfo {
@@ -38,32 +55,13 @@ func ToTaskInfoList(tasks []*model.SyncTask) []*taskmodel.SyncTaskInfo {
 	return result
 }
 
+// ToSyncRunInfo 把 core 的 SyncRun 转成对外的 SyncRunInfo(含 Steps)。
 func ToSyncRunInfo(r *model.SyncRun) *taskmodel.SyncRunInfo {
 	if r == nil {
 		return nil
 	}
-	endTime := ""
-	if r.EndTime != nil {
-		endTime = r.EndTime.Format("2006-01-02 15:04:05")
-	}
-	info := &taskmodel.SyncRunInfo{
-		ID: SafeUintToInt64(r.ID), TaskKey: r.TaskKey, TriggerSource: r.TriggerSource,
-		Status: r.Status, StartTime: r.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime: endTime, CommitRange: r.CommitRange, Details: r.Details,
-		ErrorMessage: r.ErrorMessage, CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"),
-		DurationMs: r.DurationMs, ErrorType: r.ErrorType, RetryTotal: SafeIntToInt32(r.RetryTotal),
-	}
-	if r.WebhookEventID != nil {
-		id := SafeUintToInt64(*r.WebhookEventID)
-		info.WebhookEventId = &id
-	}
-	if len(r.Steps) > 0 {
-		steps := make([]*model.SyncRunStep, len(r.Steps))
-		for i := range r.Steps {
-			steps[i] = &r.Steps[i]
-		}
-		info.Steps = ToSyncRunStepInfoList(steps)
-	}
+	info := &taskmodel.SyncRunInfo{}
+	mapFields(info, r, syncRunInfoSpec)
 	return info
 }
 
@@ -79,38 +77,28 @@ func ToSyncRunInfoList(runs []*model.SyncRun) []*taskmodel.SyncRunInfo {
 func ToSyncRunInfoListLight(runs []*model.SyncRun) []*taskmodel.SyncRunInfo {
 	result := make([]*taskmodel.SyncRunInfo, 0, len(runs))
 	for _, r := range runs {
-		endTime := ""
-		if r.EndTime != nil {
-			endTime = r.EndTime.Format("2006-01-02 15:04:05")
-		}
-		result = append(result, &taskmodel.SyncRunInfo{
-			ID: SafeUintToInt64(r.ID), TaskKey: r.TaskKey, TriggerSource: r.TriggerSource,
-			Status: r.Status, StartTime: r.StartTime.Format("2006-01-02 15:04:05"),
-			EndTime: endTime, CommitRange: r.CommitRange,
-			ErrorMessage: r.ErrorMessage, CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"),
-			DurationMs: r.DurationMs, ErrorType: r.ErrorType, RetryTotal: SafeIntToInt32(r.RetryTotal),
-		})
+		result = append(result, toSyncRunInfoLight(r))
 	}
 	return result
 }
 
+// toSyncRunInfoLight 单条记录的列表视图转换(与 ToSyncRunInfo 共用契约)。
+func toSyncRunInfoLight(r *model.SyncRun) *taskmodel.SyncRunInfo {
+	if r == nil {
+		return nil
+	}
+	info := &taskmodel.SyncRunInfo{}
+	mapFields(info, r, syncRunInfoLightSpec)
+	return info
+}
+
+// ToSyncRunStepInfo 把 core 的 SyncRunStep 转成对外的 SyncRunStepInfo。
 func ToSyncRunStepInfo(s *model.SyncRunStep) *taskmodel.SyncRunStepInfo {
 	if s == nil {
 		return nil
 	}
-	info := &taskmodel.SyncRunStepInfo{
-		ID:         SafeUintToInt64(s.ID),
-		StepName:   s.StepName,
-		Status:     s.Status,
-		StartTime:  s.StartTime.Format("2006-01-02 15:04:05"),
-		DurationMs: s.DurationMs,
-		ErrorMsg:   s.ErrorMsg,
-		ErrorType:  s.ErrorType,
-		RetryCount: SafeIntToInt32(s.RetryCount),
-	}
-	if s.EndTime != nil {
-		info.EndTime = s.EndTime.Format("2006-01-02 15:04:05")
-	}
+	info := &taskmodel.SyncRunStepInfo{}
+	mapFields(info, s, syncRunStepInfoSpec)
 	return info
 }
 

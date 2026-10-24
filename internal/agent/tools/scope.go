@@ -11,6 +11,15 @@ type SessionScope interface {
 	MarkConsumed(toolName, argsJSON string)
 	SetLastConfirm(toolName, token, argsJSON string)
 	LastConfirm() (toolName, token, argsJSON string)
+
+	// SetPermissionMode 记录本会话的工具权限模式。
+	//
+	// 返回 false 表示这条链路**存不住**(如无状态的 MCP 端点)——
+	// 调用方据此如实告诉用户「这里切不了」,而不是假装切成功了。
+	SetPermissionMode(mode string) bool
+	// PermissionMode 取本会话显式设过的权限模式;空串表示没设过
+	// (此时用进程级默认档)。
+	PermissionMode() string
 }
 
 type scopeKey struct{}

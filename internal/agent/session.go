@@ -41,6 +41,9 @@ type Session struct {
 	lastConfirm  *PendingConfirm // 最近一次发给前端的确认请求(取即清空)
 	consumedTool string          // 确认后直达执行的放行标记
 	consumedArgs string
+
+	muPerm   sync.Mutex
+	permMode string // 本会话的工具权限模式(空 = 用进程级默认档)
 }
 
 // SessionStore 内存会话存储。服务重启即失效(前端收到 404 后重开会话)。
@@ -141,6 +144,30 @@ func (s *Session) ConsumePending(toolName, token string) (string, error) {
 // ConsumeConsumed 一次性取走"确认后执行"放行标记(实现 tools.SessionScope)。
 func (s *Session) ConsumeConsumed(toolName, argsJSON string) bool {
 	return s.ConsumeConsumedPending(toolName, argsJSON)
+}
+
+// SetPermissionMode 记录本会话的工具权限模式(实现 tools.SessionScope)。
+//
+// **会话级**:切档只影响本会话 —— 之前档位是**进程级单例**,
+// 一个会话切成只读,会连带把**其他所有会话**的写操作都拒掉(跨会话 DoS)。
+func (s *Session) SetPermissionMode(mode string) bool {
+	if s == nil {
+		return false
+	}
+	s.muPerm.Lock()
+	defer s.muPerm.Unlock()
+	s.permMode = mode
+	return true
+}
+
+// PermissionMode 取本会话显式设过的权限模式;空串表示没设过。
+func (s *Session) PermissionMode() string {
+	if s == nil {
+		return ""
+	}
+	s.muPerm.Lock()
+	defer s.muPerm.Unlock()
+	return s.permMode
 }
 
 // Compact 会话历史压缩:超过 max 条时保留 system+最近 N 条,

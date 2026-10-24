@@ -98,14 +98,16 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// bool 字段转指针:壳层表单总是携带全部字段,此处显式转为指针
-	// 传给 core(指针语义:非 nil 即"更新为该值")
+	// bool 字段在 IDL 里声明为 optional,绑定后为 *bool:nil = 请求未携带该字段 = 不修改。
+	// 不能对非 optional 字段取地址(&req.Enabled)——那样指针恒非 nil,
+	// core 的 "nil 即不修改" 语义会失效,部分更新会静默把任务禁用、清空所有布尔开关。
 	t, err := GetSyncService().UpdateTask(ctx, &corebridge.UpdateTaskRequest{
 		Key: req.Key, Name: req.Name, SourceBranch: req.SourceBranch,
+		// cron:nil=不修改,空串=清空定时(IDL 里是 optional string)
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
-		Enabled: &req.Enabled, GitTags: &req.GitTags, GitForce: &req.GitForce,
-		GitPrune: &req.GitPrune,
-		GitLFS:   &req.GitLfs, SyncWiki: &req.SyncWiki, GitBundle: &req.GitBundle, Submodules: &req.Submodules, GitPushPrune: &req.GitPushPrune,
+		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
+		GitPrune: req.GitPrune,
+		GitLFS:   req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		KeepDivergent:      req.KeepDivergent,
 		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
 		IncludeBranches:    ptrx.Deref(req.IncludeBranches, ""),

@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 // OIDCConfig OIDC/JWT Bearer 鉴权配置(公网壳可选)。
@@ -49,13 +51,13 @@ func OIDCAuthMiddleware() app.HandlerFunc {
 	}
 	cfg := *oidcCfg
 	return func(ctx context.Context, c *app.RequestContext) {
-		authz := string(c.GetHeader("Authorization"))
-		if !strings.HasPrefix(authz, "Bearer ") {
+		authzHeader := string(c.GetHeader("Authorization"))
+		if !strings.HasPrefix(authzHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: bearer token required"})
 			c.Abort()
 			return
 		}
-		token := strings.TrimSpace(strings.TrimPrefix(authz, "Bearer "))
+		token := strings.TrimSpace(strings.TrimPrefix(authzHeader, "Bearer "))
 		claims, err := parseHS256JWT(token, cfg.Secret)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: " + err.Error()})
@@ -94,8 +96,11 @@ func OIDCAuthMiddleware() app.HandlerFunc {
 			roleStr = cfg.DefaultRole
 		}
 		SetAuthUser(c, "oidc:"+user)
-		SetAuthRole(c, ParseRole(roleStr))
-		c.Next(ctx)
+		role := ParseRole(roleStr)
+		SetAuthRole(c, role)
+		// 角色**跟着 ctx 往后走**:工具层要判角色,
+		// 而进程内直调 core service 的入口(MCP / AI 助手)不过路由守卫。
+		c.Next(authz.WithRole(ctx, role))
 	}
 }
 

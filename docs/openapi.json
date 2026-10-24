@@ -265,6 +265,12 @@
           "repoKey": {
             "type": "string"
           },
+          "scrubRules": {
+            "items": {
+              "$ref": "#/components/schemas/MirrorScrubRuleReq"
+            },
+            "type": "array"
+          },
           "targets": {
             "items": {
               "$ref": "#/components/schemas/MirrorTargetReq"
@@ -783,6 +789,946 @@
           "limit": {
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryAppliedCommit": {
+        "properties": {
+          "Files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "SourceCommit": {
+            "type": "string"
+          },
+          "SourceSubject": {
+            "type": "string"
+          },
+          "TargetCommit": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryChainResult": {
+        "properties": {
+          "broken_at": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "checked": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryChannelDTO": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryTargetDTO"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryChannelInput": {
+        "properties": {
+          "author_email": {
+            "type": "string"
+          },
+          "author_name": {
+            "type": "string"
+          },
+          "conflict_rules": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryConflictRule"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "host_source": {
+            "type": "string"
+          },
+          "host_target": {
+            "type": "string"
+          },
+          "module_source": {
+            "type": "string"
+          },
+          "module_target": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path_rules": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryPathRule"
+            },
+            "type": "array"
+          },
+          "scrub_rules": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryScrubRule"
+            },
+            "type": "array"
+          },
+          "source_branch": {
+            "type": "string"
+          },
+          "source_dir": {
+            "type": "string"
+          },
+          "source_repo_key": {
+            "type": "string"
+          },
+          "target_branch": {
+            "type": "string"
+          },
+          "target_dir": {
+            "type": "string"
+          },
+          "target_repo_key": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryChannelListData": {
+        "properties": {
+          "list": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryChannelDTO"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryCommitPlan": {
+        "properties": {
+          "Disposition": {
+            "type": "string"
+          },
+          "Files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "Hash": {
+            "type": "string"
+          },
+          "Subject": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryConflictDossier": {
+        "properties": {
+          "Base": {
+            "type": "string"
+          },
+          "Conflicts": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Merged": {
+            "type": "string"
+          },
+          "Ours": {
+            "type": "string"
+          },
+          "OursOnly": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "Path": {
+            "type": "string"
+          },
+          "Reason": {
+            "type": "string"
+          },
+          "SourcePath": {
+            "type": "string"
+          },
+          "Theirs": {
+            "type": "string"
+          },
+          "TheirsOnly": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "Verdict": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryConflictRule": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "patterns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryCredentialInput": {
+        "properties": {
+          "cred_type": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryCredentialStatus": {
+        "properties": {
+          "expired": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "expiring_soon": {
+            "type": "boolean"
+          },
+          "has_credential": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "target_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryDeletedData": {
+        "properties": {
+          "deleted": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryFilePlan": {
+        "properties": {
+          "AddedLines": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Disposition": {
+            "type": "string"
+          },
+          "OriginCommit": {
+            "type": "string"
+          },
+          "OriginSubject": {
+            "type": "string"
+          },
+          "Path": {
+            "type": "string"
+          },
+          "Reason": {
+            "type": "string"
+          },
+          "RemovedLines": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ScrubHits": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryScrubHit"
+            },
+            "type": "array"
+          },
+          "SourcePath": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryGateReport": {
+        "properties": {
+          "gofmt_violations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "note": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "type_check_err": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryOverrideDTO": {
+        "properties": {
+          "channel_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryOverrideInput": {
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryOverrideListData": {
+        "properties": {
+          "list": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryOverrideDTO"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryPathRule": {
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryPlanDTO": {
+        "properties": {
+          "channel_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "commits": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryCommitPlan"
+            },
+            "type": "array"
+          },
+          "dossiers": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryConflictDossier"
+            },
+            "type": "array"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryFilePlan"
+            },
+            "type": "array"
+          },
+          "resolutions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HistoryResolution"
+            },
+            "type": "object"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/HistorySummary"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryPreviewReport": {
+        "properties": {
+          "applied_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "base_head": {
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "commits": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryAppliedCommit"
+            },
+            "type": "array"
+          },
+          "credentials": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryCredentialStatus"
+            },
+            "type": "array"
+          },
+          "gate": {
+            "$ref": "#/components/schemas/HistoryGateReport"
+          },
+          "needs_force": {
+            "type": "boolean"
+          },
+          "new_head": {
+            "type": "string"
+          },
+          "pending_conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryConflictDossier"
+            },
+            "type": "array"
+          },
+          "plan_markdown": {
+            "type": "string"
+          },
+          "protected_count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "scrub_hits": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryScrubHit"
+            },
+            "type": "array"
+          },
+          "skipped_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/HistorySummary"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryTargetImpact"
+            },
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryPushDTO": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "heads": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "pushed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "run_id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryPushInput": {
+        "properties": {
+          "force_push": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryResolution": {
+        "properties": {
+          "Base": {
+            "type": "string"
+          },
+          "BaseFound": {
+            "type": "boolean"
+          },
+          "Conflicts": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Content": {
+            "type": "string"
+          },
+          "Merged": {
+            "type": "string"
+          },
+          "Ours": {
+            "type": "string"
+          },
+          "Path": {
+            "type": "string"
+          },
+          "Reason": {
+            "type": "string"
+          },
+          "Theirs": {
+            "type": "string"
+          },
+          "Verdict": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryRollbackDTO": {
+        "properties": {
+          "heads": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "pushed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ref": {
+            "type": "string"
+          },
+          "run_id": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryRollbackInput": {
+        "properties": {
+          "ref": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryRunDTO": {
+        "properties": {
+          "base_head": {
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "commits": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "duration_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "entry_hash": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "files": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string"
+          },
+          "gate_report": {
+            "type": "string"
+          },
+          "head": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "plan_summary": {
+            "type": "string"
+          },
+          "prev_hash": {
+            "type": "string"
+          },
+          "pushed_run_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "refs_after": {
+            "type": "string"
+          },
+          "refs_before": {
+            "type": "string"
+          },
+          "scrub_report": {
+            "type": "string"
+          },
+          "skipped": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryRunListData": {
+        "properties": {
+          "list": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryRunDTO"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryScrubHit": {
+        "properties": {
+          "Category": {
+            "type": "string"
+          },
+          "Line": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Mandatory": {
+            "type": "boolean"
+          },
+          "Rule": {
+            "type": "string"
+          },
+          "Text": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryScrubRule": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "replacement": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistorySummary": {
+        "properties": {
+          "AddedLines": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Exclude": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Hold": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Port": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "PortWithScrub": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Preserve": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "RemovedLines": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Resolved": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Same": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ScrubHits": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HistorySyncInput": {
+        "properties": {
+          "force": {
+            "type": "boolean"
+          },
+          "force_push": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "HistorySyncReport": {
+        "properties": {
+          "apply": {
+            "$ref": "#/components/schemas/HistoryRunDTO"
+          },
+          "blocked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/HistoryPreviewReport"
+          },
+          "push": {
+            "$ref": "#/components/schemas/HistoryPushDTO"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryTargetDTO": {
+        "properties": {
+          "channel_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "cred_type": {
+            "type": "string"
+          },
+          "has_credential": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repo_url": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryTargetImpact": {
+        "properties": {
+          "base_head": {
+            "type": "string"
+          },
+          "diverged": {
+            "type": "boolean"
+          },
+          "fast_forward": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "new_head": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "remote_head": {
+            "type": "string"
+          },
+          "repo_url": {
+            "type": "string"
+          },
+          "unknown": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryTargetInput": {
+        "properties": {
+          "cred_type": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repo_url": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HistoryTargetListData": {
+        "properties": {
+          "list": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryTargetDTO"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -1306,13 +2252,223 @@
         },
         "type": "object"
       },
+      "MirrorChannel": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repoKey": {
+            "type": "string"
+          },
+          "scrubRules": {
+            "items": {
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "replacement": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "targets": {
+            "items": {
+              "properties": {
+                "channelId": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "credType": {
+                  "type": "string"
+                },
+                "hasCredential": {
+                  "type": "boolean"
+                },
+                "hostKeyFingerprint": {
+                  "type": "string"
+                },
+                "id": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "insecureSkipTLS": {
+                  "type": "boolean"
+                },
+                "knownHostsPath": {
+                  "type": "string"
+                },
+                "remote": {
+                  "type": "string"
+                },
+                "repoUrl": {
+                  "type": "string"
+                },
+                "targetModule": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorChannelListResp": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/MirrorChannel"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorConnTest": {
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorCreateChannelReq": {
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repoKey": {
+            "type": "string"
+          },
+          "scrubRules": {
+            "items": {
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "replacement": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/MirrorTargetReq"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorOK": {
+        "properties": {},
+        "type": "object"
+      },
       "MirrorPreviewReq": {
         "properties": {
           "tag": {
             "type": "string"
           },
           "targetId": {
-            "format": "int32",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorRun": {
+        "properties": {
+          "channelId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "sourceCommit": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "targetCommit": {
+            "type": "string"
+          },
+          "targetId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorRunListResp": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/MirrorRun"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
             "type": "integer"
           }
         },
@@ -1330,8 +2486,125 @@
             "type": "array"
           },
           "targetId": {
-            "format": "int32",
+            "format": "int64",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorScrubRuleReq": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "replacement": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorTagReport": {
+        "properties": {
+          "commit": {
+            "type": "string"
+          },
+          "h1WillChange": {
+            "type": "boolean"
+          },
+          "overwroteDivergent": {
+            "type": "boolean"
+          },
+          "remoteTagExisted": {
+            "type": "boolean"
+          },
+          "replacedFiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "residualFiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "scrubHits": {
+            "items": {
+              "properties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "sourceCommit": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "tagAlreadyPublished": {
+            "type": "boolean"
+          },
+          "tree": {
+            "type": "string"
+          },
+          "treeMatchedRemote": {
+            "type": "boolean"
+          },
+          "verifyCmd": {
+            "type": "string"
+          },
+          "warning": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorTarget": {
+        "properties": {
+          "channelId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "credType": {
+            "type": "string"
+          },
+          "hasCredential": {
+            "type": "boolean"
+          },
+          "hostKeyFingerprint": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "insecureSkipTLS": {
+            "type": "boolean"
+          },
+          "knownHostsPath": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "repoUrl": {
+            "type": "string"
+          },
+          "targetModule": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -1342,6 +2615,47 @@
             "type": "string"
           },
           "credential": {
+            "type": "string"
+          },
+          "hostKeyFingerprint": {
+            "type": "string"
+          },
+          "insecureSkipTLS": {
+            "type": "boolean"
+          },
+          "knownHostsPath": {
+            "type": "string"
+          },
+          "remote": {
+            "type": "string"
+          },
+          "repoUrl": {
+            "type": "string"
+          },
+          "targetModule": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorUpdateTargetReq": {
+        "properties": {
+          "credType": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "string"
+          },
+          "hostKeyFingerprint": {
+            "type": "string"
+          },
+          "insecureSkipTLS": {
+            "type": "boolean"
+          },
+          "knownHostsPath": {
             "type": "string"
           },
           "remote": {
@@ -1361,12 +2675,38 @@
       },
       "MirrorVerifyReq": {
         "properties": {
-          "tag": {
+          "targetId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorVerifyResult": {
+        "properties": {
+          "message": {
             "type": "string"
           },
-          "targetId": {
-            "format": "int32",
-            "type": "integer"
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "MirrorVersionsResult": {
+        "properties": {
+          "sourceTags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "targets": {
+            "items": {
+              "properties": {},
+              "type": "object"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -2290,6 +3630,15 @@
           "credential": {
             "type": "string"
           },
+          "hostKeyFingerprint": {
+            "type": "string"
+          },
+          "insecureSkipTLS": {
+            "type": "boolean"
+          },
+          "knownHostsPath": {
+            "type": "string"
+          },
           "remote": {
             "type": "string"
           },
@@ -2424,7 +3773,7 @@
             "type": "string"
           },
           "enabled": {
-            "type": "boolean"
+            "type": "string"
           },
           "exclude_ref_patterns": {
             "type": "string"
@@ -2433,22 +3782,22 @@
             "type": "string"
           },
           "git_bundle": {
-            "type": "boolean"
+            "type": "string"
           },
           "git_force": {
-            "type": "boolean"
+            "type": "string"
           },
           "git_lfs": {
-            "type": "boolean"
+            "type": "string"
           },
           "git_prune": {
-            "type": "boolean"
+            "type": "string"
           },
           "git_push_prune": {
-            "type": "boolean"
+            "type": "string"
           },
           "git_tags": {
-            "type": "boolean"
+            "type": "string"
           },
           "include_branches": {
             "type": "string"
@@ -2466,13 +3815,13 @@
             "type": "string"
           },
           "submodules": {
-            "type": "boolean"
+            "type": "string"
           },
           "sync_mode": {
             "type": "string"
           },
           "sync_wiki": {
-            "type": "boolean"
+            "type": "string"
           },
           "target_branch": {
             "type": "string"
@@ -2667,6 +4016,1097 @@
         ]
       }
     },
+    "/api/v1/histsync/channels": {
+      "get": {
+        "description": "通道是历史同步的配置单元(两侧仓库 + 身份映射 + 推送目标)。",
+        "operationId": "HistoryChannelList",
+        "parameters": [
+          {
+            "description": "页码,从 1 开始,默认 1",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "每页条数,默认 50,上限 200",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryChannelListData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          }
+        },
+        "summary": "列出历史同步通道",
+        "tags": [
+          "HistorySync"
+        ]
+      },
+      "post": {
+        "description": "通道名唯一。source_repo_key/target_repo_key 与 source_dir/target_dir 二选一;module_source/module_target 是身份映射(创建时必填),用于把内网 module path 改写成公开形态。",
+        "operationId": "HistoryChannelCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryChannelInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryChannelDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          }
+        },
+        "summary": "创建历史同步通道",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}": {
+      "get": {
+        "description": "含该通道的推送目标(顺序 = 推送优先级:先留底后发布)。",
+        "operationId": "HistoryChannelGet",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryChannelDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "读取历史同步通道详情",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/apply": {
+      "post": {
+        "description": "产出执行记录(apply 类型):目标侧既有提交原样保留,新增提交按身份映射改写作者。",
+        "operationId": "HistoryChannelApply",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryRunDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "按通道把计划落到目标树(本地,不推送)",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/audit": {
+      "get": {
+        "description": "与运维侧审计链同构,但链在通道内:通道被删则链随之消失,不会无限增长。",
+        "operationId": "HistoryChannelAudit",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryChainResult"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "校验通道内执行记录的哈希链",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/delete": {
+      "post": {
+        "description": "连同该通道的推送目标一并删除。",
+        "operationId": "HistoryChannelDelete",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryDeletedData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "删除历史同步通道",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/overrides": {
+      "get": {
+        "description": "裁决是对 hold 文件的人工/AI 拍板,决定它取源侧、取目标侧还是合并。",
+        "operationId": "HistoryOverrideList",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryOverrideListData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "列出通道的裁决",
+        "tags": [
+          "HistorySync"
+        ]
+      },
+      "post": {
+        "description": "verdict 取 keep_target / take_source / merged;merged 时 content 必填。",
+        "operationId": "HistoryOverrideSet",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryOverrideInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryOverrideDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "写入(或覆盖)一条裁决",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/plan": {
+      "post": {
+        "description": "纯读:按通道算一份同步计划(逐文件处置 + 提交分组 + 统计),不改任何状态、不推送。",
+        "operationId": "HistoryChannelPlan",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPlanDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "生成同步计划(只读)",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/preview": {
+      "post": {
+        "description": "把这次同步的全部影响面摊开:门禁结果、各推送目标的影响面、凭据状态、是否需要强推。纯读,不推送。",
+        "operationId": "HistoryChannelPreview",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPreviewReport"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "执行预检(不推送)",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/preview.md": {
+      "get": {
+        "description": "与 /preview 同源,输出 text/markdown 便于直接贴进评审。",
+        "operationId": "HistoryChannelPreviewMarkdown",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "预检报告的 Markdown 文本(直接返回,不是统一信封)。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "预检报告的 Markdown 视图(给人读)",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/push": {
+      "post": {
+        "description": "把 apply 的产物推到各推送目标。请求体可省略;force_push=true 表示覆盖远端已有提交(强推会丢掉远端别人的提交,需 admin 角色)。旧字段名 force 已改名为 force_push,传旧名会明确报错。",
+        "operationId": "HistoryChannelPush",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryPushInput"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPushDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "推送最近一次执行记录的产物",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/resolve": {
+      "post": {
+        "description": "在 plan 的基础上计算 hold 文件的自动解法;解不了的会给出冲突卷宗(仍需人工裁决)。纯读。",
+        "operationId": "HistoryChannelResolve",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPlanDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "生成计划并解算 hold 冲突(只读)",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/runs": {
+      "get": {
+        "description": "记录类别:apply(内容移植)/ push(推送)/ rollback(回滚)。",
+        "operationId": "HistoryRunList",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "页码,从 1 开始,默认 1",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "每页条数,默认 50,上限 200",
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryRunListData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "列出通道的执行记录",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/sync": {
+      "post": {
+        "description": "有阻塞项(门禁不过 / 有待裁决冲突 / 需要强推)时**停下并报告**,不往下走。",
+        "operationId": "HistorySync",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistorySyncInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorySyncReport"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "一次跑完「预检 → 移植 → 推送」",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/targets": {
+      "get": {
+        "description": "顺序即推送优先级(先留底后发布)。凭据不回显,只有 has_credential。",
+        "operationId": "HistoryTargetList",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryTargetListData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "列出通道的推送目标",
+        "tags": [
+          "HistorySync"
+        ]
+      },
+      "post": {
+        "description": "凭据明文只在传输中出现,落库即加密,响应不回显。",
+        "operationId": "HistoryTargetCreate",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryTargetInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryTargetDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "创建推送目标",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/channels/{id}/update": {
+      "post": {
+        "description": "**部分更新**语义:未出现的字段保持原值,显式给空串表示清空。(指针字段区分「未指定」与「显式清空」,避免把身份映射一起抹掉。)",
+        "operationId": "HistoryChannelUpdate",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryChannelInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryChannelDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "更新历史同步通道",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/overrides/{id}/delete": {
+      "post": {
+        "description": "删除后该文件回到自动判定。",
+        "operationId": "HistoryOverrideDelete",
+        "parameters": [
+          {
+            "description": "裁决 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryDeletedData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "删除一条裁决",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/runs/{id}": {
+      "get": {
+        "description": "审计材料:计划统计 / commit 映射 / 痕迹检测报告 / ref 对照。",
+        "operationId": "HistoryRunGet",
+        "parameters": [
+          {
+            "description": "执行记录 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryRunDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "读取执行记录详情",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/runs/{id}/rollback": {
+      "post": {
+        "description": "危险操作:会把目标仓推到回滚后的状态。ref 通常取同步前的 HEAD。需要 admin 角色。",
+        "operationId": "HistoryRunRollback",
+        "parameters": [
+          {
+            "description": "执行记录 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryRollbackInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryRollbackDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "把目标树回滚到指定 ref",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/targets/{id}/delete": {
+      "post": {
+        "operationId": "HistoryTargetDelete",
+        "parameters": [
+          {
+            "description": "推送目标 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryDeletedData"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "删除推送目标",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/targets/{id}/rotate": {
+      "post": {
+        "description": "**只换密钥**:目标名与远端地址不动 —— 换密钥是常规运维动作,不该有机会顺手改掉推送到哪里。",
+        "operationId": "HistoryTargetRotate",
+        "parameters": [
+          {
+            "description": "推送目标 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryCredentialInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryTargetDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "轮换推送目标的凭据",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
+    "/api/v1/histsync/targets/{id}/update": {
+      "post": {
+        "description": "可改目标名/远端地址/凭据。",
+        "operationId": "HistoryTargetUpdate",
+        "parameters": [
+          {
+            "description": "推送目标 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryTargetInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryTargetDTO"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "403": {
+            "description": "角色不足:写操作需 operator/admin,回滚需 admin"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "更新推送目标",
+        "tags": [
+          "HistorySync"
+        ]
+      }
+    },
     "/api/v1/logs/operations": {
       "get": {
         "operationId": "ListOperationLogs",
@@ -2749,23 +5189,364 @@
     },
     "/api/v1/mirror/channels": {
       "get": {
+        "operationId": "mirrorChannelList",
         "responses": {
           "200": {
-            "description": "Success"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorChannelListResp"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
           }
         },
-        "summary": "镜像中心接口(/api/v1/mirror/channels)",
+        "summary": "列出镜像通道",
         "tags": [
           "Mirror"
         ]
       },
       "post": {
+        "description": "publish 模式会先拉取源仓库并读取 go.mod,提前暴露仓库不可达 / module 缺失等问题。",
+        "operationId": "mirrorChannelCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MirrorCreateChannelReq"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "Success"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorChannel"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "500": {
+            "description": ""
           }
         },
-        "summary": "镜像中心操作(/api/v1/mirror/channels)",
+        "summary": "新建镜像通道",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels/{id}": {
+      "get": {
+        "operationId": "mirrorChannelGet",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorChannel"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "镜像通道详情(含推送目标)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels/{id}/delete": {
+      "post": {
+        "operationId": "mirrorChannelDelete",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorOK"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "删除镜像通道",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels/{id}/preview": {
+      "post": {
+        "description": "校验身份改写与编译门禁,给出将产生的提交;不推送。",
+        "operationId": "mirrorPreview",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MirrorPreviewReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorTagReport"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "预检发布(不推送)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels/{id}/runs": {
+      "get": {
+        "operationId": "mirrorRunList",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorRunListResp"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "列出通道的发布任务",
+        "tags": [
+          "Mirror"
+        ]
+      },
+      "post": {
+        "operationId": "mirrorRunCreate",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MirrorRunReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorRun"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "创建发布任务(异步执行)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels/{id}/verify": {
+      "post": {
+        "operationId": "mirrorVerify",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MirrorVerifyReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorVerifyResult"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "校验发布身份一致性",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/channels/{id}/versions": {
+      "get": {
+        "operationId": "mirrorVersions",
+        "parameters": [
+          {
+            "description": "通道 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorVersionsResult"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "列出源仓的 tag 与各目标已发布版本",
         "tags": [
           "Mirror"
         ]
@@ -2795,6 +5576,42 @@
         ]
       }
     },
+    "/api/v1/mirror/runs/{id}": {
+      "get": {
+        "operationId": "mirrorRunGet",
+        "parameters": [
+          {
+            "description": "发布任务 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorRun"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          }
+        },
+        "summary": "发布任务详情",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
     "/api/v1/mirror/targets": {
       "get": {
         "responses": {
@@ -2814,6 +5631,137 @@
           }
         },
         "summary": "镜像中心操作(/api/v1/mirror/targets)",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/targets/{id}/delete": {
+      "post": {
+        "operationId": "mirrorTargetDelete",
+        "parameters": [
+          {
+            "description": "目标 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorOK"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "删除推送目标",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/targets/{id}/test": {
+      "post": {
+        "operationId": "mirrorTargetTest",
+        "parameters": [
+          {
+            "description": "目标 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorConnTest"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "测试目标连通性",
+        "tags": [
+          "Mirror"
+        ]
+      }
+    },
+    "/api/v1/mirror/targets/{id}/update": {
+      "post": {
+        "description": "凭据传空串表示保持原凭据(不必重传)。SSH 主机密钥钉扎字段可在此配置。",
+        "operationId": "mirrorTargetUpdate",
+        "parameters": [
+          {
+            "description": "目标 ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MirrorUpdateTargetReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorTarget"
+                }
+              }
+            },
+            "description": "成功。响应体是统一信封 {code, message, data, timestamp},此处 schema 描述 data 部分。"
+          },
+          "400": {
+            "description": "请求参数不合法(如路径上的 id 不是正整数)"
+          },
+          "404": {
+            "description": "对象不存在"
+          },
+          "500": {
+            "description": ""
+          }
+        },
+        "summary": "更新推送目标",
         "tags": [
           "Mirror"
         ]

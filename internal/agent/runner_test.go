@@ -10,6 +10,8 @@ import (
 
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
 func newTestRunner(t *testing.T, m *toolstest.Mock, steps ...toolstest.FakeStep) *Runner {
@@ -73,7 +75,7 @@ func TestRunner_TextReply(t *testing.T) {
 	st := NewSessionStore(time.Minute, 20)
 	sess := st.Create()
 
-	ch, cancel, err := r.Run(context.Background(), sess, "你是谁")
+	ch, cancel, err := r.Run(authz.WithRole(context.Background(), authz.RoleAdmin), sess, "你是谁")
 	require.NoError(t, err)
 	defer cancel()
 	text, events := drainEvents(t, ch)
@@ -120,7 +122,7 @@ func TestRunner_ToolLoop_WithConfirm(t *testing.T) {
 	st := NewSessionStore(time.Minute, 20)
 	sess := st.Create()
 
-	ch, cancel, err := r.Run(context.Background(), sess, "帮我同步 t1")
+	ch, cancel, err := r.Run(authz.WithRole(context.Background(), authz.RoleAdmin), sess, "帮我同步 t1")
 	require.NoError(t, err)
 	defer cancel()
 	_, events := drainEvents(t, ch)
@@ -137,13 +139,13 @@ func TestRunner_ToolLoop_WithConfirm(t *testing.T) {
 	assert.Empty(t, m.RunTaskKey(), "未确认不执行")
 
 	// 确认直达执行(不经模型)
-	out, err := r.ExecuteConfirmed(context.Background(), sess, "run_task", confirm.Token)
+	out, err := r.ExecuteConfirmed(authz.WithRole(context.Background(), authz.RoleAdmin), sess, "run_task", confirm.Token)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"status":"ok"`)
 	assert.Equal(t, "t1", m.RunTaskKey())
 
 	// 令牌一次性:再次执行报错
-	_, err = r.ExecuteConfirmed(context.Background(), sess, "run_task", confirm.Token)
+	_, err = r.ExecuteConfirmed(authz.WithRole(context.Background(), authz.RoleAdmin), sess, "run_task", confirm.Token)
 	assert.Error(t, err)
 }
 
