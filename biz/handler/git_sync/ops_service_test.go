@@ -15,11 +15,15 @@ import (
 )
 
 func TestScoreLevelMapping(t *testing.T) {
-	// 经 health DSL,满分应 gold
-	cfg := health.DefaultConfig()
-	res := cfg.Evaluate(health.Facts{
-		"has_name": "true", "has_cron": "true",
+	// 经 health 维度引擎,满分应 gold
+	res := health.EvaluateDimensions(nil, health.Facts{
+		"has_name": "true", "has_cron": "true", "enabled": "true",
 		"has_history": "true", "recent_success": "true", "error_free": "true",
+		"run_total": "10", "run_success": "10", "fail_streak": "0",
+		"step_fail_count": "0", "retry_total": "0",
+		"last_run_age_hours": "1",
+		"force_push_policy": "block",
+		"backup_enabled":    "true", "sync_wiki": "true",
 	})
 	require.Equal(t, "gold", res.Level)
 }

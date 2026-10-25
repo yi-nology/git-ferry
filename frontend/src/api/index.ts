@@ -126,8 +126,7 @@ export const systemApi = {
 // 统一错误类型,供业务层 catch 后判断
 export { ApiError } from './http'
 
-// 兼容旧导入(Dashboard 等页面仍在使用 SystemStatusResp 别名)
-export type { SystemStatusData as SystemStatusResp , PlatformWebhookData, PlatformWebhookListData } from '@/types/api'
+export type { PlatformWebhookData, PlatformWebhookListData } from '@/types/api'
 
 export { opsApi }
 export type * from './ops'
