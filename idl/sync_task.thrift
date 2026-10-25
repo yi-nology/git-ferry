@@ -14,6 +14,7 @@ struct SyncTaskInfo {
     11: bool enabled (api.json="enabled")
     12: bool gitTags (api.json="git_tags")
     13: bool gitForce (api.json="git_force")
+    // gitPrune 已不再生效(源端 fetch 恒剪枝),保留字段只为兼容旧客户端/配置。
     14: bool gitPrune (api.json="git_prune")
     20: bool gitLfs (api.json="git_lfs")
     21: bool gitPushPrune (api.json="git_push_prune")
@@ -58,6 +59,9 @@ struct CreateTaskReq {
     7: string cron (api.json="cron")
     8: bool gitTags (api.json="git_tags")
     9: bool gitForce (api.json="git_force")
+    // gitPrune 已**不再生效**:源端 fetch 恒剪枝(镜像语义要求 ——
+    // 剪掉"源端已删分支"的远端跟踪 ref,否则源端已删的分支会被推回目标、
+    // 且镜像删除永远不触发)。保留字段只为兼容旧客户端/配置。
     10: bool gitPrune (api.json="git_prune")
     15: bool gitLfs (api.json="git_lfs")
     16: bool gitPushPrune (api.json="git_push_prune")
@@ -86,6 +90,7 @@ struct UpdateTaskReq {
     7: optional bool enabled (api.json="enabled")
     8: optional bool gitTags (api.json="git_tags")
     9: optional bool gitForce (api.json="git_force")
+    // gitPrune 已不再生效(源端 fetch 恒剪枝),保留字段只为兼容旧客户端/配置。
     10: optional bool gitPrune (api.json="git_prune")
     15: optional bool gitLfs (api.json="git_lfs")
     16: optional bool gitPushPrune (api.json="git_push_prune")
