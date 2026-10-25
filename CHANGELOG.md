@@ -2,6 +2,29 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.34.0] - 2026-10-25
+
+### Fixed
+
+- **Gotify 令牌落进服务端日志**：token 拼在 **query** 里 ⇒ 请求失败时
+  `http.Client` 返回 `*url.Error`，其 `Error()` 含**完整 URL** ⇒ 错误进日志 ⇒
+  令牌落到日志采集 / 告警平台 / 备份。healthchecks.io 的 ping UUID 在**路径**里
+  （同样是秘密），同样会被打出去。
+  修法：`redactSecretURL`（秘密类查询参数替换成 `REDACTED`、**路径整体掩掉**，
+  保留 host 以便排障）+ `redactError`（把 `*url.Error` 里的 URL 换成脱敏版，
+  保留错误类型与包装）+ 通知与心跳的日志点统一走脱敏。
+- **AI 接口把 API key 放在 URL query**：`GET /api/v1/ai/models?…&api_key=…`
+  ⇒ 密钥进浏览器历史 / Referer / 反向代理 access log。
+  ⇒ 改 **POST + body**（key 不再出现在 URL 里）。路由、handler、apidoc 的路由表、
+  前端调用同步改；OpenAPI 已重新生成（契约门禁盯着路由与 OpenAPI 是否一致）。
+
+### Changed
+
+- **core pin → v0.28.0**：webhook 提交被静默丢掉的两条路径（任务繁忙时的待补跑、
+  卡在 `processing` 的事件回收）+ 抬 SDK 至 v0.99.4。
+- **SDK pin → v0.99.4**：跨 host 重定向不再带走平台令牌（P0）+ gogit 后端六处
+  会破坏仓库的差异。
+
 ## [v1.33.0] - 2026-10-25
 
 ### Fixed
