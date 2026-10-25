@@ -40,7 +40,6 @@ struct GetRepoResp {
 struct CreateRepoReq {
     1: string name (api.json="name")
     2: string remoteUrl (api.json="remote_url")
-    3: string accessToken (api.json="access_token")
 }
 
 struct CreateRepoResp {
@@ -50,7 +49,6 @@ struct CreateRepoResp {
 struct UpdateRepoReq {
     1: string key (api.json="key")
     2: string name (api.json="name")
-    3: string accessToken (api.json="access_token")
 }
 
 struct UpdateRepoResp {

@@ -274,7 +274,6 @@ CREATE TABLE repos (
     clone_url VARCHAR(500) COMMENT '克隆地址',
     ssh_url VARCHAR(500) COMMENT 'SSH 地址',
     default_branch VARCHAR(100) DEFAULT 'main' COMMENT '默认分支',
-    access_token TEXT COMMENT '访问令牌 (AES 加密)',
     webhook_secret VARCHAR(255) COMMENT 'Webhook 密钥',
     webhook_id BIGINT COMMENT '平台 Webhook ID',
     status VARCHAR(20) DEFAULT 'active' COMMENT 'active/inactive/error',

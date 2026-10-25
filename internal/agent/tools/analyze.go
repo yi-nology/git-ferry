@@ -48,7 +48,6 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 			"has_cron":          textutil.BoolFact(t.Cron != ""),
 			"cron":              t.Cron,
 			"enabled":           textutil.BoolFact(t.Enabled),
-			"keep_divergent":    textutil.BoolFact(t.KeepDivergent),
 			"git_force":         textutil.BoolFact(t.GitForce),
 			"force_push_policy": t.ForcePushPolicy,
 			"backup_enabled":    textutil.BoolFact(t.GitBundle),
@@ -157,7 +156,7 @@ func analyzeRules() []map[string]string {
 	return []map[string]string{
 		{"when": "auth/401/403", "do": "检查 token 是否过期/权限是否含 repo push"},
 		{"when": "network/timeout", "do": "检查内网出口、proxy、调大 default_timeout"},
-		{"when": "divergent/conflict", "do": "比对目标独有提交,决定 merge 或关 keep_divergent"},
+		{"when": "divergent/conflict", "do": "比对目标独有提交,决定 merge 或把 force_push_policy 设为 allow"},
 		{"when": "push rejected", "do": "检查分支保护;确认后可 git_force"},
 		{"when": "lfs", "do": "安装 git-lfs 或关闭任务 git_lfs"},
 		{"when": "bundle/backup", "do": "检查 backup_dir 可写与磁盘空间"},

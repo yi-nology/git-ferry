@@ -23,7 +23,6 @@ type SyncTaskInfo struct {
 	GitForce           bool   `thrift:"gitForce,13" form:"git_force" json:"git_force" query:"git_force"`
 	GitLfs             bool   `thrift:"gitLfs,20" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	GitPushPrune       bool   `thrift:"gitPushPrune,21" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
-	KeepDivergent      bool   `thrift:"keepDivergent,22" form:"keep_divergent" json:"keep_divergent" query:"keep_divergent"`
 	ForcePushPolicy    string `thrift:"forcePushPolicy,23" form:"force_push_policy" json:"force_push_policy" query:"force_push_policy"`
 	IncludeBranches    string `thrift:"includeBranches,24" form:"include_branches" json:"include_branches" query:"include_branches"`
 	ExcludeRefPatterns string `thrift:"excludeRefPatterns,25" form:"exclude_ref_patterns" json:"exclude_ref_patterns" query:"exclude_ref_patterns"`
@@ -102,10 +101,6 @@ func (p *SyncTaskInfo) GetGitPushPrune() (v bool) {
 	return p.GitPushPrune
 }
 
-func (p *SyncTaskInfo) GetKeepDivergent() (v bool) {
-	return p.KeepDivergent
-}
-
 func (p *SyncTaskInfo) GetForcePushPolicy() (v string) {
 	return p.ForcePushPolicy
 }
@@ -158,7 +153,6 @@ var fieldIDToName_SyncTaskInfo = map[int16]string{
 	13: "gitForce",
 	20: "gitLfs",
 	21: "gitPushPrune",
-	22: "keepDivergent",
 	23: "forcePushPolicy",
 	24: "includeBranches",
 	25: "excludeRefPatterns",
@@ -296,14 +290,6 @@ func (p *SyncTaskInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField21(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 22:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -575,17 +561,6 @@ func (p *SyncTaskInfo) ReadField21(iprot thrift.TProtocol) error {
 	p.GitPushPrune = _field
 	return nil
 }
-func (p *SyncTaskInfo) ReadField22(iprot thrift.TProtocol) error {
-
-	var _field bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.KeepDivergent = _field
-	return nil
-}
 func (p *SyncTaskInfo) ReadField23(iprot thrift.TProtocol) error {
 
 	var _field string
@@ -746,10 +721,6 @@ func (p *SyncTaskInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
-			goto WriteFieldError
-		}
-		if err = p.writeField22(oprot); err != nil {
-			fieldId = 22
 			goto WriteFieldError
 		}
 		if err = p.writeField23(oprot); err != nil {
@@ -1061,22 +1032,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
-func (p *SyncTaskInfo) writeField22(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("keepDivergent", thrift.BOOL, 22); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.KeepDivergent); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
-}
 
 func (p *SyncTaskInfo) writeField23(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("forcePushPolicy", thrift.STRING, 23); err != nil {
@@ -1975,7 +1930,6 @@ type CreateTaskReq struct {
 	GitForce           bool    `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
 	GitLfs             bool    `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	GitPushPrune       bool    `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
-	KeepDivergent      *bool   `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 	ForcePushPolicy    *string `thrift:"forcePushPolicy,18,optional" form:"force_push_policy" json:"force_push_policy,omitempty" query:"force_push_policy"`
 	IncludeBranches    *string `thrift:"includeBranches,19,optional" form:"include_branches" json:"include_branches,omitempty" query:"include_branches"`
 	ExcludeRefPatterns *string `thrift:"excludeRefPatterns,20,optional" form:"exclude_ref_patterns" json:"exclude_ref_patterns,omitempty" query:"exclude_ref_patterns"`
@@ -2035,14 +1989,6 @@ func (p *CreateTaskReq) GetGitPushPrune() (v bool) {
 	return p.GitPushPrune
 }
 
-var CreateTaskReq_KeepDivergent_DEFAULT bool
-
-func (p *CreateTaskReq) GetKeepDivergent() (v bool) {
-	if !p.IsSetKeepDivergent() {
-		return CreateTaskReq_KeepDivergent_DEFAULT
-	}
-	return *p.KeepDivergent
-}
 
 var CreateTaskReq_ForcePushPolicy_DEFAULT string
 
@@ -2095,17 +2041,12 @@ var fieldIDToName_CreateTaskReq = map[int16]string{
 	9:  "gitForce",
 	15: "gitLfs",
 	16: "gitPushPrune",
-	17: "keepDivergent",
 	18: "forcePushPolicy",
 	19: "includeBranches",
 	20: "excludeRefPatterns",
 	21: "syncWiki",
 	22: "gitBundle",
 	23: "submodules",
-}
-
-func (p *CreateTaskReq) IsSetKeepDivergent() bool {
-	return p.KeepDivergent != nil
 }
 
 func (p *CreateTaskReq) IsSetForcePushPolicy() bool {
@@ -2222,14 +2163,6 @@ func (p *CreateTaskReq) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField16(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 17:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2433,17 +2366,6 @@ func (p *CreateTaskReq) ReadField16(iprot thrift.TProtocol) error {
 	p.GitPushPrune = _field
 	return nil
 }
-func (p *CreateTaskReq) ReadField17(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.KeepDivergent = _field
-	return nil
-}
 func (p *CreateTaskReq) ReadField18(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -2559,10 +2481,6 @@ func (p *CreateTaskReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
-			goto WriteFieldError
-		}
-		if err = p.writeField17(oprot); err != nil {
-			fieldId = 17
 			goto WriteFieldError
 		}
 		if err = p.writeField18(oprot); err != nil {
@@ -2794,24 +2712,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
-func (p *CreateTaskReq) writeField17(oprot thrift.TProtocol) (err error) {
-	if p.IsSetKeepDivergent() {
-		if err = oprot.WriteFieldBegin("keepDivergent", thrift.BOOL, 17); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.KeepDivergent); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
-}
 
 func (p *CreateTaskReq) writeField18(oprot thrift.TProtocol) (err error) {
 	if p.IsSetForcePushPolicy() {
@@ -3089,7 +2989,6 @@ type UpdateTaskReq struct {
 	GitForce           *bool   `thrift:"gitForce,9,optional" form:"git_force" json:"git_force,omitempty" query:"git_force"`
 	GitLfs             *bool   `thrift:"gitLfs,15,optional" form:"git_lfs" json:"git_lfs,omitempty" query:"git_lfs"`
 	GitPushPrune       *bool   `thrift:"gitPushPrune,16,optional" form:"git_push_prune" json:"git_push_prune,omitempty" query:"git_push_prune"`
-	KeepDivergent      *bool   `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
 	ForcePushPolicy    *string `thrift:"forcePushPolicy,18,optional" form:"force_push_policy" json:"force_push_policy,omitempty" query:"force_push_policy"`
 	IncludeBranches    *string `thrift:"includeBranches,19,optional" form:"include_branches" json:"include_branches,omitempty" query:"include_branches"`
 	ExcludeRefPatterns *string `thrift:"excludeRefPatterns,20,optional" form:"exclude_ref_patterns" json:"exclude_ref_patterns,omitempty" query:"exclude_ref_patterns"`
@@ -3179,14 +3078,6 @@ func (p *UpdateTaskReq) GetGitPushPrune() (v bool) {
 	return *p.GitPushPrune
 }
 
-var UpdateTaskReq_KeepDivergent_DEFAULT bool
-
-func (p *UpdateTaskReq) GetKeepDivergent() (v bool) {
-	if !p.IsSetKeepDivergent() {
-		return UpdateTaskReq_KeepDivergent_DEFAULT
-	}
-	return *p.KeepDivergent
-}
 
 var UpdateTaskReq_ForcePushPolicy_DEFAULT string
 
@@ -3254,7 +3145,6 @@ var fieldIDToName_UpdateTaskReq = map[int16]string{
 	9:  "gitForce",
 	15: "gitLfs",
 	16: "gitPushPrune",
-	17: "keepDivergent",
 	18: "forcePushPolicy",
 	19: "includeBranches",
 	20: "excludeRefPatterns",
@@ -3285,10 +3175,6 @@ func (p *UpdateTaskReq) IsSetGitLfs() bool {
 
 func (p *UpdateTaskReq) IsSetGitPushPrune() bool {
 	return p.GitPushPrune != nil
-}
-
-func (p *UpdateTaskReq) IsSetKeepDivergent() bool {
-	return p.KeepDivergent != nil
 }
 
 func (p *UpdateTaskReq) IsSetForcePushPolicy() bool {
@@ -3417,14 +3303,6 @@ func (p *UpdateTaskReq) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField16(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 17:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3628,17 +3506,6 @@ func (p *UpdateTaskReq) ReadField16(iprot thrift.TProtocol) error {
 	p.GitPushPrune = _field
 	return nil
 }
-func (p *UpdateTaskReq) ReadField17(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.KeepDivergent = _field
-	return nil
-}
 func (p *UpdateTaskReq) ReadField18(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -3754,10 +3621,6 @@ func (p *UpdateTaskReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
-			goto WriteFieldError
-		}
-		if err = p.writeField17(oprot); err != nil {
-			fieldId = 17
 			goto WriteFieldError
 		}
 		if err = p.writeField18(oprot); err != nil {
@@ -4001,24 +3864,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
-func (p *UpdateTaskReq) writeField17(oprot thrift.TProtocol) (err error) {
-	if p.IsSetKeepDivergent() {
-		if err = oprot.WriteFieldBegin("keepDivergent", thrift.BOOL, 17); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.KeepDivergent); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
-}
 
 func (p *UpdateTaskReq) writeField18(oprot thrift.TProtocol) (err error) {
 	if p.IsSetForcePushPolicy() {

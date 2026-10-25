@@ -293,7 +293,6 @@ const form = reactive({
   git_bundle: false,
   submodules: false,
   git_push_prune: false,
-  keep_divergent: true,
   force_push_policy: 'block' as 'allow' | 'block' | 'backup_on_demand',
   include_branches: '',
   exclude_ref_patterns: 'refs/pull/*,refs/merge-requests/*',
@@ -434,11 +433,7 @@ async function submit() {
   }
   submitting.value = true
   try {
-    // 兼容旧字段:allow → keep_divergent=false,其余保持保护
-    const payload = {
-      ...form,
-      keep_divergent: form.force_push_policy !== 'allow',
-    }
+    const payload = { ...form }
     await taskStore.createTask(payload)
     notifySuccess('创建任务成功')
     router.push('/sync')

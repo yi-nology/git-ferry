@@ -53,7 +53,6 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 			"has_cron":          textutil.BoolFact(t.Cron != ""),
 			"cron":              t.Cron,
 			"enabled":           textutil.BoolFact(t.Enabled),
-			"keep_divergent":    textutil.BoolFact(t.KeepDivergent),
 			"git_force":         textutil.BoolFact(t.GitForce),
 			"force_push_policy": t.ForcePushPolicy,
 			"backup_enabled":    textutil.BoolFact(t.GitBundle),

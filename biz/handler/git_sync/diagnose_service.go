@@ -87,7 +87,7 @@ func diagnoseRun(run *corebridge.SyncRun) map[string]any {
 		severity = "critical"
 		causes = append(causes, "目标分支与源分支已分叉,拒绝覆盖")
 		actions = append(actions,
-			"对比目标独有提交,确认可丢弃后关闭 keep_divergent",
+			"对比目标独有提交,确认可丢弃后把 force_push_policy 设为 allow",
 			"或先把目标变更合回源,再重试")
 	case "config":
 		causes = append(causes, "仓库/分支/平台配置不正确")

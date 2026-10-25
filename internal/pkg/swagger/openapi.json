@@ -331,9 +331,6 @@
       },
       "CreateRepoReq": {
         "properties": {
-          "access_token": {
-            "type": "string"
-          },
           "name": {
             "type": "string"
           },
@@ -412,9 +409,6 @@
           "git_lfs": {
             "type": "boolean"
           },
-          "git_prune": {
-            "type": "boolean"
-          },
           "git_push_prune": {
             "type": "boolean"
           },
@@ -422,9 +416,6 @@
             "type": "boolean"
           },
           "include_branches": {
-            "type": "string"
-          },
-          "keep_divergent": {
             "type": "string"
           },
           "name": {
@@ -3496,9 +3487,6 @@
           "git_lfs": {
             "type": "boolean"
           },
-          "git_prune": {
-            "type": "boolean"
-          },
           "git_push_prune": {
             "type": "boolean"
           },
@@ -3511,9 +3499,6 @@
           },
           "include_branches": {
             "type": "string"
-          },
-          "keep_divergent": {
-            "type": "boolean"
           },
           "key": {
             "type": "string"
@@ -3709,9 +3694,6 @@
       },
       "UpdateRepoReq": {
         "properties": {
-          "access_token": {
-            "type": "string"
-          },
           "key": {
             "type": "string"
           },
@@ -3794,9 +3776,6 @@
           "git_lfs": {
             "type": "string"
           },
-          "git_prune": {
-            "type": "string"
-          },
           "git_push_prune": {
             "type": "string"
           },
@@ -3804,9 +3783,6 @@
             "type": "string"
           },
           "include_branches": {
-            "type": "string"
-          },
-          "keep_divergent": {
             "type": "string"
           },
           "key": {

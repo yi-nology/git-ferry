@@ -522,8 +522,7 @@ function openEdit(task: SyncTask) {
     cron: task.cron,
     git_tags: task.git_tags,
     git_force: task.git_force,
-    force_push_policy: (task.force_push_policy as 'allow' | 'block' | 'backup_on_demand')
-      || (task.keep_divergent === false ? 'allow' : 'block'),
+    force_push_policy: (task.force_push_policy as 'allow' | 'block' | 'backup_on_demand') || 'block',
   })
   previewFrom.value = formData.force_push_policy
   policyPreview.value = false
@@ -536,10 +535,7 @@ async function handleSubmit() {
     return
   }
   try {
-    const payload = {
-      ...formData,
-      keep_divergent: formData.force_push_policy !== 'allow',
-    }
+    const payload = { ...formData }
     if (editingKey.value) {
       await taskStore.updateTask({ key: editingKey.value, ...payload })
       notifySuccess('更新任务成功')

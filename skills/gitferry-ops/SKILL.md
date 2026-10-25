@@ -120,7 +120,7 @@ gitferry ops +metadata-restore --key my-repo --kinds labels,milestones --execute
 | reliability | 35 | 近 N 次成功率、连续失败、最近是否成功 |
 | freshness | 20 | 最近执行距今时长 |
 | schedule | 15 | 是否有 cron、是否启用 |
-| safety | 15 | force_push_policy / keep_divergent / git_force；`--with-drift` 时折入实测漂移 |
+| safety | 15 | force_push_policy / git_force；`--with-drift` 时折入实测漂移 |
 | completeness | 15 | 名称、历史、冷备 bundle、wiki |
 
 **解读顺序：** 先看 `attention` → 对每个任务看低分维度的 `reason`/`action` → 用 `history +diagnose` 深挖 reliability 问题。

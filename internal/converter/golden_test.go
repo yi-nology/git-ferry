@@ -30,7 +30,7 @@ func goldenTask() *model.SyncTask {
 		SyncMode: "mirror", Cron: "0 * * * *", WebhookToken: "secret-token",
 		Enabled: true, GitTags: true, GitForce: true,
 		GitLFS: true, SyncWiki: true, GitBundle: true, Submodules: true,
-		GitPushPrune: true, KeepDivergent: true,
+		GitPushPrune: true,
 		ForcePushPolicy: "allow", IncludeBranches: "main,release/*",
 		ExcludeRefPatterns: "refs/pull/*",
 		LastRunAt:          &tt, LastStatus: "success", CreatedAt: tt,
@@ -82,7 +82,7 @@ func goldenRepo() *model.Repo {
 		ID: 41, Key: "repo-key", Name: "Repo Name", PlatformID: 3,
 		Platform: "github", PlatformOwner: "owner", PlatformRepo: "repo",
 		CloneURL: "https://github.com/owner/repo.git", SSHURL: "git@github.com:owner/repo.git",
-		DefaultBranch: "main", AccessToken: "tok", WebhookSecret: "s", WebhookID: 9,
+		DefaultBranch: "main", WebhookSecret: "s", WebhookID: 9,
 		Status: "active", CreatedAt: tt, UpdatedAt: tt,
 	}
 }
@@ -128,12 +128,12 @@ func TestGoldenJSONShape(t *testing.T) {
 		{
 			name: "TaskInfo",
 			got:  ToTaskInfo(goldenTask()),
-			want: `{"id":11,"key":"task-key","name":"Task Name","source_repo_key":"src-repo","source_branch":"main","target_repo_key":"dst-repo","target_branch":"release","sync_mode":"mirror","cron":"0 * * * *","webhook_token":"","enabled":true,"git_tags":true,"git_force":true,"git_lfs":true,"git_push_prune":true,"keep_divergent":true,"force_push_policy":"allow","include_branches":"main,release/*","exclude_ref_patterns":"refs/pull/*","sync_wiki":true,"git_bundle":true,"submodules":true,"last_run_at":"2024-05-17 08:30:15","last_status":"success","created_at":"2024-05-17 08:30:15"}`,
+			want: `{"id":11,"key":"task-key","name":"Task Name","source_repo_key":"src-repo","source_branch":"main","target_repo_key":"dst-repo","target_branch":"release","sync_mode":"mirror","cron":"0 * * * *","webhook_token":"","enabled":true,"git_tags":true,"git_force":true,"git_lfs":true,"git_push_prune":true,"force_push_policy":"allow","include_branches":"main,release/*","exclude_ref_patterns":"refs/pull/*","sync_wiki":true,"git_bundle":true,"submodules":true,"last_run_at":"2024-05-17 08:30:15","last_status":"success","created_at":"2024-05-17 08:30:15"}`,
 		},
 		{
 			name: "TaskInfoZero",
 			got:  ToTaskInfo(&model.SyncTask{}),
-			want: `{"id":0,"key":"","name":"","source_repo_key":"","source_branch":"","target_repo_key":"","target_branch":"","sync_mode":"","cron":"","webhook_token":"","enabled":false,"git_tags":false,"git_force":false,"git_lfs":false,"git_push_prune":false,"keep_divergent":false,"force_push_policy":"","include_branches":"","exclude_ref_patterns":"","sync_wiki":false,"git_bundle":false,"submodules":false,"last_run_at":"","last_status":"","created_at":"0001-01-01 00:00:00"}`,
+			want: `{"id":0,"key":"","name":"","source_repo_key":"","source_branch":"","target_repo_key":"","target_branch":"","sync_mode":"","cron":"","webhook_token":"","enabled":false,"git_tags":false,"git_force":false,"git_lfs":false,"git_push_prune":false,"force_push_policy":"","include_branches":"","exclude_ref_patterns":"","sync_wiki":false,"git_bundle":false,"submodules":false,"last_run_at":"","last_status":"","created_at":"0001-01-01 00:00:00"}`,
 		},
 		{
 			name: "SyncRunInfo",

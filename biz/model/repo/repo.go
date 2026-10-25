@@ -1518,7 +1518,6 @@ func (p *GetRepoResp) String() string {
 type CreateRepoReq struct {
 	Name        string `thrift:"name,1" form:"name" json:"name" query:"name"`
 	RemoteUrl   string `thrift:"remoteUrl,2" form:"remote_url" json:"remote_url" query:"remote_url"`
-	AccessToken string `thrift:"accessToken,3" form:"access_token" json:"access_token" query:"access_token"`
 }
 
 func NewCreateRepoReq() *CreateRepoReq {
@@ -1536,14 +1535,9 @@ func (p *CreateRepoReq) GetRemoteUrl() (v string) {
 	return p.RemoteUrl
 }
 
-func (p *CreateRepoReq) GetAccessToken() (v string) {
-	return p.AccessToken
-}
-
 var fieldIDToName_CreateRepoReq = map[int16]string{
 	1: "name",
 	2: "remoteUrl",
-	3: "accessToken",
 }
 
 func (p *CreateRepoReq) Read(iprot thrift.TProtocol) (err error) {
@@ -1576,14 +1570,6 @@ func (p *CreateRepoReq) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1640,17 +1626,6 @@ func (p *CreateRepoReq) ReadField2(iprot thrift.TProtocol) error {
 	p.RemoteUrl = _field
 	return nil
 }
-func (p *CreateRepoReq) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.AccessToken = _field
-	return nil
-}
 
 func (p *CreateRepoReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1664,10 +1639,6 @@ func (p *CreateRepoReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -1722,22 +1693,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
-func (p *CreateRepoReq) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("accessToken", thrift.STRING, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.AccessToken); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
 
 func (p *CreateRepoReq) String() string {
 	if p == nil {
@@ -1896,7 +1851,6 @@ func (p *CreateRepoResp) String() string {
 type UpdateRepoReq struct {
 	Key         string `thrift:"key,1" form:"key" json:"key" query:"key"`
 	Name        string `thrift:"name,2" form:"name" json:"name" query:"name"`
-	AccessToken string `thrift:"accessToken,3" form:"access_token" json:"access_token" query:"access_token"`
 }
 
 func NewUpdateRepoReq() *UpdateRepoReq {
@@ -1914,14 +1868,9 @@ func (p *UpdateRepoReq) GetName() (v string) {
 	return p.Name
 }
 
-func (p *UpdateRepoReq) GetAccessToken() (v string) {
-	return p.AccessToken
-}
-
 var fieldIDToName_UpdateRepoReq = map[int16]string{
 	1: "key",
 	2: "name",
-	3: "accessToken",
 }
 
 func (p *UpdateRepoReq) Read(iprot thrift.TProtocol) (err error) {
@@ -1954,14 +1903,6 @@ func (p *UpdateRepoReq) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2018,17 +1959,6 @@ func (p *UpdateRepoReq) ReadField2(iprot thrift.TProtocol) error {
 	p.Name = _field
 	return nil
 }
-func (p *UpdateRepoReq) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.AccessToken = _field
-	return nil
-}
 
 func (p *UpdateRepoReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2042,10 +1972,6 @@ func (p *UpdateRepoReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -2100,22 +2026,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
-func (p *UpdateRepoReq) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("accessToken", thrift.STRING, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.AccessToken); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
 
 func (p *UpdateRepoReq) String() string {
 	if p == nil {

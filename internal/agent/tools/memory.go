@@ -174,7 +174,7 @@ func diagnoseRunView(run *runView, taskKey string) map[string]any {
 	case "divergent", "conflict":
 		severity = "critical"
 		causes = append(causes, "目标分支与源分叉,拒绝覆盖")
-		actions = append(actions, "对比目标独有提交;确认可丢弃后关 keep_divergent")
+		actions = append(actions, "对比目标独有提交;确认可丢弃后把 force_push_policy 设为 allow")
 	case "config":
 		causes = append(causes, "仓库/分支/平台配置不正确")
 		actions = append(actions, "核对 repo key 与分支名")

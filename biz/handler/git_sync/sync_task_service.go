@@ -74,7 +74,6 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		SyncMode: req.SyncMode, Cron: req.Cron, GitTags: req.GitTags,
 		GitForce: req.GitForce,
 		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
-		KeepDivergent:      req.KeepDivergent,
 		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
 		IncludeBranches:    ptrx.Deref(req.IncludeBranches, ""),
 		ExcludeRefPatterns: ptrx.Deref(req.ExcludeRefPatterns, ""),
@@ -107,7 +106,6 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
 		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
 		GitLFS:   req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
-		KeepDivergent: req.KeepDivergent,
 		// 这三个字段:nil=不修改,**空串=清空**(IDL 里是 optional string)。
 		// 之前 Deref 成普通 string ⇒ 空串与"没传"不可区分 ⇒ 一旦设过就再也改不回去。
 		ForcePushPolicy:    req.ForcePushPolicy,

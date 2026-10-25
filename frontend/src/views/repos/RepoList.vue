@@ -403,7 +403,6 @@ const formData = reactive({
   platform_id: '',
   name: '',
   remote_url: '',
-  access_token: '',
   skip_tls_verify: false,
   ca_cert_path: '',
   proxy_url: '',
@@ -576,7 +575,7 @@ function openCreate() {
 
   Object.assign(formData, {
     platform_id: defaultPlatform?.id || '',
-    name: '', remote_url: '', access_token: '',
+    name: '', remote_url: '',
     skip_tls_verify: false, ca_cert_path: '', proxy_url: '',
   })
 
@@ -596,7 +595,7 @@ function openEdit(repo: Repo) {
 
   Object.assign(formData, {
     platform_id: matchingPlatform?.id || '',
-    name: repo.name, remote_url: repo.clone_url, access_token: '',
+    name: repo.name, remote_url: repo.clone_url,
     skip_tls_verify: false, ca_cert_path: '', proxy_url: '',
   })
 
@@ -613,7 +612,7 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (editingKey.value) {
-      await repoStore.updateRepo({ key: editingKey.value, name: formData.name, access_token: formData.access_token })
+      await repoStore.updateRepo({ key: editingKey.value, name: formData.name })
       notifySuccess('更新仓库成功')
     } else {
       await repoStore.createRepo(formData)

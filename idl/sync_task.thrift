@@ -16,7 +16,6 @@ struct SyncTaskInfo {
     13: bool gitForce (api.json="git_force")
     20: bool gitLfs (api.json="git_lfs")
     21: bool gitPushPrune (api.json="git_push_prune")
-    22: bool keepDivergent (api.json="keep_divergent")
     23: string forcePushPolicy (api.json="force_push_policy")
     24: string includeBranches (api.json="include_branches")
     25: string excludeRefPatterns (api.json="exclude_ref_patterns")
@@ -57,11 +56,8 @@ struct CreateTaskReq {
     7: string cron (api.json="cron")
     8: bool gitTags (api.json="git_tags")
     9: bool gitForce (api.json="git_force")
-    // 剪掉"源端已删分支"的远端跟踪 ref,否则源端已删的分支会被推回目标、
-    // 且镜像删除永远不触发)。保留字段只为兼容旧客户端/配置。
     15: bool gitLfs (api.json="git_lfs")
     16: bool gitPushPrune (api.json="git_push_prune")
-    17: optional bool keepDivergent (api.json="keep_divergent")
     18: optional string forcePushPolicy (api.json="force_push_policy")
     19: optional string includeBranches (api.json="include_branches")
     20: optional string excludeRefPatterns (api.json="exclude_ref_patterns")
@@ -88,7 +84,6 @@ struct UpdateTaskReq {
     9: optional bool gitForce (api.json="git_force")
     15: optional bool gitLfs (api.json="git_lfs")
     16: optional bool gitPushPrune (api.json="git_push_prune")
-    17: optional bool keepDivergent (api.json="keep_divergent")
     18: optional string forcePushPolicy (api.json="force_push_policy")
     19: optional string includeBranches (api.json="include_branches")
     20: optional string excludeRefPatterns (api.json="exclude_ref_patterns")

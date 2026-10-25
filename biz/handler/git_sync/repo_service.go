@@ -100,7 +100,7 @@ func RepoCreate(ctx context.Context, c *app.RequestContext) {
 	}
 
 	r, err := GetSyncService().CreateRepo(ctx, &corebridge.CreateRepoRequest{
-		Name: req.Name, RemoteURL: req.RemoteUrl, AccessToken: req.AccessToken, PlatformID: platformID,
+		Name: req.Name, RemoteURL: req.RemoteUrl, PlatformID: platformID,
 	})
 	if err != nil {
 		if sdkprov.IsInvalidInput(err) {
@@ -126,7 +126,7 @@ func RepoUpdate(ctx context.Context, c *app.RequestContext) {
 	}
 
 	r, err := GetSyncService().UpdateRepo(ctx, &corebridge.UpdateRepoRequest{
-		Key: req.Key, Name: req.Name, AccessToken: req.AccessToken,
+		Key: req.Key, Name: req.Name,
 	})
 	if err != nil {
 		response.FromError(c, err)

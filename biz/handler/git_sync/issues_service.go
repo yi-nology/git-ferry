@@ -51,7 +51,7 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	prov, err := newIssueProvider(plat, repo.AccessToken)
+	prov, err := newIssueProvider(plat, "")
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return

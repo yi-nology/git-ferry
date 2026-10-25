@@ -32,15 +32,7 @@ sync:
   legal_hold: false          # true=合规冻结,禁止自动清理
   auto_discover_interval_minutes: 0  # 平台自动发现周期(分钟),0=关闭
   auto_discover_import: false        # 发现新仓库是否自动导入
-  backup_s3:                 # bundle 异地冷备(S3 兼容);空=只存本地
-    endpoint: ""
-    region: ""
-    bucket: ""
-    prefix: ""
-    access_key: ""
-    secret_key: ""
-    path_style: false
-  backup_destinations:       # 多目的地扇出(与 backup_s3 并存,逐个独立上传)
+  backup_destinations:       # 多目的地扇出(逐个独立上传,逐个独立成功/失败)
     # - type: s3             # s3 | webdav | azure | local
     #   name: oss
     #   endpoint: https://oss-cn-hangzhou.aliyuncs.com

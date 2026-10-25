@@ -43,13 +43,12 @@ func postTaskUpdate(t *testing.T, h *hertzserver.Hertz, body string) (int, strin
 // CreateTask 自己生成 key,直接返回建好的任务。
 func seedTask(t *testing.T, name string) *corebridge.SyncTask {
 	t.Helper()
-	keep := true
 	task, err := GetSyncService().CreateTask(context.Background(), &corebridge.CreateTaskRequest{
 		Name: name, SourceRepoKey: "src/repo", SourceBranch: "main",
 		TargetRepoKey: "dst/repo", TargetBranch: "main", SyncMode: "single",
 		Cron: "0 3 * * *", GitTags: true, GitForce: true,
 		GitLFS: true, SyncWiki: true, GitBundle: true, Submodules: true, GitPushPrune: true,
-		KeepDivergent: &keep, ForcePushPolicy: "block",
+		ForcePushPolicy: "block",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, task)

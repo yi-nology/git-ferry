@@ -39,7 +39,7 @@ GitFerry 把这三件事收进一个自托管中枢：
 - 多平台：GitHub / GitLab / Gitee / GitLink / Gitea / 自建实例
 - 触发：cron 表达式、Webhook 实时、手动 / 批量
 - 范围：分支 glob、**include 白名单**、**忽略 `refs/pull/*` 等 PR refs**、tags、wiki、子模块、部分克隆
-- 保护：`force_push_policy`（allow / block / backup_on_demand）、keep_divergent、prune
+- 保护：`force_push_policy`（allow / block / backup_on_demand）、prune
 - 补偿：`runwatch` 轮询 + 自动重跑；限流自动指数退避（403/429）
 
 ### 镜像与备份

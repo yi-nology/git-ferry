@@ -39,7 +39,7 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 - Platforms: GitHub / GitLab / Gitee / GitLink / Gitea / self-hosted
 - Triggers: cron, real-time webhook, manual / batch
 - Scope: branch globs, **include allow-list**, **ignore `refs/pull/*` and other PR refs**, tags, wiki, submodules, partial clone
-- Safety: `force_push_policy` (allow / block / backup_on_demand), keep_divergent, prune
+- Safety: `force_push_policy` (allow / block / backup_on_demand), prune
 - Resilience: `runwatch` auto-retry; exponential backoff on 403/429 rate limits
 
 ### Mirror & backup

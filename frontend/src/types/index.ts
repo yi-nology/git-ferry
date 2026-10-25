@@ -31,7 +31,6 @@ export interface SyncTask {
   git_bundle?: boolean
   submodules?: boolean
   git_push_prune?: boolean
-  keep_divergent?: boolean
   force_push_policy?: 'allow' | 'block' | 'backup_on_demand' | ''
   include_branches?: string
   exclude_ref_patterns?: string
@@ -88,13 +87,11 @@ export interface WebhookEvent {
 export interface CreateRepoRequest {
   name: string
   remote_url: string
-  access_token?: string
 }
 
 export interface UpdateRepoRequest {
   key: string
   name?: string
-  access_token?: string
 }
 
 export interface CreateTaskRequest {
@@ -112,7 +109,6 @@ export interface CreateTaskRequest {
   git_bundle?: boolean
   submodules?: boolean
   git_push_prune?: boolean
-  keep_divergent?: boolean
   force_push_policy?: 'allow' | 'block' | 'backup_on_demand' | ''
   include_branches?: string
   exclude_ref_patterns?: string
@@ -133,7 +129,6 @@ export interface UpdateTaskRequest {
   git_bundle?: boolean
   submodules?: boolean
   git_push_prune?: boolean
-  keep_divergent?: boolean
   force_push_policy?: 'allow' | 'block' | 'backup_on_demand' | ''
   include_branches?: string
   exclude_ref_patterns?: string
