@@ -2,6 +2,18 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.35.0] - 2026-10-25
+
+### Changed
+
+- **core pin → v0.29.0**：`GetBranchSyncInfo` 在两侧历史无关（目标仓被强推改写过）时
+  gogit 后端返回 `(0,0)` ⇒ 漂移检测**误判成「已同步」** ⇒ 目标仓被改写历史后漂移
+  再也检测不到。native 走 `git rev-list --left-right --count A...B` 会给出两侧各自
+  的提交数 ⇒ 补齐同一语义（这条路径在镜像漂移检测里被用到）。
+- **SDK pin → v0.99.6**：同上修复 + v0.99.5 的日志脱敏加固（`redactURL` 补
+  userinfo；新增 `redactPath` 接入三处日志与一处错误构造 —— `Request.Path` 可以
+  自带 query，里面的 token 会随日志与错误信息外泄）。
+
 ## [v1.34.0] - 2026-10-25
 
 ### Fixed
