@@ -2,6 +2,34 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.31.0] - 2026-10-25
+
+### Removed（**破坏性**）
+
+删除剩余三处**仍在生效**的旧版本兼容（core v0.25.0）。删除前核过现网数据：
+300+ 仓库的 per-repo `access_token` **全为空**、9 个任务的 `keep_divergent`
+**全为 1**（等价 block）且 `force_push_policy` 为空、配置**无 `backup_s3` 段**
+⇒ 三处对现网均为**零行为变化**。
+
+- **per-repo `accessToken`**：IDL（`idl/repo.thrift` 的 Create/Update 各一处）、
+  手维护的 thrift model、handler 映射、前端类型与仓库表单、OpenAPI。
+  凭据口径**只留平台一处**（含 GitHub App installation token）。
+- **`keepDivergent`**：IDL 三处、手维护的 thrift model（三个结构体）、
+  handler 映射、前端类型与两个任务页面、OpenAPI、README 与 skill 文档。
+  它是 `force_push_policy` 的**旧拼写**；两套并存 ⇒ 前端一度**按 `keep_divergent`
+  展示策略**，与实际生效的 `force_push_policy` 不一致。现在只认
+  `force_push_policy`，空值按 `block`（最安全）回填。
+- **legacy `backup_s3` 配置项**（`conf/config.example.yaml`），
+  只留 `backup_destinations`（多目的地扇出）。
+
+### Changed
+
+- **core pin 抬到 v0.25.0**（零 replace）：策略解析收敛为唯一实现
+  `model.ResolveForcePushPolicy`（`service` 与 `executor` 此前各有一份平行实现），
+  空值 ⇒ `block`、非法值同样按 `block`（不静默放行）。
+- `internal/agent/tools/*` 同步去掉 health 事实里的 `keep_divergent`
+  （该字段引用 core model，不清理则编译不过）。
+
 ## [v1.30.0] - 2026-10-25
 
 ### Removed（**破坏性**）
