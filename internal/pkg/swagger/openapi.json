@@ -4004,6 +4004,56 @@
         ]
       }
     },
+    "/api/v1/ai/config": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "读取 AI 配置",
+        "tags": [
+          "AI"
+        ]
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "更新 AI 配置",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/v1/ai/config/test": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "测试 AI 配置连通性",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/v1/ai/models": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "列出可用模型",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/api/v1/ai/status": {
       "get": {
         "responses": {
@@ -5556,30 +5606,6 @@
         ]
       }
     },
-    "/api/v1/mirror/runs": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "镜像中心接口(/api/v1/mirror/runs)",
-        "tags": [
-          "Mirror"
-        ]
-      },
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "镜像中心操作(/api/v1/mirror/runs)",
-        "tags": [
-          "Mirror"
-        ]
-      }
-    },
     "/api/v1/mirror/runs/{id}": {
       "get": {
         "operationId": "mirrorRunGet",
@@ -5611,30 +5637,6 @@
           }
         },
         "summary": "发布任务详情",
-        "tags": [
-          "Mirror"
-        ]
-      }
-    },
-    "/api/v1/mirror/targets": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "镜像中心接口(/api/v1/mirror/targets)",
-        "tags": [
-          "Mirror"
-        ]
-      },
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "镜像中心操作(/api/v1/mirror/targets)",
         "tags": [
           "Mirror"
         ]
@@ -5994,6 +5996,19 @@
         ]
       }
     },
+    "/api/v1/ops/dr-drill/export": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "灾备演练历史导出",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/dr-drill/history": {
       "get": {
         "responses": {
@@ -6040,6 +6055,70 @@
         "tags": [
           "Ops"
         ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "申请 force-push 审批",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/force-push-approvals/approve": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "放行 force-push 审批(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/force-push-approvals/revoke": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "撤销 force-push 审批(admin)",
+        "tags": [
+          "Ops"
+        ]
       }
     },
     "/api/v1/ops/gists-backup": {
@@ -6078,13 +6157,44 @@
       }
     },
     "/api/v1/ops/import-public-org": {
-      "get": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success"
           }
         },
         "summary": "导入公共组织公开仓",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/import-starred": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "导入已加星仓库",
         "tags": [
           "Ops"
         ]
@@ -6195,6 +6305,28 @@
         ]
       }
     },
+    "/api/v1/ops/org-mirror": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "按 org 策略批量建镜像通道",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/overview": {
       "get": {
         "responses": {
@@ -6209,7 +6341,16 @@
       }
     },
     "/api/v1/ops/push-backup": {
-      "get": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success"
@@ -6270,7 +6411,16 @@
       }
     },
     "/api/v1/ops/resolve-org-target": {
-      "get": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success"
@@ -6362,6 +6512,17 @@
       }
     },
     "/api/v1/ops/templates": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "策略模板列表",
+        "tags": [
+          "Ops"
+        ]
+      },
       "post": {
         "requestBody": {
           "content": {
@@ -6400,6 +6561,50 @@
           }
         },
         "summary": "应用策略模板(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/templates/delete": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "删除策略模板(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/templates/preview": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "策略模板预览(将要改动什么)",
         "tags": [
           "Ops"
         ]

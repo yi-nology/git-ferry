@@ -513,6 +513,21 @@ func guessTag(path string) string {
 	}
 }
 
+// mergePathMethod 把一个方法挂到路径条目上,**已存在的其它方法保留**。
+//
+// 为什么要它:同一路径常常有多个方法(列表 GET + 创建 POST)。
+// 直接 `paths[p] = map[...]{...}` 是**整条覆盖** —— 后写的那个方法会把
+// 先写的方法**整个抹掉**(实测 GET /api/v1/ops/templates 从契约里消失),
+// 于是调用方按契约调用得到 404。
+func mergePathMethod(existing any, method string, op map[string]any) map[string]any {
+	item, _ := existing.(map[string]any)
+	if item == nil {
+		item = map[string]any{}
+	}
+	item[method] = op
+	return item
+}
+
 // addCustomPaths 追加非 IDL 定义的端点(AI/Mirror/Health/Webhook receive/HistorySync)。
 func addCustomPaths(paths map[string]any, schemas map[string]any) {
 	// Health
@@ -590,28 +605,22 @@ func addCustomPaths(paths map[string]any, schemas map[string]any) {
 			},
 		},
 	}
-	// Mirror
-	for _, p := range []string{
-		"/api/v1/mirror/channels", "/api/v1/mirror/runs", "/api/v1/mirror/targets",
-	} {
-		paths[p] = map[string]any{
-			"get": map[string]any{
-				"tags": []string{"Mirror"}, "summary": "镜像中心接口(" + p + ")",
-				"responses": map[string]any{"200": map[string]any{"description": "Success"}},
-			},
-			"post": map[string]any{
-				"tags": []string{"Mirror"}, "summary": "镜像中心操作(" + p + ")",
-				"responses": map[string]any{"200": map[string]any{"description": "Success"}},
-			},
-		}
-	}
+	// Mirror:完整的镜像中心契约在 mirror.go(addMirrorPaths)里逐条声明。
+	//
+	// **这里不要再声明通用条目**:曾经在这里给
+	// /api/v1/mirror/{channels,runs,targets} 三个路径统一挂上 get+post,
+	// 而实际只注册了 /api/v1/mirror/channels(GET/POST)——
+	// /api/v1/mirror/runs 与 /api/v1/mirror/targets **根本不存在**,
+	// 却在契约里写着 get+post ⇒ 调用方照契约调用得到 404/405(契约说谎)。
+	//
 	// Ops:灾备 / 元数据 / 生命周期 / 治理
+	//
+	// **同名路径必须合并而不是覆盖**:下面 opsGET 与 opsPOST 都含
+	// /api/v1/ops/templates(列表 GET / 创建 POST),若整条路径赋值,
+	// 后一个循环会把前一个的方法**整个抹掉**(实测 GET /ops/templates 从契约里消失)。
 	opsGET := []struct{ path, summary string }{
 		{"/api/v1/ops/health-score", "健康评分"},
 		{"/api/v1/ops/todo", "统一待办队列"},
-		{"/api/v1/ops/resolve-org-target", "org 映射目标解析"},
-		{"/api/v1/ops/import-public-org", "导入公共组织公开仓"},
-		{"/api/v1/ops/push-backup", "备份远端推送(github/gitlab)"},
 		{"/api/v1/ops/repo-files", "workdir 文件浏览(救援)"},
 		{"/api/v1/ops/overview", "系统概览"},
 		{"/api/v1/ops/trends", "同步成功率/耗时趋势"},
@@ -623,6 +632,7 @@ func addCustomPaths(paths map[string]any, schemas map[string]any) {
 		{"/api/v1/ops/bundles", "冷备 bundle 列表"},
 		{"/api/v1/ops/bundles/verify", "校验 bundle"},
 		{"/api/v1/ops/dr-drill/history", "灾备演练历史"},
+		{"/api/v1/ops/dr-drill/export", "灾备演练历史导出"},
 		{"/api/v1/ops/dr-drill/chain/verify", "演练哈希链校验"},
 		{"/api/v1/ops/backup-manifest/verify", "冷备完整性校验"},
 		{"/api/v1/ops/rpo", "RPO/RTO 报告"},
@@ -632,12 +642,10 @@ func addCustomPaths(paths map[string]any, schemas map[string]any) {
 		{"/api/v1/ops/issues-export", "Issues 导出"},
 	}
 	for _, op := range opsGET {
-		paths[op.path] = map[string]any{
-			"get": map[string]any{
-				"tags": []string{"Ops"}, "summary": op.summary,
-				"responses": map[string]any{"200": map[string]any{"description": "Success"}},
-			},
-		}
+		paths[op.path] = mergePathMethod(paths[op.path], "get", map[string]any{
+			"tags": []string{"Ops"}, "summary": op.summary,
+			"responses": map[string]any{"200": map[string]any{"description": "Success"}},
+		})
 	}
 	opsPOST := []struct{ path, summary string }{
 		{"/api/v1/ops/dr-drill", "灾备演练(单/批)"},
@@ -657,17 +665,45 @@ func addCustomPaths(paths map[string]any, schemas map[string]any) {
 		{"/api/v1/ops/retry-batch", "批量重试"},
 		{"/api/v1/ops/templates", "创建策略模板"},
 		{"/api/v1/ops/templates/apply", "应用策略模板(admin)"},
+		{"/api/v1/ops/templates/delete", "删除策略模板(admin)"},
+		{"/api/v1/ops/templates/preview", "策略模板预览(将要改动什么)"},
+		// 下面三个**实际注册的是 POST**;契约里曾写成 GET ⇒ 照契约调用得到 404/405。
+		{"/api/v1/ops/resolve-org-target", "org 映射目标解析"},
+		{"/api/v1/ops/import-public-org", "导入公共组织公开仓"},
+		{"/api/v1/ops/push-backup", "备份远端推送(github/gitlab)"},
+		{"/api/v1/ops/import-starred", "导入已加星仓库"},
+		{"/api/v1/ops/org-mirror", "按 org 策略批量建镜像通道"},
+		{"/api/v1/ops/force-push-approvals", "申请 force-push 审批"},
+		{"/api/v1/ops/force-push-approvals/approve", "放行 force-push 审批(admin)"},
+		{"/api/v1/ops/force-push-approvals/revoke", "撤销 force-push 审批(admin)"},
 	}
 	for _, op := range opsPOST {
-		paths[op.path] = map[string]any{
-			"post": map[string]any{
-				"tags": []string{"Ops"}, "summary": op.summary,
-				"requestBody": map[string]any{
-					"content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object"}}},
-				},
-				"responses": map[string]any{"200": map[string]any{"description": "Success"}},
+		paths[op.path] = mergePathMethod(paths[op.path], "post", map[string]any{
+			"tags": []string{"Ops"}, "summary": op.summary,
+			"requestBody": map[string]any{
+				"content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object"}}},
 			},
-		}
+			"responses": map[string]any{"200": map[string]any{"description": "Success"}},
+		})
+	}
+
+	// AI 配置(路由在 biz/router/custom.go 的 ai 组里注册)。
+	//
+	// 之前契约里只有 status/chat,config 与 models **没进契约** ⇒
+	// spec 驱动的客户端看不到 AI 配置面。
+	aiOps := []struct {
+		method, path, summary string
+	}{
+		{"get", "/api/v1/ai/config", "读取 AI 配置"},
+		{"post", "/api/v1/ai/config", "更新 AI 配置"},
+		{"post", "/api/v1/ai/config/test", "测试 AI 配置连通性"},
+		{"get", "/api/v1/ai/models", "列出可用模型"},
+	}
+	for _, op := range aiOps {
+		paths[op.path] = mergePathMethod(paths[op.path], op.method, map[string]any{
+			"tags": []string{"AI"}, "summary": op.summary,
+			"responses": map[string]any{"200": map[string]any{"description": "Success"}},
+		})
 	}
 
 	// 历史同步(histsync):路由同样是手写的(见 biz/router/git_sync/git_sync.go),
