@@ -50,8 +50,10 @@ export const aiConfigApi = {
   update: (data: AIConfigInput) => api.post<unknown, AIConfig>('/ai/config', data),
   test: (data: { base_url: string; model: string; api_key?: string }) =>
     api.post<unknown, AITestResult>('/ai/config/test', data),
+  // POST + body:api_key 走请求体而不是 query(query 会进浏览器历史/Referer/代理日志)
   listModels: (params: { base_url: string; api_key?: string }) =>
-    api.get<unknown, AIModelList>('/ai/models', {
-      params: { base_url: params.base_url, api_key: params.api_key || undefined },
+    api.post<unknown, AIModelList>('/ai/models', {
+      base_url: params.base_url,
+      api_key: params.api_key || undefined,
     }),
 }

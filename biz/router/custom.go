@@ -39,7 +39,9 @@ func CustomizedRegister(r *server.Hertz) {
 	ai.GET("/config", git_sync.AIGetConfig)
 	ai.POST("/config", git_sync.AIUpdateConfig)
 	ai.POST("/config/test", git_sync.AITestConfig)
-	ai.GET("/models", git_sync.AIListModels)
+	// POST(不是 GET):api_key 走 **body** 而不是 query ——
+	// query 会进浏览器历史 / Referer / 反向代理 access log ⇒ 密钥泄漏。
+	ai.POST("/models", git_sync.AIListModels)
 
 	// MCP Streamable HTTP：与 eino 工具同表，供 Claude Code / Cursor 直连
 	mcpGroup := r.Group("/mcp", routergitsync.AuthMiddleware())

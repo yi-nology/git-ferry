@@ -76,7 +76,7 @@ func (h *Heartbeat) pingAll(urls []string, suffix string) {
 			target = trimSlash(target) + "/" + suffix
 		}
 		if err := h.ping(target); err != nil {
-			slog.Warn("heartbeat ping failed", "url", target, "error", err)
+			slog.Warn("heartbeat ping failed", "url", redactSecretURL(target), "error", redactError(err))
 		}
 	}
 }

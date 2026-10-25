@@ -709,7 +709,9 @@ func addCustomPaths(paths map[string]any, schemas map[string]any) {
 		{"get", "/api/v1/ai/config", "读取 AI 配置"},
 		{"post", "/api/v1/ai/config", "更新 AI 配置"},
 		{"post", "/api/v1/ai/config/test", "测试 AI 配置连通性"},
-		{"get", "/api/v1/ai/models", "列出可用模型"},
+		// POST(不是 GET):api_key 走 body 而不是 query —— query 会进浏览器历史 /
+		// Referer / 反向代理 access log ⇒ 密钥泄漏。
+		{"post", "/api/v1/ai/models", "列出可用模型"},
 	}
 	for _, op := range aiOps {
 		paths[op.path] = mergePathMethod(paths[op.path], op.method, map[string]any{

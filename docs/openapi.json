@@ -4025,7 +4025,7 @@
       }
     },
     "/api/v1/ai/models": {
-      "get": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"

@@ -101,15 +101,29 @@ func rebuildAgentRunner(st *agent.Settings) error {
 	return rebuildAgentRunnerFn(st)
 }
 
-// AIListModels GET /api/v1/ai/models —— 列出 OpenAI 兼容端点可用模型。
-// Query: base_url(必填), api_key(可选,缺省用已保存密钥)。
+// aiListModelsReq AI 端点列表请求体。
+type aiListModelsReq struct {
+	BaseURL string `json:"base_url"`
+	APIKey  string `json:"api_key"`
+}
+
+// AIListModels POST /api/v1/ai/models —— 列出 OpenAI 兼容端点可用模型。
+// Body: base_url(必填), api_key(可选,缺省用已保存密钥)。
+//
+// **必须是 POST**:api_key 放 query 会进浏览器历史 / Referer / 反向代理 access log
+// ⇒ 密钥泄漏(之前就是 GET+query)。
 func AIListModels(ctx context.Context, c *app.RequestContext) {
-	base := strings.TrimRight(strings.TrimSpace(string(c.Query("base_url"))), "/")
+	var in aiListModelsReq
+	if err := c.BindAndValidate(&in); err != nil {
+		response.BadRequest(c, "请求体不合法: "+err.Error())
+		return
+	}
+	base := strings.TrimRight(strings.TrimSpace(in.BaseURL), "/")
 	if base == "" {
 		response.BadRequest(c, "base_url 不能为空")
 		return
 	}
-	key := string(c.Query("api_key"))
+	key := in.APIKey
 	if strings.Contains(key, "****") {
 		key = ""
 	}

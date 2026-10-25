@@ -7,9 +7,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -70,7 +72,7 @@ func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
 			continue
 		}
 		if err := n.sendNtfy(ctx, cfg, ev); err != nil {
-			slog.Warn("notify ntfy failed", "error", err, "url", cfg.URL)
+			slog.Warn("notify ntfy failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
 		}
 	}
 	for i := range n.cfg.Gotify {
@@ -79,12 +81,12 @@ func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
 			continue
 		}
 		if err := n.sendGotify(ctx, cfg, ev); err != nil {
-			slog.Warn("notify gotify failed", "error", err, "url", cfg.URL)
+			slog.Warn("notify gotify failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
 		}
 	}
 	if n.cfg.Webhook != nil {
 		if err := n.sendWebhook(ctx, n.cfg.Webhook, ev); err != nil {
-			slog.Warn("notify webhook failed", "error", err, "url", n.cfg.Webhook.FailURL)
+			slog.Warn("notify webhook failed", "error", redactError(err), "url", redactSecretURL(n.cfg.Webhook.FailURL))
 		}
 	}
 }
@@ -146,7 +148,9 @@ func (n *Notifier) sendGotify(ctx context.Context, cfg *GotifyConfig, ev *RunEve
 func (n *Notifier) do(req *http.Request) error {
 	resp, err := n.client.Do(req)
 	if err != nil {
-		return err
+		// *url.Error 的 Error() 含**完整 URL** ⇒ Gotify 的 token(在 query 里)
+		// 会跟着错误进日志 ⇒ 必须脱敏。
+		return redactError(err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
@@ -232,4 +236,56 @@ func signBody(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
 	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
+}
+
+// ===== 日志脱敏 =====
+//
+// 通知目标的 URL **不能**原样进日志:
+// ① Gotify 的 token 就在 query 里;
+// ② healthchecks.io 的 ping UUID 在**路径**里(同样是秘密);
+// ③ 任何 webhook 地址都可能是"带凭据的一次性地址"。
+// 而 http.Client 返回的 *url.Error 的 Error() 里含**完整 URL** ⇒ 错误信息也要脱敏。
+
+// isSecretParam 判断查询参数名是否是秘密。
+func isSecretParam(k string) bool {
+	switch strings.ToLower(k) {
+	case "token", "access_token", "private_token", "password", "passwd", "secret", "api_key", "apikey", "key":
+		return true
+	}
+	return false
+}
+
+// redactSecretURL 脱敏 URL:秘密类查询参数替换掉,路径整体掩掉(路径里可能有 UUID/一次性凭据)。
+func redactSecretURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "<unparsable-url>"
+	}
+	q := u.Query()
+	for k := range q {
+		if isSecretParam(k) {
+			q.Set(k, "REDACTED")
+		}
+	}
+	u.RawQuery = q.Encode()
+	if u.Path != "" && u.Path != "/" {
+		u.Path = "/***"
+		u.RawPath = ""
+	}
+	return u.String()
+}
+
+// redactError 把错误里的 URL 脱敏(*url.Error 的消息含完整 URL)。
+func redactError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return &url.Error{Op: ue.Op, URL: redactSecretURL(ue.URL), Err: ue.Err}
+	}
+	return err
 }
