@@ -2,6 +2,28 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.28.9] - 2026-10-25
+
+### Changed
+
+- core pin 抬到 **v0.22.0**、SDK pin 抬到 **v0.99.0**（零 replace）：一轮**自查复查**
+  揪出上一轮改动里的 1 个 P0 + 3 个 P1，另修完此前清单剩下的九条 ——
+  **P0 多分支路径的 fail-closed 是死代码**（目标端状态未知 ⇒ 放行覆盖目标侧独有提交）、
+  **P1 多分支 allow 策略回归**（显式允许覆盖的任务反被拒）、
+  **P1 多分支的人工放行永远不被消费**（"一次性"退化成常驻后门）、
+  增量 `since` 漏老条目、PR 剔除仍占 issue 预算、manifest 写失败仍报成功、
+  DR 演练不解密、bundle 文件名不校验、SampleMetadataVerify 无快照报"通过"、
+  UpdateTask 三个字段无法清空、回灌历史不清理、RevParse 失败被当成"未绑定"、
+  wiki 关键词误判、rotateBundles 吞错、漂移仓库不自愈、漂移 glob 必失败。
+
+### Fixed
+
+- **契约门禁的路由源改成 glob**：此前写死两个文件 ⇒ 新增第三个注册文件时，
+  那个文件里的接口**两个方向都测不到** ⇒ 门禁静默失去覆盖。删掉死代码。
+- **update 的 `force_push_policy` / `include_branches` / `exclude_ref_patterns`
+  改为传指针**（nil=不修改、**空串=清空**），与 IDL 的 `optional string` 对齐 ——
+  之前用 `Deref` 成普通 string，空串与"没传"不可区分 ⇒ 一旦设过就再也改不回去。
+
 ## [v1.28.8] - 2026-10-25
 
 ### Changed
