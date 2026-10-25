@@ -14,7 +14,7 @@ require (
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oagentkit/guardx v0.15.0
 	github.com/oekit/bootstrap v0.6.5
-	github.com/oekit/concurrency v0.21.0
+	github.com/oekit/concurrency v0.22.0
 	github.com/oekit/core v0.12.0
 	github.com/oekit/hertz v0.8.5
 	github.com/oekit/metrics v0.1.9
