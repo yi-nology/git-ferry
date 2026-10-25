@@ -37,8 +37,10 @@ struct CreateRuleReq {
     4: string branchPattern (api.json="branch_pattern")
     5: string action (api.json="action")
     6: string syncTaskKeys (api.json="sync_task_keys")
-    7: i32 minInterval (api.json="min_interval")
-    8: bool enabled (api.json="enabled")
+    // optional:不传=用默认值(60);显式 0=不限流。
+    7: optional i32 minInterval (api.json="min_interval")
+    // optional:不传=默认启用;显式 false=建出来就是禁用的。
+    8: optional bool enabled (api.json="enabled")
     9: string description (api.json="description")
 }
 
@@ -50,12 +52,16 @@ struct UpdateRuleReq {
     1: i64 id (api.json="id")
     2: string name (api.json="name")
     3: string eventType (api.json="event_type")
-    4: string branchPattern (api.json="branch_pattern")
+    // optional:不传=不修改;显式 ""=匹配全部分支。
+    4: optional string branchPattern (api.json="branch_pattern")
     5: string action (api.json="action")
     6: string syncTaskKeys (api.json="sync_task_keys")
-    7: i32 minInterval (api.json="min_interval")
-    8: bool enabled (api.json="enabled")
-    9: string description (api.json="description")
+    // optional:不传=不修改;显式 0=不限流。
+    7: optional i32 minInterval (api.json="min_interval")
+    // optional:不传=不修改;显式 false=禁用。
+    8: optional bool enabled (api.json="enabled")
+    // optional:不传=不修改;显式 ""=清空描述。
+    9: optional string description (api.json="description")
 }
 
 struct UpdateRuleResp {

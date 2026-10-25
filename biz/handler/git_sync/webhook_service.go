@@ -70,7 +70,8 @@ func RuleCreate(ctx context.Context, c *app.RequestContext) {
 	r, err := GetSyncService().CreateRule(ctx, &corebridge.CreateRuleRequest{
 		Name: req.Name, RepoKey: req.RepoKey, EventType: req.EventType,
 		BranchPattern: req.BranchPattern, Action: req.Action,
-		TaskKeys: taskKeys, MinInterval: int(req.MinInterval),
+		// 指针透传:nil=用默认值,显式 false/0=调用方的明确意图。
+		TaskKeys: taskKeys, MinInterval: int32PtrToInt(req.MinInterval),
 		Enabled: req.Enabled, Description: req.Description,
 	})
 	if err != nil {
@@ -96,8 +97,11 @@ func RuleUpdate(ctx context.Context, c *app.RequestContext) {
 
 	r, err := GetSyncService().UpdateRule(ctx, &corebridge.UpdateRuleRequest{
 		ID: uint(req.ID), Name: req.Name, EventType: req.EventType,
+		// 指针透传:nil=**不修改**。以前是无条件回写 ⇒ 局部更新
+		// (只带 id+enabled,例如前端在列表里切启用开关)会把分支模式清空
+		// ⇒ 规则悄悄从"只跟 main"放宽成"任何分支都触发"。
 		BranchPattern: req.BranchPattern, Action: req.Action,
-		TaskKeys: taskKeys, MinInterval: int(req.MinInterval),
+		TaskKeys: taskKeys, MinInterval: int32PtrToInt(req.MinInterval),
 		Enabled: req.Enabled, Description: req.Description,
 	})
 	if err != nil {
@@ -237,4 +241,13 @@ func DeletePlatformWebhook(ctx context.Context, c *app.RequestContext) {
 
 	recordAudit(ctx, c, "delete", "platform_webhook", req.RepoKey, "删除仓库 "+req.RepoKey+" 的平台 Webhook #"+strconv.FormatInt(req.WebhookId, 10))
 	response.NoContent(c)
+}
+
+// int32PtrToInt 把 IDL 的 *int32 转成 core 的 *int(nil 保持 nil)。
+func int32PtrToInt(p *int32) *int {
+	if p == nil {
+		return nil
+	}
+	v := int(*p)
+	return &v
 }

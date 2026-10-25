@@ -55,17 +55,8 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 		}
 		runs, _, herr := r.svc.ListHistory(ctx, t.Key, 0, 5)
 		if herr == nil && len(runs) > 0 {
-			snaps := make([]health.RunSnapshot, 0, len(runs))
-			for _, rr := range runs {
-				end := time.Time{}
-				if rr.EndTime != nil {
-					end = *rr.EndTime
-				}
-				snaps = append(snaps, health.RunSnapshot{
-					Status: rr.Status, ErrorMessage: rr.ErrorMessage, EndAt: end,
-				})
-			}
-			for k, v := range health.CollectRunFacts(snaps, now) {
+			// 快照映射用 core health 的**唯一实现** ⇒ 与 API 的健康评分同口径
+			for k, v := range health.CollectRunFacts(health.SnapshotsFromRuns(runs), now) {
 				facts[k] = v
 			}
 		} else {

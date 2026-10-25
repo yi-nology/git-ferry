@@ -155,6 +155,18 @@ func parseField(line string) *thriftField {
 	if len(parts) < 2 {
 		return nil
 	}
+	// thrift 的 optional 关键字:**类型在它后面**。
+	//
+	// 以前没处理 ⇒ "optional bool enabled" 被解析成 typ="optional"、name="bool",
+	// 而类型落到未知分支 ⇒ OpenAPI 里所有 optional 字段都成了 "type":"string"
+	// (optional bool 的 enabled/git_force/git_lfs/... 全被说成字符串)。
+	// 契约在说谎 ⇒ 按它生成的客户端会把布尔字段发成字符串。
+	if parts[0] == "optional" {
+		parts = parts[1:]
+		if len(parts) < 2 {
+			return nil
+		}
+	}
 	typ := parts[0]
 	name := parts[1]
 	if i := strings.Index(name, "("); i >= 0 {

@@ -1200,8 +1200,8 @@ type CreateRuleReq struct {
 	BranchPattern string `thrift:"branchPattern,4" form:"branch_pattern" json:"branch_pattern" query:"branch_pattern"`
 	Action        string `thrift:"action,5" form:"action" json:"action" query:"action"`
 	SyncTaskKeys  string `thrift:"syncTaskKeys,6" form:"sync_task_keys" json:"sync_task_keys" query:"sync_task_keys"`
-	MinInterval   int32  `thrift:"minInterval,7" form:"min_interval" json:"min_interval" query:"min_interval"`
-	Enabled       bool   `thrift:"enabled,8" form:"enabled" json:"enabled" query:"enabled"`
+	MinInterval   *int32 `thrift:"minInterval,7,optional" form:"min_interval" json:"min_interval,omitempty" query:"min_interval"`
+	Enabled       *bool  `thrift:"enabled,8,optional" form:"enabled" json:"enabled,omitempty" query:"enabled"`
 	Description   string `thrift:"description,9" form:"description" json:"description" query:"description"`
 }
 
@@ -1237,11 +1237,29 @@ func (p *CreateRuleReq) GetSyncTaskKeys() (v string) {
 }
 
 func (p *CreateRuleReq) GetMinInterval() (v int32) {
-	return p.MinInterval
+	if !p.IsSetMinInterval() {
+		return CreateRuleReq_MinInterval_DEFAULT
+	}
+	return *p.MinInterval
+}
+
+var CreateRuleReq_MinInterval_DEFAULT int32
+
+func (p *CreateRuleReq) IsSetMinInterval() bool {
+	return p.MinInterval != nil
 }
 
 func (p *CreateRuleReq) GetEnabled() (v bool) {
-	return p.Enabled
+	if !p.IsSetEnabled() {
+		return CreateRuleReq_Enabled_DEFAULT
+	}
+	return *p.Enabled
+}
+
+var CreateRuleReq_Enabled_DEFAULT bool
+
+func (p *CreateRuleReq) IsSetEnabled() bool {
+	return p.Enabled != nil
 }
 
 func (p *CreateRuleReq) GetDescription() (v string) {
@@ -1448,22 +1466,22 @@ func (p *CreateRuleReq) ReadField6(iprot thrift.TProtocol) error {
 }
 func (p *CreateRuleReq) ReadField7(iprot thrift.TProtocol) error {
 
-	var _field int32
+	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.MinInterval = _field
 	return nil
 }
 func (p *CreateRuleReq) ReadField8(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Enabled = _field
 	return nil
@@ -1643,15 +1661,18 @@ WriteFieldEndError:
 }
 
 func (p *CreateRuleReq) writeField7(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("minInterval", thrift.I32, 7); err != nil {
-		goto WriteFieldBeginError
+	if p.IsSetMinInterval() {
+		if err = oprot.WriteFieldBegin("minInterval", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MinInterval); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
-	if err := oprot.WriteI32(p.MinInterval); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
+
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
@@ -1660,15 +1681,18 @@ WriteFieldEndError:
 }
 
 func (p *CreateRuleReq) writeField8(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 8); err != nil {
-		goto WriteFieldBeginError
+	if p.IsSetEnabled() {
+		if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Enabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
-	if err := oprot.WriteBool(p.Enabled); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
+
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
@@ -1848,15 +1872,15 @@ func (p *CreateRuleResp) String() string {
 }
 
 type UpdateRuleReq struct {
-	ID            int64  `thrift:"id,1" form:"id" json:"id" query:"id"`
-	Name          string `thrift:"name,2" form:"name" json:"name" query:"name"`
-	EventType     string `thrift:"eventType,3" form:"event_type" json:"event_type" query:"event_type"`
-	BranchPattern string `thrift:"branchPattern,4" form:"branch_pattern" json:"branch_pattern" query:"branch_pattern"`
-	Action        string `thrift:"action,5" form:"action" json:"action" query:"action"`
-	SyncTaskKeys  string `thrift:"syncTaskKeys,6" form:"sync_task_keys" json:"sync_task_keys" query:"sync_task_keys"`
-	MinInterval   int32  `thrift:"minInterval,7" form:"min_interval" json:"min_interval" query:"min_interval"`
-	Enabled       bool   `thrift:"enabled,8" form:"enabled" json:"enabled" query:"enabled"`
-	Description   string `thrift:"description,9" form:"description" json:"description" query:"description"`
+	ID            int64   `thrift:"id,1" form:"id" json:"id" query:"id"`
+	Name          string  `thrift:"name,2" form:"name" json:"name" query:"name"`
+	EventType     string  `thrift:"eventType,3" form:"event_type" json:"event_type" query:"event_type"`
+	BranchPattern *string `thrift:"branchPattern,4,optional" form:"branch_pattern" json:"branch_pattern,omitempty" query:"branch_pattern"`
+	Action        string  `thrift:"action,5" form:"action" json:"action" query:"action"`
+	SyncTaskKeys  string  `thrift:"syncTaskKeys,6" form:"sync_task_keys" json:"sync_task_keys" query:"sync_task_keys"`
+	MinInterval   *int32  `thrift:"minInterval,7,optional" form:"min_interval" json:"min_interval,omitempty" query:"min_interval"`
+	Enabled       *bool   `thrift:"enabled,8,optional" form:"enabled" json:"enabled,omitempty" query:"enabled"`
+	Description   *string `thrift:"description,9,optional" form:"description" json:"description,omitempty" query:"description"`
 }
 
 func NewUpdateRuleReq() *UpdateRuleReq {
@@ -1879,7 +1903,16 @@ func (p *UpdateRuleReq) GetEventType() (v string) {
 }
 
 func (p *UpdateRuleReq) GetBranchPattern() (v string) {
-	return p.BranchPattern
+	if !p.IsSetBranchPattern() {
+		return UpdateRuleReq_BranchPattern_DEFAULT
+	}
+	return *p.BranchPattern
+}
+
+var UpdateRuleReq_BranchPattern_DEFAULT string
+
+func (p *UpdateRuleReq) IsSetBranchPattern() bool {
+	return p.BranchPattern != nil
 }
 
 func (p *UpdateRuleReq) GetAction() (v string) {
@@ -1891,15 +1924,42 @@ func (p *UpdateRuleReq) GetSyncTaskKeys() (v string) {
 }
 
 func (p *UpdateRuleReq) GetMinInterval() (v int32) {
-	return p.MinInterval
+	if !p.IsSetMinInterval() {
+		return UpdateRuleReq_MinInterval_DEFAULT
+	}
+	return *p.MinInterval
+}
+
+var UpdateRuleReq_MinInterval_DEFAULT int32
+
+func (p *UpdateRuleReq) IsSetMinInterval() bool {
+	return p.MinInterval != nil
 }
 
 func (p *UpdateRuleReq) GetEnabled() (v bool) {
-	return p.Enabled
+	if !p.IsSetEnabled() {
+		return UpdateRuleReq_Enabled_DEFAULT
+	}
+	return *p.Enabled
+}
+
+var UpdateRuleReq_Enabled_DEFAULT bool
+
+func (p *UpdateRuleReq) IsSetEnabled() bool {
+	return p.Enabled != nil
 }
 
 func (p *UpdateRuleReq) GetDescription() (v string) {
-	return p.Description
+	if !p.IsSetDescription() {
+		return UpdateRuleReq_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var UpdateRuleReq_Description_DEFAULT string
+
+func (p *UpdateRuleReq) IsSetDescription() bool {
+	return p.Description != nil
 }
 
 var fieldIDToName_UpdateRuleReq = map[int16]string{
@@ -2069,11 +2129,11 @@ func (p *UpdateRuleReq) ReadField3(iprot thrift.TProtocol) error {
 }
 func (p *UpdateRuleReq) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field string
+	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.BranchPattern = _field
 	return nil
@@ -2102,33 +2162,33 @@ func (p *UpdateRuleReq) ReadField6(iprot thrift.TProtocol) error {
 }
 func (p *UpdateRuleReq) ReadField7(iprot thrift.TProtocol) error {
 
-	var _field int32
+	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.MinInterval = _field
 	return nil
 }
 func (p *UpdateRuleReq) ReadField8(iprot thrift.TProtocol) error {
 
-	var _field bool
+	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Enabled = _field
 	return nil
 }
 func (p *UpdateRuleReq) ReadField9(iprot thrift.TProtocol) error {
 
-	var _field string
+	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Description = _field
 	return nil
@@ -2246,15 +2306,18 @@ WriteFieldEndError:
 }
 
 func (p *UpdateRuleReq) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("branchPattern", thrift.STRING, 4); err != nil {
-		goto WriteFieldBeginError
+	if p.IsSetBranchPattern() {
+		if err = oprot.WriteFieldBegin("branchPattern", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BranchPattern); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
-	if err := oprot.WriteString(p.BranchPattern); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
+
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
@@ -2297,15 +2360,18 @@ WriteFieldEndError:
 }
 
 func (p *UpdateRuleReq) writeField7(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("minInterval", thrift.I32, 7); err != nil {
-		goto WriteFieldBeginError
+	if p.IsSetMinInterval() {
+		if err = oprot.WriteFieldBegin("minInterval", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MinInterval); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
-	if err := oprot.WriteI32(p.MinInterval); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
+
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
@@ -2314,15 +2380,18 @@ WriteFieldEndError:
 }
 
 func (p *UpdateRuleReq) writeField8(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 8); err != nil {
-		goto WriteFieldBeginError
+	if p.IsSetEnabled() {
+		if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Enabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
-	if err := oprot.WriteBool(p.Enabled); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
+
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
@@ -2331,15 +2400,18 @@ WriteFieldEndError:
 }
 
 func (p *UpdateRuleReq) writeField9(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("description", thrift.STRING, 9); err != nil {
-		goto WriteFieldBeginError
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
-	if err := oprot.WriteString(p.Description); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
+
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)

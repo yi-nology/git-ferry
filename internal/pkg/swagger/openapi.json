@@ -4,7 +4,7 @@
       "AIChatRequest": {
         "properties": {
           "confirmed_tool_call": {
-            "type": "string"
+            "$ref": "#/components/schemas/AIConfirmCall"
           },
           "message": {
             "type": "string"
@@ -76,7 +76,7 @@
       "ApplyTemplateReq": {
         "properties": {
           "dry_run": {
-            "type": "string"
+            "type": "boolean"
           },
           "template_id": {
             "type": "string"
@@ -108,13 +108,13 @@
       "AutoDiscoverReq": {
         "properties": {
           "exclude_archived": {
-            "type": "string"
+            "type": "boolean"
           },
           "exclude_forks": {
-            "type": "string"
+            "type": "boolean"
           },
           "import_new": {
-            "type": "string"
+            "type": "boolean"
           },
           "include_language": {
             "type": "string"
@@ -292,10 +292,12 @@
             "type": "string"
           },
           "github_app_id": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           },
           "github_installation_id": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           },
           "github_private_key": {
             "type": "string"
@@ -683,7 +685,7 @@
             "type": "string"
           },
           "with_comments": {
-            "type": "string"
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -697,7 +699,7 @@
             "type": "string"
           },
           "wait": {
-            "type": "string"
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -1758,10 +1760,10 @@
       "ImportPublicOrgReq": {
         "properties": {
           "dry_run": {
-            "type": "string"
+            "type": "boolean"
           },
           "import_new": {
-            "type": "string"
+            "type": "boolean"
           },
           "max": {
             "format": "int32",
@@ -1779,10 +1781,10 @@
       "ImportStarredReq": {
         "properties": {
           "dry_run": {
-            "type": "string"
+            "type": "boolean"
           },
           "import_new": {
-            "type": "string"
+            "type": "boolean"
           },
           "max": {
             "format": "int32",
@@ -2098,22 +2100,22 @@
             "type": "string"
           },
           "with_archives": {
-            "type": "string"
+            "type": "boolean"
           },
           "with_assets": {
-            "type": "string"
+            "type": "boolean"
           },
           "with_gists": {
-            "type": "string"
+            "type": "boolean"
           },
           "with_issues": {
-            "type": "string"
+            "type": "boolean"
           },
           "with_prs": {
-            "type": "string"
+            "type": "boolean"
           },
           "with_releases": {
-            "type": "string"
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -2129,7 +2131,7 @@
       "MetadataRestoreReq": {
         "properties": {
           "dry_run": {
-            "type": "string"
+            "type": "boolean"
           },
           "kinds": {
             "items": {
@@ -2138,7 +2140,7 @@
             "type": "array"
           },
           "overwrite": {
-            "type": "string"
+            "type": "boolean"
           },
           "repo_key": {
             "type": "string"
@@ -2787,13 +2789,13 @@
       "OrgMirrorReq": {
         "properties": {
           "create_tasks": {
-            "type": "string"
+            "type": "boolean"
           },
           "dry_run": {
-            "type": "string"
+            "type": "boolean"
           },
           "import_new": {
-            "type": "string"
+            "type": "boolean"
           },
           "source_org": {
             "type": "string"
@@ -2899,7 +2901,8 @@
             "type": "string"
           },
           "github_app_id": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           },
           "has_github_app": {
             "type": "boolean"
@@ -3084,7 +3087,8 @@
       "RPOReportReq": {
         "properties": {
           "max_seconds": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -3253,7 +3257,7 @@
       "RunDRDrillReq": {
         "properties": {
           "all": {
-            "type": "string"
+            "type": "boolean"
           },
           "max": {
             "format": "int32",
@@ -3263,7 +3267,7 @@
             "type": "string"
           },
           "with_metadata": {
-            "type": "string"
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -3326,10 +3330,10 @@
       "SyncPlatformFilteredReq": {
         "properties": {
           "exclude_archived": {
-            "type": "string"
+            "type": "boolean"
           },
           "exclude_forks": {
-            "type": "string"
+            "type": "boolean"
           },
           "exclude_globs": {
             "type": "string"
@@ -3421,7 +3425,8 @@
             "type": "string"
           },
           "webhook_event_id": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -3655,10 +3660,12 @@
             "type": "string"
           },
           "github_app_id": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           },
           "github_installation_id": {
-            "type": "string"
+            "format": "int64",
+            "type": "integer"
           },
           "github_private_key": {
             "type": "string"
@@ -3667,7 +3674,7 @@
             "type": "string"
           },
           "is_default": {
-            "type": "string"
+            "type": "boolean"
           },
           "key": {
             "type": "string"
@@ -3679,7 +3686,7 @@
             "type": "string"
           },
           "skip_tls_verify": {
-            "type": "string"
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -3759,7 +3766,7 @@
             "type": "string"
           },
           "enabled": {
-            "type": "string"
+            "type": "boolean"
           },
           "exclude_ref_patterns": {
             "type": "string"
@@ -3768,19 +3775,19 @@
             "type": "string"
           },
           "git_bundle": {
-            "type": "string"
+            "type": "boolean"
           },
           "git_force": {
-            "type": "string"
+            "type": "boolean"
           },
           "git_lfs": {
-            "type": "string"
+            "type": "boolean"
           },
           "git_push_prune": {
-            "type": "string"
+            "type": "boolean"
           },
           "git_tags": {
-            "type": "string"
+            "type": "boolean"
           },
           "include_branches": {
             "type": "string"
@@ -3795,13 +3802,13 @@
             "type": "string"
           },
           "submodules": {
-            "type": "string"
+            "type": "boolean"
           },
           "sync_mode": {
             "type": "string"
           },
           "sync_wiki": {
-            "type": "string"
+            "type": "boolean"
           },
           "target_branch": {
             "type": "string"
