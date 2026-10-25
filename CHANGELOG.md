@@ -2,6 +2,40 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.33.0] - 2026-10-25
+
+### Fixed
+
+- **已发布的 OpenAPI 契约在说谎**：`apidoc` 生成器不认识 thrift 的 `optional`
+  关键字 ⇒ "optional bool enabled" 被解析成 typ="optional" ⇒ 类型落到未知分支
+  ⇒ **OpenAPI 里所有 optional 字段都成了 `"type":"string"`**
+  （`UpdateTaskReq` 的 enabled / git_force / git_lfs / git_bundle / sync_wiki /
+  submodules / git_push_prune，以及 Create/UpdateRuleReq 的 enabled）
+  ⇒ **按已发布契约生成的客户端会把布尔字段发成字符串**。
+  修法：解析器先剥掉 `optional` 再取类型；补单测钉住。
+  （双向契约门禁没抓到：IDL 与 openapi.json 同源，错的也一致。）
+- **core pin → v0.27.0**：两处 P0（入站 webhook 第 2 条起被静默丢弃、历史同步
+  目标树基线永不前进）、五处 P1（预检与推送闸门口径相反、显式 `enabled=false`
+  被默认值吞掉、局部更新静默改规则、触发失败仍标 processed）、三处 P2（推送目标
+  地址回显凭据、同名目标凭据串号、演练链检不出截断与坏行）。
+- **SDK pin → v0.99.3**：入站 webhook 的事件 ID 永不为空 + 优先用平台投递 ID
+  （GitHub `X-GitHub-Delivery` 等）⇒ GitHub 上配了入站同步不再「第一条之后就失效」。
+
+### Changed
+
+- **webhook 规则字段改 optional**（**破坏性**）：`CreateRuleReq.min_interval/enabled`、
+  `UpdateRuleReq.min_interval/enabled/branch_pattern/description` 改成 optional
+  （IDL、手维护 thrift model、handler 同步）。
+  理由：**前端在规则列表里切换启用开关提交的是 `{id, enabled}`**，而旧 core
+  `UpdateRule` 无条件回写 enabled/branchPattern/description ⇒ 每次切开关都会
+  把分支模式清空（规则从「只跟 main」悄悄放宽成「任何分支都触发」）、把描述清空、
+  把 enabled 写成 false（规则被静默禁用 ⇒ 之后所有 webhook 都不再触发同步）。
+  ⇒ 改指针：nil = 不修改。
+- **健康评分口径对齐**：`internal/agent/tools/{ops,analyze}.go` 改用 core 的
+  `health.SnapshotsFromRuns`（唯一实现）⇒ 此前壳层另写一份事实采集，漏了
+  `StepFails`/`RetryTotal`/`ErrorType` ⇒ **同一个任务，AI 看到的健康分比 API
+  给运维看的乐观**。
+
 ## [v1.32.0] - 2026-10-25
 
 ### Changed
