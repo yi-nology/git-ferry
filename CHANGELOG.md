@@ -2,6 +2,31 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.32.0] - 2026-10-25
+
+### Changed
+
+- **core pin 抬到 v0.26.1**（零 replace）：删除旧规则引擎（健康评分只留
+  一套维度实现，`error_free` 信号由 reliability 维度接管）+ 抬 SDK 地板。
+- **SDK pin 抬到 v0.99.2**：本仓用 `GetCommitsBetween` 算「目标侧独有提交」
+  展示清单，而 gogit 后端的旧实现（SDK v0.99.0）**在分叉场景会把共同祖先
+  也收进清单**（v0.99.1 已修）。⇒ 壳层与 core 此前跑的 SDK 版本不一致
+  （依赖图取最高版本 ⇒ 壳层已是新版、core 单独构建仍是旧版）。
+
+### Removed
+
+- **删除前端死别名 `SystemStatusResp`**（`frontend/src/api/index.ts`）：
+  注释声称"兼容旧导入"，实际全仓**无任何引用** ⇒ 纯死兼容导出。
+
+### Fixed
+
+- 健康评分测试改用维度引擎（旧规则引擎已删，`health.DefaultConfig()` 不复存在）。
+
+### Changed（健康面板文案）
+
+- 健康 `issues` 数组不再有旧规则引擎的措辞，改为维度格式（`<维度>: <结论>`）；
+  **分数与 level 不变**。
+
 ## [v1.31.0] - 2026-10-25
 
 ### Removed（**破坏性**）
