@@ -2,6 +2,35 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.28.6] - 2026-10-25
+
+### Fixed
+
+- **OpenAPI 契约与实际路由对不上**（`cmd/apidoc/main.go`）：
+  - 三个端点实际注册的是 **POST**，契约写成 **GET**（`resolve-org-target` /
+    `import-public-org` / `push-backup`）⇒ 照契约调用的客户端拿到 404/405；
+  - `/api/v1/mirror/runs` 与 `/api/v1/mirror/targets` **根本没注册**，契约却给它们
+    挂了 get+post；
+  - 17 个已注册端点不在 OpenAPI 里（force-push 审批三个、AI 配置四个、
+    templates delete/preview、import-starred、org-mirror、dr-drill/export…）
+    ⇒ spec 驱动的客户端（swagger UI / `gitferry schema`）看不见它们；
+  - 同名路径被后一个循环**整条覆盖**（`GET /api/v1/ops/templates` 曾从契约里消失）。
+
+### Added
+
+- **全 API 契约门禁**（`internal/pkg/swagger/api_contract_test.go`）：双向校验 ——
+  已注册的路由必须在 OpenAPI 里，**OpenAPI 声明的端点必须真的注册了**
+  （此前只有 histsync / mirror 两个前缀有门禁，ops / ai 等路由无人管）。
+
+### Changed
+
+- core pin 抬到 **v0.20.0**（零 replace）：六条数据安全缺陷 ——
+  强推放行的「消费」没绑定 target_ref（同一次放行可反复授权覆盖）、
+  `git_push_prune` 推完就删目标分支、多分支（glob）任务分歧保护整体 fail-open、
+  多分支首次执行不对齐分支、冷备完整性清单零校验却报「通过」、
+  RPO 报告把不同任务合并成一条（停更的任务被「洗白」）；
+  外加手动触发绕过同 taskKey 互斥、post_exec 脚本无超时。
+
 ## [v1.28.5] - 2026-10-25
 
 ### Changed
