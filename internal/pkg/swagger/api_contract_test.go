@@ -1,12 +1,9 @@
 package swagger
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
+	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -24,22 +21,33 @@ import (
 // 门禁双向都查,任何一侧漂移都红。
 const contractScope = "/api/v1"
 
-// outOfContract 是**故意不进契约**的路径前缀(基础设施,不是业务 API)。
-var outOfContract = []string{
-	"/ping", "/health", "/metrics", "/mcp", "/swagger",
-}
-
 // routerSources 返回全部路由注册源文件(绝对路径)。
 //
-// 两处都要:IDL 生成的路由在 biz/router/git_sync/git_sync.go,
-// 定制路由(ops / ai / mcp / 探活)在 biz/router/custom.go。
+// **用 glob 而不是写死两个文件**:新增第三个注册文件时,写死的列表会读不到它 ⇒
+// 那个文件里"已注册但契约没有"的接口**两个方向都测不到**
+// (解析器看不见 ⇒ 不算 missing;契约没声明 ⇒ 不算 ghost)
+// ⇒ 门禁静默失去覆盖,而注释还宣称"全 API 契约门禁"。
 func routerSources(t *testing.T) []string {
 	t.Helper()
 	root := repoRoot(t)
-	return []string{
-		filepath.Join(root, "biz", "router", "git_sync", "git_sync.go"),
-		filepath.Join(root, "biz", "router", "custom.go"),
+	var out []string
+	err := filepath.WalkDir(filepath.Join(root, "biz", "router"), func(path string, d os.DirEntry, werr error) error {
+		if werr != nil || d == nil || d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		out = append(out, path)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("扫描路由源文件失败: %v", err)
 	}
+	if len(out) == 0 {
+		t.Fatalf("没找到任何路由源文件(目录布局变了?)")
+	}
+	return out
 }
 
 // registeredContractRoutes 返回**实际注册**且属于契约范围的路由集合。
@@ -159,11 +167,3 @@ func firstKeys(m map[string]string, n int) []string {
 	}
 	return keys
 }
-
-// 复用既有解析器:下面两个声明只为满足编译器(实现见 histsync_contract_test.go)。
-var (
-	_ = ast.Inspect
-	_ = parser.ParseFile
-	_ = token.NewFileSet
-	_ = strconv.Unquote
-)

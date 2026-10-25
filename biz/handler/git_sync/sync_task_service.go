@@ -108,10 +108,12 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
 		GitPrune: req.GitPrune,
 		GitLFS:   req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
-		KeepDivergent:      req.KeepDivergent,
-		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
-		IncludeBranches:    ptrx.Deref(req.IncludeBranches, ""),
-		ExcludeRefPatterns: ptrx.Deref(req.ExcludeRefPatterns, ""),
+		KeepDivergent: req.KeepDivergent,
+		// 这三个字段:nil=不修改,**空串=清空**(IDL 里是 optional string)。
+		// 之前 Deref 成普通 string ⇒ 空串与"没传"不可区分 ⇒ 一旦设过就再也改不回去。
+		ForcePushPolicy:    req.ForcePushPolicy,
+		IncludeBranches:    req.IncludeBranches,
+		ExcludeRefPatterns: req.ExcludeRefPatterns,
 	})
 	if err != nil {
 		response.FromError(c, err)
