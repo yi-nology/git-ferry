@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.28.8] - 2026-10-25
+
+### Changed
+
+- core pin 抬到 **v0.21.0**、SDK pin 抬到 **v0.98.0**（零 replace）：九条修复 ——
+  **wiki 同步推的是旧内容 + 无条件强推 + 非默认分支不同步**（P0）、
+  **漂移检测比错两侧且不带凭证**（私有仓永远检不出漂移）、
+  `exclude_ref_patterns` 被 align 重新造回、`glob` 传给 `git bundle create`
+  导致多分支任务永远产不出冷备、`backup_keep` 没有任何消费者、
+  保留策略删除失败仍计入 removed、附件/Gists 截断无告警、
+  回灌历史同秒覆盖 + 写失败被吞、issue 快照混进 PR（GitHub 的 issue 列表含 PR，
+  同一 PR 两份快照且占掉 issue 预算）。
+
 ## [v1.28.7] - 2026-10-25
 
 ### Changed
