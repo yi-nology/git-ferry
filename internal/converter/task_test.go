@@ -23,7 +23,6 @@ func TestToTaskInfo(t *testing.T) {
 		Enabled:       true,
 		GitTags:       true,
 		GitForce:      false,
-		GitPrune:      true,
 		LastRunAt:     &now,
 		LastStatus:    "success",
 		CreatedAt:     now,
@@ -88,9 +87,6 @@ func TestToTaskInfo(t *testing.T) {
 		t.Error("Expected GitForce to be false")
 	}
 
-	if !result.GitPrune {
-		t.Error("Expected GitPrune to be true")
-	}
 
 	if result.LastStatus != "success" {
 		t.Errorf("Expected LastStatus 'success', got '%s'", result.LastStatus)

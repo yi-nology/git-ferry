@@ -52,7 +52,6 @@ func sc(name, short string, fn runFunc) *cobra.Command {
 	f.Bool("enabled", true, "是否启用（task +update）")
 	f.Bool("git-tags", false, "同步 tags")
 	f.Bool("git-force", false, "允许 force push")
-	f.Bool("git-prune", false, "git prune")
 	f.Bool("git-lfs", false, "同步 LFS")
 	f.Bool("git-push-prune", false, "push --prune")
 	f.String("include-branches", "", "分支 glob 白名单，逗号分隔（如 main,release/*）")

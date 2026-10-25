@@ -72,7 +72,7 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		Name: req.Name, SourceRepoKey: req.SourceRepoKey, SourceBranch: req.SourceBranch,
 		TargetRepoKey: req.TargetRepoKey, TargetBranch: req.TargetBranch,
 		SyncMode: req.SyncMode, Cron: req.Cron, GitTags: req.GitTags,
-		GitForce: req.GitForce, GitPrune: req.GitPrune,
+		GitForce: req.GitForce,
 		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		KeepDivergent:      req.KeepDivergent,
 		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
@@ -106,7 +106,6 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		// cron:nil=不修改,空串=清空定时(IDL 里是 optional string)
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
 		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
-		GitPrune: req.GitPrune,
 		GitLFS:   req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		KeepDivergent: req.KeepDivergent,
 		// 这三个字段:nil=不修改,**空串=清空**(IDL 里是 optional string)。

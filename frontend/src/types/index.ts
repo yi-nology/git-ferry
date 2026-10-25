@@ -26,7 +26,6 @@ export interface SyncTask {
   enabled: boolean
   git_tags: boolean
   git_force: boolean
-  git_prune: boolean
   git_lfs?: boolean
   sync_wiki?: boolean
   git_bundle?: boolean
@@ -108,7 +107,6 @@ export interface CreateTaskRequest {
   cron?: string
   git_tags?: boolean
   git_force?: boolean
-  git_prune?: boolean
   git_lfs?: boolean
   sync_wiki?: boolean
   git_bundle?: boolean
@@ -130,7 +128,6 @@ export interface UpdateTaskRequest {
   enabled?: boolean
   git_tags?: boolean
   git_force?: boolean
-  git_prune?: boolean
   git_lfs?: boolean
   sync_wiki?: boolean
   git_bundle?: boolean

@@ -21,7 +21,6 @@ type SyncTaskInfo struct {
 	Enabled            bool   `thrift:"enabled,11" form:"enabled" json:"enabled" query:"enabled"`
 	GitTags            bool   `thrift:"gitTags,12" form:"git_tags" json:"git_tags" query:"git_tags"`
 	GitForce           bool   `thrift:"gitForce,13" form:"git_force" json:"git_force" query:"git_force"`
-	GitPrune           bool   `thrift:"gitPrune,14" form:"git_prune" json:"git_prune" query:"git_prune"`
 	GitLfs             bool   `thrift:"gitLfs,20" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	GitPushPrune       bool   `thrift:"gitPushPrune,21" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
 	KeepDivergent      bool   `thrift:"keepDivergent,22" form:"keep_divergent" json:"keep_divergent" query:"keep_divergent"`
@@ -95,10 +94,6 @@ func (p *SyncTaskInfo) GetGitForce() (v bool) {
 	return p.GitForce
 }
 
-func (p *SyncTaskInfo) GetGitPrune() (v bool) {
-	return p.GitPrune
-}
-
 func (p *SyncTaskInfo) GetGitLfs() (v bool) {
 	return p.GitLfs
 }
@@ -161,7 +156,6 @@ var fieldIDToName_SyncTaskInfo = map[int16]string{
 	11: "enabled",
 	12: "gitTags",
 	13: "gitForce",
-	14: "gitPrune",
 	20: "gitLfs",
 	21: "gitPushPrune",
 	22: "keepDivergent",
@@ -267,14 +261,6 @@ func (p *SyncTaskInfo) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 10:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField10(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
 		case 11:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField11(iprot); err != nil {
@@ -294,14 +280,6 @@ func (p *SyncTaskInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField13(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 14:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -575,17 +553,6 @@ func (p *SyncTaskInfo) ReadField13(iprot thrift.TProtocol) error {
 	p.GitForce = _field
 	return nil
 }
-func (p *SyncTaskInfo) ReadField14(iprot thrift.TProtocol) error {
-
-	var _field bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.GitPrune = _field
-	return nil
-}
 func (p *SyncTaskInfo) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -761,10 +728,6 @@ func (p *SyncTaskInfo) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 9
 			goto WriteFieldError
 		}
-		if err = p.writeField10(oprot); err != nil {
-			fieldId = 10
-			goto WriteFieldError
-		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
 			goto WriteFieldError
@@ -775,10 +738,6 @@ func (p *SyncTaskInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
-			goto WriteFieldError
-		}
-		if err = p.writeField14(oprot); err != nil {
-			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -1066,23 +1025,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
-}
-
-func (p *SyncTaskInfo) writeField14(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitPrune", thrift.BOOL, 14); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitPrune); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 
 func (p *SyncTaskInfo) writeField20(oprot thrift.TProtocol) (err error) {
@@ -2031,7 +1973,6 @@ type CreateTaskReq struct {
 	Cron               string  `thrift:"cron,7" form:"cron" json:"cron" query:"cron"`
 	GitTags            bool    `thrift:"gitTags,8" form:"git_tags" json:"git_tags" query:"git_tags"`
 	GitForce           bool    `thrift:"gitForce,9" form:"git_force" json:"git_force" query:"git_force"`
-	GitPrune           bool    `thrift:"gitPrune,10" form:"git_prune" json:"git_prune" query:"git_prune"`
 	GitLfs             bool    `thrift:"gitLfs,15" form:"git_lfs" json:"git_lfs" query:"git_lfs"`
 	GitPushPrune       bool    `thrift:"gitPushPrune,16" form:"git_push_prune" json:"git_push_prune" query:"git_push_prune"`
 	KeepDivergent      *bool   `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
@@ -2084,10 +2025,6 @@ func (p *CreateTaskReq) GetGitTags() (v bool) {
 
 func (p *CreateTaskReq) GetGitForce() (v bool) {
 	return p.GitForce
-}
-
-func (p *CreateTaskReq) GetGitPrune() (v bool) {
-	return p.GitPrune
 }
 
 func (p *CreateTaskReq) GetGitLfs() (v bool) {
@@ -2156,7 +2093,6 @@ var fieldIDToName_CreateTaskReq = map[int16]string{
 	7:  "cron",
 	8:  "gitTags",
 	9:  "gitForce",
-	10: "gitPrune",
 	15: "gitLfs",
 	16: "gitPushPrune",
 	17: "keepDivergent",
@@ -2270,14 +2206,6 @@ func (p *CreateTaskReq) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField9(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 10:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2483,17 +2411,6 @@ func (p *CreateTaskReq) ReadField9(iprot thrift.TProtocol) error {
 	p.GitForce = _field
 	return nil
 }
-func (p *CreateTaskReq) ReadField10(iprot thrift.TProtocol) error {
-
-	var _field bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.GitPrune = _field
-	return nil
-}
 func (p *CreateTaskReq) ReadField15(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -2634,10 +2551,6 @@ func (p *CreateTaskReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
-			goto WriteFieldError
-		}
-		if err = p.writeField10(oprot); err != nil {
-			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField15(oprot); err != nil {
@@ -2845,23 +2758,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
-}
-
-func (p *CreateTaskReq) writeField10(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("gitPrune", thrift.BOOL, 10); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteBool(p.GitPrune); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
 func (p *CreateTaskReq) writeField15(oprot thrift.TProtocol) (err error) {
@@ -3191,7 +3087,6 @@ type UpdateTaskReq struct {
 	Enabled            *bool   `thrift:"enabled,7,optional" form:"enabled" json:"enabled,omitempty" query:"enabled"`
 	GitTags            *bool   `thrift:"gitTags,8,optional" form:"git_tags" json:"git_tags,omitempty" query:"git_tags"`
 	GitForce           *bool   `thrift:"gitForce,9,optional" form:"git_force" json:"git_force,omitempty" query:"git_force"`
-	GitPrune           *bool   `thrift:"gitPrune,10,optional" form:"git_prune" json:"git_prune,omitempty" query:"git_prune"`
 	GitLfs             *bool   `thrift:"gitLfs,15,optional" form:"git_lfs" json:"git_lfs,omitempty" query:"git_lfs"`
 	GitPushPrune       *bool   `thrift:"gitPushPrune,16,optional" form:"git_push_prune" json:"git_push_prune,omitempty" query:"git_push_prune"`
 	KeepDivergent      *bool   `thrift:"keepDivergent,17,optional" form:"keep_divergent" json:"keep_divergent,omitempty" query:"keep_divergent"`
@@ -3264,15 +3159,6 @@ func (p *UpdateTaskReq) GetGitForce() (v bool) {
 		return UpdateTaskReq_GitForce_DEFAULT
 	}
 	return *p.GitForce
-}
-
-var UpdateTaskReq_GitPrune_DEFAULT bool
-
-func (p *UpdateTaskReq) GetGitPrune() (v bool) {
-	if !p.IsSetGitPrune() {
-		return UpdateTaskReq_GitPrune_DEFAULT
-	}
-	return *p.GitPrune
 }
 
 var UpdateTaskReq_GitLfs_DEFAULT bool
@@ -3366,7 +3252,6 @@ var fieldIDToName_UpdateTaskReq = map[int16]string{
 	7:  "enabled",
 	8:  "gitTags",
 	9:  "gitForce",
-	10: "gitPrune",
 	15: "gitLfs",
 	16: "gitPushPrune",
 	17: "keepDivergent",
@@ -3392,10 +3277,6 @@ func (p *UpdateTaskReq) IsSetGitTags() bool {
 
 func (p *UpdateTaskReq) IsSetGitForce() bool {
 	return p.GitForce != nil
-}
-
-func (p *UpdateTaskReq) IsSetGitPrune() bool {
-	return p.GitPrune != nil
 }
 
 func (p *UpdateTaskReq) IsSetGitLfs() bool {
@@ -3520,14 +3401,6 @@ func (p *UpdateTaskReq) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField9(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 10:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3733,17 +3606,6 @@ func (p *UpdateTaskReq) ReadField9(iprot thrift.TProtocol) error {
 	p.GitForce = _field
 	return nil
 }
-func (p *UpdateTaskReq) ReadField10(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.GitPrune = _field
-	return nil
-}
 func (p *UpdateTaskReq) ReadField15(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -3884,10 +3746,6 @@ func (p *UpdateTaskReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
-			goto WriteFieldError
-		}
-		if err = p.writeField10(oprot); err != nil {
-			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField15(oprot); err != nil {
@@ -4103,25 +3961,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
-}
-
-func (p *UpdateTaskReq) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetGitPrune() {
-		if err = oprot.WriteFieldBegin("gitPrune", thrift.BOOL, 10); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.GitPrune); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
 func (p *UpdateTaskReq) writeField15(oprot thrift.TProtocol) (err error) {
@@ -5814,14 +5653,6 @@ func (p *SyncRunInfo) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 10:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField10(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
 		case 11:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField11(iprot); err != nil {
@@ -5841,14 +5672,6 @@ func (p *SyncRunInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField13(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 14:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6111,10 +5934,6 @@ func (p *SyncRunInfo) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 9
 			goto WriteFieldError
 		}
-		if err = p.writeField10(oprot); err != nil {
-			fieldId = 10
-			goto WriteFieldError
-		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
 			goto WriteFieldError
@@ -6125,10 +5944,6 @@ func (p *SyncRunInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
-			goto WriteFieldError
-		}
-		if err = p.writeField14(oprot); err != nil {
-			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField15(oprot); err != nil {

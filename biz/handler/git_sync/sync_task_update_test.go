@@ -47,7 +47,7 @@ func seedTask(t *testing.T, name string) *corebridge.SyncTask {
 	task, err := GetSyncService().CreateTask(context.Background(), &corebridge.CreateTaskRequest{
 		Name: name, SourceRepoKey: "src/repo", SourceBranch: "main",
 		TargetRepoKey: "dst/repo", TargetBranch: "main", SyncMode: "single",
-		Cron: "0 3 * * *", GitTags: true, GitForce: true, GitPrune: true,
+		Cron: "0 3 * * *", GitTags: true, GitForce: true,
 		GitLFS: true, SyncWiki: true, GitBundle: true, Submodules: true, GitPushPrune: true,
 		KeepDivergent: &keep, ForcePushPolicy: "block",
 	})
@@ -77,7 +77,6 @@ func TestTaskUpdate_PartialBody_KeepsUntouchedFields(t *testing.T) {
 	require.True(t, after.Enabled, "部分更新不得禁用任务(enabled 未出现在请求里)")
 	require.True(t, after.GitTags, "部分更新不得清空 git_tags")
 	require.True(t, after.GitForce, "部分更新不得清空 git_force")
-	require.True(t, after.GitPrune, "部分更新不得清空 git_prune")
 	require.True(t, after.GitLFS, "部分更新不得清空 git_lfs")
 	require.True(t, after.SyncWiki, "部分更新不得清空 sync_wiki")
 	require.True(t, after.GitBundle, "部分更新不得清空 git_bundle")

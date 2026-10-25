@@ -302,7 +302,6 @@ CREATE TABLE sync_tasks (
     enabled BOOLEAN DEFAULT TRUE COMMENT '是否启用',
     git_tags BOOLEAN DEFAULT FALSE COMMENT '同步标签',
     git_force BOOLEAN DEFAULT FALSE COMMENT '强制推送',
-    git_prune BOOLEAN DEFAULT FALSE COMMENT '清理远程分支',
     git_no_verify BOOLEAN DEFAULT FALSE COMMENT '跳过钩子',
     push_options VARCHAR(500) COMMENT '额外推送选项',
     last_run_at TIMESTAMP NULL COMMENT '最后运行时间',
@@ -401,7 +400,6 @@ type SyncTask struct {
     Enabled       bool       `json:"enabled"`
     GitTags       bool       `json:"gitTags"`
     GitForce      bool       `json:"gitForce"`
-    GitPrune      bool       `json:"gitPrune"`
     GitNoVerify   bool       `json:"gitNoVerify"`
     PushOptions   string     `json:"pushOptions"`
     LastRunAt     *time.Time `json:"lastRunAt"`

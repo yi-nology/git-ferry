@@ -250,10 +250,6 @@
               <span style="font-weight: 500;">强制推送</span>
               <span style="color: #8C8C8C; font-size: 12px; margin-left: 8px;">使用 --force 推送（谨慎使用）</span>
             </a-checkbox>
-            <a-checkbox v-model:checked="formData.git_prune">
-              <span style="font-weight: 500;">Prune</span>
-              <span style="color: #8C8C8C; font-size: 12px; margin-left: 8px;">清理远程已删除的分支</span>
-            </a-checkbox>
             <div style="margin-top: 8px">
               <div style="font-weight: 500; margin-bottom: 4px">强制推送保护</div>
               <a-select
@@ -436,7 +432,6 @@ const formData = reactive({
   cron: '',
   git_tags: false,
   git_force: false,
-  git_prune: false,
   force_push_policy: 'block' as 'allow' | 'block' | 'backup_on_demand',
 })
 
@@ -506,7 +501,7 @@ function openCreate() {
   Object.assign(formData, {
     name: '', source_repo_key: '', source_branch: 'main',
     target_repo_key: '', target_branch: 'main', sync_mode: 'single',
-    cron: '', git_tags: false, git_force: false, git_prune: false,
+    cron: '', git_tags: false, git_force: false,
     force_push_policy: 'block',
   })
   previewFrom.value = 'block'
@@ -527,7 +522,6 @@ function openEdit(task: SyncTask) {
     cron: task.cron,
     git_tags: task.git_tags,
     git_force: task.git_force,
-    git_prune: task.git_prune,
     force_push_policy: (task.force_push_policy as 'allow' | 'block' | 'backup_on_demand')
       || (task.keep_divergent === false ? 'allow' : 'block'),
   })

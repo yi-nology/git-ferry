@@ -85,7 +85,7 @@ gitferry task +preview \
 | `--target-branch` | 否 | 默认 `main` |
 | `--sync-mode` | 否 | `all` / `single` |
 | `--cron` | 否 | cron 表达式；不填则仅手动 |
-| `--git-tags` / `--git-force` / `--git-prune` / `--git-lfs` / `--git-push-prune` | 否 | 同步开关 |
+| `--git-tags` / `--git-force` / `--git-lfs` / `--git-push-prune` | 否 | 同步开关 |
 
 ### task +update
 

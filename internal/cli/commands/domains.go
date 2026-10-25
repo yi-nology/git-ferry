@@ -181,7 +181,6 @@ func taskCreate(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []stri
 		"cron":            flagStr(cmd, "cron"),
 		"git_tags":        flagBool(cmd, "git-tags"),
 		"git_force":       flagBool(cmd, "git-force"),
-		"git_prune":       flagBool(cmd, "git-prune"),
 		"git_lfs":         flagBool(cmd, "git-lfs"),
 		"git_push_prune":  flagBool(cmd, "git-push-prune"),
 	}

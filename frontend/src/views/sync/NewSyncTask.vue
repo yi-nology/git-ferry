@@ -172,10 +172,6 @@
                   <div class="option-desc">使用 --force 推送，会覆盖目标分支的历史（谨慎使用）</div>
                 </div>
                 <div class="option-item">
-                  <a-checkbox v-model:checked="form.git_prune">Prune 本地跟踪</a-checkbox>
-                  <div class="option-desc">删除本地已不在源端的跟踪分支</div>
-                </div>
-                <div class="option-item">
                   <a-checkbox v-model:checked="form.git_push_prune">删除目标多余分支</a-checkbox>
                   <div class="option-desc">清理目标仓库中已被源仓库删除的远程分支</div>
                 </div>
@@ -292,7 +288,6 @@ const form = reactive({
   cron: '',
   git_tags: false,
   git_force: false,
-  git_prune: false,
   git_lfs: false,
   sync_wiki: false,
   git_bundle: false,

@@ -31,7 +31,6 @@ gitferry task +create \
 | `--cron` | 否 | cron；不填仅手动触发 |
 | `--git-tags` | 否 | 同步 tags |
 | `--git-force` | 否 | 允许 force push（危险，需用户明确） |
-| `--git-prune` | 否 | prune |
 | `--git-lfs` | 否 | 同步 LFS |
 | `--git-push-prune` | 否 | push --prune |
 | `--yes` | 否 | 跳过确认（仅脚本） |
@@ -50,7 +49,6 @@ POST /api/v1/sync/task/create
   "cron": "0 2 * * *",
   "git_tags": false,
   "git_force": false,
-  "git_prune": false,
   "git_lfs": false,
   "git_push_prune": false
 }
