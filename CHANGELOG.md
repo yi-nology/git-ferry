@@ -2,6 +2,28 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.38.0] - 2026-10-26
+
+### Fixed
+
+同包内另外三处**同一形状**的错误吞掉（一并修掉）：
+
+- **MCP `get_sync_health` / `deep_analyze` 把历史查询失败当成「从未执行」**：
+  以前 `if herr == nil && len(runs) > 0` 的 else 分支同时覆盖「没有历史」与
+  「查询失败」⇒ 报告写「从未执行」，真相是「查不到」⇒ 运维会去查一个
+  根本不存在的配置问题。
+  修法：分数仍按「没有历史」**保守**打分（fail-closed：宁可低不要高），
+  但把失败本身报出来 —— 顶层 `failures`（`get_sync_health`）/
+  `query_failures`（`deep_analyze`）+ 任务级 `history_error`。
+- **MCP `diagnose_run` 把「查不到」说成「未找到」**：`findRunView` 对历史
+  查询失败是 `continue` 直接跳过 ⇒ 搜完全部任务找不到就报 `run N not found`
+  ⇒ 运维以为记录被删了，真相是「查不到」⇒ **无法断言它不存在**。
+  修法：累计查询失败，搜完仍找不到时用 `historyQueryError` 明确报
+  「无法断言它不存在」；输出加 `query_failed` 标记，与「确实不存在」区分开。
+- **MCP `get_ops_todo` 继续吃健康维度的内部失败**：健康段逐任务的查询失败
+  现在会一并传到待办队列的 `failures`（`source=health/history`）；
+  且这类任务的「健康分偏低」会说明是**保守打分**、不是真实健康度。
+
 ## [v1.37.0] - 2026-10-26
 
 ### Fixed
