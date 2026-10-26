@@ -126,3 +126,51 @@ func TestConfigValidate_acpx不支持ask(t *testing.T) {
 	c3 := Config{Transport: TransportStdio, Command: "mcode acp", Permission: PermissionAsk}
 	assert.NoError(t, c3.Validate(), "stdio 后端才是能逐次确认的那个")
 }
+
+// TestEngine_同一会话并发回合被串行化 同一个 git-ferry 会话并发发两轮时:
+// ① 共享的 sink 会被覆盖(第一轮的事件流到第二轮的通道,输出错乱);
+// ② ACP 会话一次只处理一个 prompt,并发 prompt 协议上就不合法。
+// ⇒ 必须排队,不是各跑各的。
+func TestEngine_同一会话并发回合被串行化(t *testing.T) {
+	eng, err := NewEngine(&Config{
+		Command: fakeACPCommand(t),
+		Cwd:     t.TempDir(),
+		Timeout: 30 * time.Second,
+	})
+	require.NoError(t, err)
+	defer func() { _ = eng.Close() }()
+
+	sess := newFakeSession("s1")
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// 并发起两轮(同一个会话)
+	type res struct {
+		text string
+		err  error
+	}
+	results := make(chan res, 2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			ch, engCancel, err := eng.Run(ctx, sess, engine.Input{Message: "hi"})
+			if err != nil {
+				results <- res{err: err}
+				return
+			}
+			defer engCancel()
+			var text string
+			for ev := range ch {
+				if ev.Type == engine.EventDelta {
+					text += ev.Content
+				}
+			}
+			results <- res{text: text}
+		}()
+	}
+	for i := 0; i < 2; i++ {
+		r := <-results
+		require.NoError(t, r.err)
+		assert.Contains(t, r.text, "你好，我是假 agent",
+			"两轮都应拿到完整输出(不能互相截胡)")
+	}
+}

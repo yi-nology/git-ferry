@@ -684,6 +684,10 @@ docs/design/acp-external-agent-design.md     新增  本文档
 | F9 | **yaml 的 `mcp_enabled: true` 永远不生效** | 布尔的「未设置 vs 显式 false」没法区分 ⇒ `MergeSettings` 漏合并它 ⇒ 设置文件没写过之前,yaml 的布尔值说了算 |
 | F10 | **acpx 通道的 `ask` 档名不副实** | acpx 非交互(它的 stdin/stdout 被我们占着)⇒ 弹不出授权卡,`nonInteractivePermissions` 默认 deny ⇒ 「问」实际等于「拒绝」⇒ 校验阶段直接拒绝该组合,并在**保存时**就拒(不存「起不来」的配置);参数映射改成显式给 `--approve-reads`,不吃默认值 |
 | F11 | **外部 agent 的会话 ID 没透出** | 外部 agent 与本服务可能**共用同一个会话库**(MiniMax Code 的 CLI 与桌面版)⇒ 新增 `agent_session` 事件带出 `agent_session_id`,用户才能在那个界面上找到这次会话 |
+| F12 | **fs 沙箱不解析符号链接** | 只做 `filepath.Clean` 时,工作区里一个指向 `~/.ssh/id_rsa` 的软链路径看着仍在根下 ⇒ 沙箱形同虚设。改法:`EvalSymlinks` 解析后再判包含;根目录本身也要解析(macOS 的 `/var` → `/private/var` 会造成误判) |
+| F13 | **terminal 无上限** | 终端只在 agent 调 `terminal/release` 时才释放 ⇒ agent 不释放就一直涨(内存泄漏)。改法:加存活上限(16),超了明确报错让 agent 自己放 |
+| F14 | **acpx 会话泄漏到磁盘** | acpx 的会话是**磁盘上的持久记录**(`~/.acpx/sessions/`),git-ferry 会话 30 分钟过期但 acpx 会话不会自己消失 ⇒ 长期运行就把磁盘喂饱。改法:引擎关时关掉本进程建过的会话 + 空闲回收 |
+| F15 | **同一会话并发回合互相截胡** | 同一个 git-ferry 会话并发发两轮时,共享的 sink 被覆盖(第一轮事件流到第二轮通道),且 ACP 会话一次只处理一个 prompt。改法:每会话**串行化**回合 |
 
 ### 17.2 测试逼出来的三个真 bug
 
@@ -743,6 +747,16 @@ POST /api/v1/ai/chat  (backend=stdio, command="mcode acp", MCP 挂本服务 /mcp
 
 ⇒ **要「逐次确认」或「挂本服务 MCP」就得用 stdio 后端**;acpx 适合「一个命令面对
 20+ 个 agent、免写协议」的轻量场景。这个差异在配置校验阶段就告诉操作者,不留到运行时才发现。
+
+### 17.5.1 一轮「换了眼睛」的自审发现的东西
+
+F12–F15 是**事后**才发现的,共同点:它们都在「代码看起来对」的地方 ——
+fs 沙箱的包含判断、terminal 的生命周期、acpx 会话的去向、并发回合的事件路由。
+**没有一条是靠读代码能看出来的**:要么要构造越界的软链,要么要造并发,
+要么要长跑才会显现。
+
+⇒ 结论与之前那条一致,但更具体了:**边界与生命周期的 bug,只能用「构造异常输入」和
+「制造并发」去找,不能靠 review**。这四条现在都有对应的回归用例。
 
 ### 17.6 一次「只读边界」的实测,以及它被捅穿的路径
 

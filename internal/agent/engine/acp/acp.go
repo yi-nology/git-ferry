@@ -57,11 +57,15 @@ func NewEngine(cfg *Config) (*Engine, error) {
 		return nil, fmt.Errorf("创建工作目录失败: %w", err)
 	}
 	cfg.Cwd = root
+	fs, err := newFSHandler(root)
+	if err != nil {
+		return nil, err
+	}
 	e := &Engine{
 		cfg:   *cfg,
 		procs: make(map[string]*sessionProc),
 		perms: newPermRegistry(),
-		fs:    &fsHandler{root: root},
+		fs:    fs,
 		terms: newTerminalHandler(root),
 		stop:  make(chan struct{}),
 	}
@@ -160,6 +164,10 @@ func (e *Engine) Run(ctx context.Context, sess engine.Session, in engine.Input) 
 func (e *Engine) prompt(ctx context.Context, proc *sessionProc, message string, emit func(engine.Event)) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.cfg.Timeout)
 	defer cancel()
+
+	// 同一 ACP 会话上的回合**串行**:并发会互相覆盖 sink,而且协议上也不允许。
+	proc.turnMu.Lock()
+	defer proc.turnMu.Unlock()
 
 	// 本轮的 sink:session/update 通知由 reader goroutine 派发到这里。
 	//
@@ -646,6 +654,12 @@ type sessionProc struct {
 	sink      func(engine.Event)
 	used      time.Time
 	closeOnce sync.Once
+	// turnMu 串行化同一 ACP 会话上的回合。
+	//
+	// **为什么**:同一个 git-ferry 会话并发发两轮时,① 共享的 sink 会被覆盖
+	// (第一轮的事件流到第二轮的通道,输出错乱);② ACP 会话一次只处理一个
+	// prompt,并发 prompt 本身就不合法。⇒ 排队,而不是各跑各的。
+	turnMu sync.Mutex
 	// inFlight 正在跑的回合数(>0 ⇒ 这个进程不能被回收,
 	// 否则会把在飞的回合打断,用户看到的是「工具调用到一半断了」)。
 	inFlight int

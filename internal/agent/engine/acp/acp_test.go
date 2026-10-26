@@ -242,7 +242,8 @@ func TestConfigValidate(t *testing.T) {
 
 func TestFsHandler_Sandbox(t *testing.T) {
 	dir := t.TempDir()
-	h := &fsHandler{root: dir}
+	h, err := newFSHandler(dir)
+	require.NoError(t, err)
 
 	// 根内可读
 	inside := filepath.Join(dir, "a.txt")
@@ -307,4 +308,59 @@ func TestReady_静态就位性(t *testing.T) {
 	ok, msg := e.Ready()
 	assert.False(t, ok)
 	assert.Contains(t, msg, "找不到")
+}
+
+// TestFsHandler_符号链接逃逸被拒 只做 filepath.Clean 是不够的:
+// 工作区里一个指向 ~/.ssh/id_rsa 的软链,路径看起来仍在根下,
+// 实际读的是根外的文件 ⇒ 沙箱形同虚设。
+func TestFsHandler_符号链接逃逸被拒(t *testing.T) {
+	root := t.TempDir()
+	outsideDir := t.TempDir()
+	outside := filepath.Join(outsideDir, "secret.txt")
+	require.NoError(t, os.WriteFile(outside, []byte("secret"), 0o600))
+
+	link := filepath.Join(root, "link.txt")
+	require.NoError(t, os.Symlink(outside, link))
+
+	h, err := newFSHandler(root)
+	require.NoError(t, err)
+
+	_, err = h.readTextFile(json.RawMessage(`{"path":"` + link + `"}`))
+	assert.ErrorContains(t, err, "越界", "指向根外的软链必须被拒")
+
+	// 写也不能借软链逃逸
+	err = h.writeTextFile(json.RawMessage(`{"path":"` + link + `","content":"pwn"}`))
+	assert.ErrorContains(t, err, "越界")
+	// 原文件没被动过
+	got, err := os.ReadFile(outside)
+	require.NoError(t, err)
+	assert.Equal(t, "secret", string(got))
+}
+
+// TestTerminalHandler_有上限 终端只在 agent 调 terminal/release 时才释放;
+// agent 不释放的话这个 map 就一直涨 ⇒ 内存泄漏。给个上限,超了直接拒。
+func TestTerminalHandler_有上限(t *testing.T) {
+	h := newTerminalHandler(t.TempDir())
+	h.max = 2
+
+	for i := 0; i < 2; i++ {
+		res, err := h.create(json.RawMessage(`{"command":"sleep","args":["5"]}`))
+		require.NoError(t, err, "第 %d 个终端应当建得出来", i)
+		require.NotNil(t, res)
+	}
+	_, err := h.create(json.RawMessage(`{"command":"sleep","args":["5"]}`))
+	assert.ErrorContains(t, err, "上限", "超上限要明确报错,而不是悄悄回收 agent 正在用的终端")
+
+	// 释放一个之后又能建
+	h.mu.Lock()
+	var id string
+	for k := range h.terms {
+		id = k
+	}
+	h.mu.Unlock()
+	require.NotEmpty(t, id)
+	_, err = h.release(json.RawMessage(`{"terminalId":"` + id + `"}`))
+	require.NoError(t, err)
+	_, err = h.create(json.RawMessage(`{"command":"sleep","args":["5"]}`))
+	assert.NoError(t, err, "释放之后应能再建")
 }

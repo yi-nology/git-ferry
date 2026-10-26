@@ -22,10 +22,19 @@ type terminalHandler struct {
 	mu    sync.Mutex
 	terms map[string]*termProc
 	seq   atomic.Int64
+	// max 同时存活的终端上限(测试可调小)。
+	max int
 }
 
+// maxTerminals 同时存活的终端上限。
+//
+// 终端只在 agent 调 terminal/release 时才释放 —— agent 不释放的话
+// 这里的 map 就会一直涨(内存泄漏)。给个上限,超了直接拒:
+// 让 agent 自己决定先放掉哪个,比悄悄回收它正在用的终端安全。
+const maxTerminals = 16
+
 func newTerminalHandler(root string) *terminalHandler {
-	return &terminalHandler{root: root, terms: make(map[string]*termProc)}
+	return &terminalHandler{root: root, terms: make(map[string]*termProc), max: maxTerminals}
 }
 
 // termProc 一个终端进程。
@@ -78,6 +87,17 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 	if limit <= 0 {
 		limit = 256 * 1024
 	}
+	maxAlive := h.max
+	if maxAlive <= 0 {
+		maxAlive = maxTerminals
+	}
+	h.mu.Lock()
+	if len(h.terms) >= maxAlive {
+		h.mu.Unlock()
+		return nil, fmt.Errorf("同时存活的终端已达上限(%d),请先 terminal/release 释放", maxAlive)
+	}
+	h.mu.Unlock()
+
 	cmd := exec.Command(p.Command, p.Args...) //nolint:gosec // 命令由 agent 指定,工作目录受限于 root
 	cmd.Dir = cwd
 	if len(p.Env) > 0 {

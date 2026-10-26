@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"sync"
@@ -36,6 +37,11 @@ type AcpxEngine struct {
 	// acpx 的会话存在磁盘上(~/.acpx/sessions),git-ferry 重启后仍在,
 	// 所以「建过」只是省一次调用,不是正确性依赖 —— 失败时会自愈。
 	created map[string]bool
+	// usedAt 每个 acpx 会话最后一次使用的时间(空闲回收用)。
+	usedAt map[string]time.Time
+	// stop 停掉空闲回收 goroutine。
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 // NewAcpxEngine 构造 acpx 后端。
@@ -44,7 +50,14 @@ func NewAcpxEngine(cfg *Config) (*AcpxEngine, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	return &AcpxEngine{cfg: *cfg, created: make(map[string]bool)}, nil
+	e := &AcpxEngine{
+		cfg:     *cfg,
+		created: make(map[string]bool),
+		usedAt:  make(map[string]time.Time),
+		stop:    make(chan struct{}),
+	}
+	e.startJanitor()
+	return e, nil
 }
 
 // ID 后端标识。
@@ -66,8 +79,84 @@ func (e *AcpxEngine) ModelName() string {
 	return e.cfg.Command
 }
 
-// Close 无长驻资源。
-func (e *AcpxEngine) Close() error { return nil }
+// Close 关闭本进程建过的 acpx 会话。
+//
+// **为什么必须关**:acpx 的会话是**磁盘上的持久记录**(~/.acpx/sessions/),
+// 不关就一直攒 —— git-ferry 每个会话建一个,长期跑就把磁盘喂饱了。
+func (e *AcpxEngine) Close() error {
+	e.stopOnce.Do(func() { close(e.stop) })
+	e.mu.Lock()
+	names := make([]string, 0, len(e.created))
+	for name := range e.created {
+		names = append(names, name)
+	}
+	e.created = make(map[string]bool)
+	e.usedAt = make(map[string]time.Time)
+	e.mu.Unlock()
+	for _, name := range names {
+		e.closeSession(name)
+	}
+	return nil
+}
+
+// startJanitor 启动空闲回收。
+//
+// **为什么需要**:acpx 的会话是磁盘上的持久记录。git-ferry 的会话 30 分钟
+// 就过期了,但 acpx 的会话不会自己消失 —— 不回收的话,长期运行的进程
+// 会在 ~/.acpx/sessions/ 下攒出一堆孤儿记录。
+func (e *AcpxEngine) startJanitor() {
+	async.GoSafe(func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-e.stop:
+				return
+			case <-ticker.C:
+				e.reapIdle()
+			}
+		}
+	})
+}
+
+// reapIdle 回收空闲超时的 acpx 会话。
+func (e *AcpxEngine) reapIdle() {
+	ttl := e.cfg.IdleTTL
+	if ttl <= 0 {
+		ttl = DefaultIdleTTL
+	}
+	now := time.Now()
+	e.mu.Lock()
+	var stale []string
+	for name, used := range e.usedAt {
+		if now.Sub(used) > ttl {
+			stale = append(stale, name)
+		}
+	}
+	e.mu.Unlock()
+	for _, name := range stale {
+		e.closeSession(name)
+		e.mu.Lock()
+		delete(e.created, name)
+		delete(e.usedAt, name)
+		e.mu.Unlock()
+	}
+}
+
+// closeSession 关掉一个 acpx 会话(尽力而为:失败只告警)。
+func (e *AcpxEngine) closeSession(name string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	args := e.baseArgs()
+	args = append(args, e.agentToken()...)
+	args = append(args, "sessions", "close", name)
+	cmd := exec.CommandContext(ctx, e.cfg.Binary, args...) //nolint:gosec // G204:命令来自部署配置
+	cmd.Dir = e.cfg.Cwd
+	cmd.Env = scrubbedEnv()
+	if out, err := cmd.CombinedOutput(); err != nil {
+		slog.Warn("关闭 acpx 会话失败", "session", name, "error", err, "output", strings.TrimSpace(string(out)))
+	}
+}
 
 // Ready 静态就位性:acpx 在不在 + agent 在不在(快,不启动进程)。
 func (e *AcpxEngine) Ready() (bool, string) {
@@ -196,12 +285,16 @@ func (e *AcpxEngine) ensureSession(ctx context.Context, name string) error {
 	}
 	e.mu.Lock()
 	e.created[name] = true
+	e.usedAt[name] = time.Now()
 	e.mu.Unlock()
 	return nil
 }
 
 // execPrompt 跑一轮提示,读 stdout 的 ACP 流。
 func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string, emit func(engine.Event)) (string, error) {
+	e.mu.Lock()
+	e.usedAt[sessionName] = time.Now()
+	e.mu.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, e.cfg.Timeout)
 	defer cancel()
 

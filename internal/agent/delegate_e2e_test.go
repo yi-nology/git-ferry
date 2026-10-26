@@ -66,6 +66,37 @@ func Test委派链路端到端(t *testing.T) {
 	assert.Equal(t, "修个登录 bug", d.got.Prompt, "prompt 要原样传给委派执行器")
 }
 
+// Test委派链路_参数覆盖 允许单次委派覆盖 agent 名与工作目录。
+func Test委派链路_参数覆盖(t *testing.T) {
+	d := &fakeDelegator{out: "ok"}
+	fm := toolstest.NewFakeModel()
+	fm.Append(toolstest.FakeStep{ToolName: "ai_code_delegate",
+		ToolArgs: `{"prompt":"p","agent":"codex","cwd":"/tmp/ws"}`})
+	reg := tools.NewRegistry(toolstest.NewMock())
+	reg.SetDelegator(d)
+	eng, err := NewEinoEngineWithModel(&Config{}, fm, reg)
+	require.NoError(t, err)
+	r := NewRunner(eng, 2)
+	sess := r.Sessions().Create()
+
+	ctx := authz.WithRole(context.Background(), authz.RoleAdmin)
+	ch, cancel, err := r.Run(ctx, sess, "干活")
+	require.NoError(t, err)
+	defer cancel()
+	events := drainAll(t, ch)
+	var confirm *Event
+	for i := range events {
+		if events[i].Type == "tool_confirm" {
+			confirm = &events[i]
+		}
+	}
+	require.NotNil(t, confirm)
+	_, err = r.ExecuteConfirmed(ctx, sess, "ai_code_delegate", confirm.Token)
+	require.NoError(t, err)
+	assert.Equal(t, "codex", d.got.Agent, "agent 覆盖要传下去")
+	assert.Equal(t, "/tmp/ws", d.got.Cwd, "工作目录覆盖要传下去")
+}
+
 // Test委派链路_未装配执行器时如实报错 未装配时工具应返回说明,而不是静默成功。
 func Test委派链路_未装配执行器时如实报错(t *testing.T) {
 	fm := toolstest.NewFakeModel()
