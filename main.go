@@ -72,6 +72,8 @@ func main() {
 	}
 	cur := aiStore.Get()
 	aiSettings := agent.MergeSettings(yamlAI, &cur)
+	// 注入 yaml 段:设置页要显示**生效**配置(设置文件只是覆盖层)
+	git_sync.SetAIYamlConfig(yamlAI)
 
 	var aiRunnerMu sync.RWMutex
 	var aiRunner *agent.Runner

@@ -105,3 +105,51 @@ func TestAIUpdateConfig_未填授权档不算变更(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w1.Code,
 		"未填授权档(等价默认 ask)不该被当成变更而要求 admin")
 }
+
+// TestAIGetConfig_回生效配置 设置文件只是**覆盖层**,
+// 真正生效的是「yaml 默认 + 设置文件覆盖」。
+// 只回设置文件的话,用 yaml 配置的部署在界面上看到的是**空表单**
+// (得把配置全部重敲一遍才能保存)。
+func TestAIGetConfig_回生效配置(t *testing.T) {
+	store, err := agent.OpenSettings(filepath.Join(t.TempDir(), "ai-settings.json"))
+	require.NoError(t, err)
+	SetAISettingsStore(func() *agent.SettingsStore { return store })
+	SetAIYamlConfig(&agent.Config{
+		Enabled: true,
+		Backend: agent.BackendInternal,
+		BaseURL: "http://yaml-endpoint/v1",
+		Model:   "yaml-model",
+	})
+	t.Cleanup(func() { SetAIYamlConfig(nil) })
+
+	h := hertzserver.Default()
+	h.GET("/api/v1/ai/config", AIGetConfig)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ai/config", nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "yaml-model", "应回 yaml 里的生效值")
+	assert.Contains(t, w.Body.String(), "http://yaml-endpoint/v1")
+}
+
+// TestAIGetConfig_设置文件覆盖yaml 设置文件里的值优先于 yaml。
+func TestAIGetConfig_设置文件覆盖yaml(t *testing.T) {
+	store, err := agent.OpenSettings(filepath.Join(t.TempDir(), "ai-settings.json"))
+	require.NoError(t, err)
+	_, err = store.Save(&agent.Settings{
+		Enabled: true,
+		Backend: agent.BackendACPX,
+		Model:   "from-file",
+		External: agent.ExternalSettings{
+			Agent: "mcode",
+		},
+	})
+	require.NoError(t, err)
+	SetAISettingsStore(func() *agent.SettingsStore { return store })
+	SetAIYamlConfig(&agent.Config{Enabled: true, Backend: agent.BackendInternal, Model: "from-yaml"})
+	t.Cleanup(func() { SetAIYamlConfig(nil) })
+
+	h := hertzserver.Default()
+	h.GET("/api/v1/ai/config", AIGetConfig)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/ai/config", nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "from-file", "设置文件应覆盖 yaml")
+}

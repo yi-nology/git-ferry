@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -24,6 +25,36 @@ var aiSettingsStore = struct {
 	// holder 延迟绑定,避免 handler 包初始化依赖
 	get func() *agent.SettingsStore
 }{}
+
+// aiYamlConfig yaml 里的 ai 段(main 注入)。
+//
+// **为什么要在 handler 侧合并**:设置文件只是**覆盖层**,
+// 真正的生效值 = yaml 默认 + 设置文件覆盖。
+// 只回设置文件的话,用 yaml 配置的部署在界面上看到的是**空表单**
+// (用户得把配置全部重敲一遍才能保存)—— 那是"读到的不是真正在跑的那份"。
+var aiYamlConfig = struct {
+	mu  sync.RWMutex
+	cfg *agent.Config
+}{}
+
+// SetAIYamlConfig 注入 yaml 段的 ai 配置。
+func SetAIYamlConfig(cfg *agent.Config) {
+	aiYamlConfig.mu.Lock()
+	aiYamlConfig.cfg = cfg
+	aiYamlConfig.mu.Unlock()
+}
+
+// effectiveAISettings 取**生效**的 AI 配置(yaml + 设置文件覆盖)。
+func effectiveAISettings(st *agent.SettingsStore) agent.Settings {
+	aiYamlConfig.mu.RLock()
+	yamlCfg := aiYamlConfig.cfg
+	aiYamlConfig.mu.RUnlock()
+	cur := st.Get()
+	if yamlCfg == nil {
+		return cur
+	}
+	return agent.MergeSettings(yamlCfg, &cur)
+}
 
 // SetAISettingsStore 注入 AI 设置库。
 func SetAISettingsStore(get func() *agent.SettingsStore) {
@@ -44,8 +75,9 @@ func AIGetConfig(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, consts.StatusNotImplemented, "ai_settings_unavailable")
 		return
 	}
-	cur := st.Get()
-	response.Success(c, agent.View(&cur))
+	// 回**生效**配置(不是设置文件原样)—— 见 effectiveAISettings 的说明。
+	eff := effectiveAISettings(st)
+	response.Success(c, agent.View(&eff))
 }
 
 // AIUpdateConfig POST /api/v1/ai/config —— 更新配置并热生效。
@@ -119,7 +151,7 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	//
 	// 比较前**两边都要归一化**:存量后端可能是空串(等价 internal),
 	// 不归一就会把「没改后端」误判成「换了后端」,把普通保存也卡在 admin 闸门上。
-	cur := st.Get()
+	cur := effectiveAISettings(st)
 	curBackend := cur.Backend
 	if curBackend == "" {
 		curBackend = agent.BackendInternal
