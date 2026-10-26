@@ -37,7 +37,7 @@ type hsParam struct {
 }
 
 // schema 返回该参数的 OpenAPI schema。
-func (p hsParam) schema() map[string]any {
+func (p *hsParam) schema() map[string]any {
 	s := map[string]any{"type": p.Type}
 	if p.Format != "" {
 		s["format"] = p.Format
@@ -389,11 +389,12 @@ var historySyncOps = []hsOp{
 }
 
 // addHistorySyncPaths 把 histsync 端点写进 OpenAPI 的 paths 与 components。
-func addHistorySyncPaths(paths map[string]any, schemas map[string]any) {
+func addHistorySyncPaths(paths, schemas map[string]any) {
 	for name, schema := range historySyncSchemas() {
 		schemas[name] = schema
 	}
-	for _, op := range historySyncOps {
+	for i := range historySyncOps {
+		op := &historySyncOps[i]
 		pathItem, ok := paths[op.Path].(map[string]any)
 		if !ok {
 			pathItem = make(map[string]any)
@@ -405,7 +406,7 @@ func addHistorySyncPaths(paths map[string]any, schemas map[string]any) {
 }
 
 // build 把一个端点渲染成 OpenAPI operation。
-func (op hsOp) build() map[string]any {
+func (op *hsOp) build() map[string]any {
 	operation := map[string]any{
 		"operationId": op.OperationID,
 		"tags":        []string{"HistorySync"},

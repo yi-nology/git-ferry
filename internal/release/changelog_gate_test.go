@@ -171,7 +171,7 @@ func previousReleaseTag(t *testing.T) string {
 		if tag == "" || tag == latest {
 			continue
 		}
-		if _, err := exec.Command("git", "rev-parse", tag).CombinedOutput(); err != nil {
+		if _, err := exec.Command("git", "rev-parse", tag).CombinedOutput(); err != nil { //nolint:gosec // G204:测试内固定 git 子命令
 			continue // 本地没有这个 tag
 		}
 		return tag
@@ -182,7 +182,7 @@ func previousReleaseTag(t *testing.T) string {
 // gitShow 取某个 git 对象的内容。
 func gitShow(t *testing.T, obj string) ([]byte, error) {
 	t.Helper()
-	out, err := exec.Command("git", "show", obj).Output()
+	out, err := exec.Command("git", "show", obj).Output() //nolint:gosec // G204:测试内固定 git 子命令
 	if err != nil {
 		return nil, err
 	}

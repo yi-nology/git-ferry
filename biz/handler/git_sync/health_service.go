@@ -33,7 +33,8 @@ func HealthScore(ctx context.Context, c *app.RequestContext) {
 	if withDrift {
 		if rep, derr := svc.DetectDrift(ctx, nil); derr == nil && rep != nil {
 			driftByTask = map[string]int{}
-			for _, it := range rep.Items {
+			for i := range rep.Items {
+				it := &rep.Items[i]
 				if it.Drifted {
 					driftByTask[it.TaskKey]++
 				}

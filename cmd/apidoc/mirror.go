@@ -31,7 +31,7 @@ type mirrorParam struct {
 }
 
 // schema 返回该参数的 OpenAPI schema。
-func (p mirrorParam) schema() map[string]any {
+func (p *mirrorParam) schema() map[string]any {
 	s := map[string]any{"type": p.Type}
 	if p.Format != "" {
 		s["format"] = p.Format
@@ -201,11 +201,12 @@ var mirrorOps = []mirrorOp{
 }
 
 // addMirrorPaths 把镜像中心的端点写进 OpenAPI。
-func addMirrorPaths(paths map[string]any, schemas map[string]any) {
+func addMirrorPaths(paths, schemas map[string]any) {
 	for name, schema := range mirrorSchemas() {
 		schemas[name] = schema
 	}
-	for _, op := range mirrorOps {
+	for i := range mirrorOps {
+		op := &mirrorOps[i]
 		pathItem, ok := paths[op.Path].(map[string]any)
 		if !ok {
 			pathItem = make(map[string]any)
@@ -216,7 +217,7 @@ func addMirrorPaths(paths map[string]any, schemas map[string]any) {
 }
 
 // build 把一个端点渲染成 OpenAPI operation。
-func (op mirrorOp) build() map[string]any {
+func (op *mirrorOp) build() map[string]any {
 	operation := map[string]any{
 		"operationId": op.OperationID,
 		"tags":        []string{"Mirror"},

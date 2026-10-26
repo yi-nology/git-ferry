@@ -517,14 +517,6 @@ func opsGet(path string) runFunc {
 
 // opsPost 走 POST 的 ops 端点。
 // 有些 ops 端点只注册了 POST,CLI 用 GET 会拿到 404,命令看起来存在却永远调不通。
-func opsPost(path string) runFunc {
-	return func(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
-		q := url.Values{}
-		setIf(cmd, q, "task", "task_key")
-		setIf(cmd, q, "limit", "limit")
-		return c.Do(http.MethodPost, path, nil, q)
-	}
-}
 
 // opsDrift 漂移检测。
 //

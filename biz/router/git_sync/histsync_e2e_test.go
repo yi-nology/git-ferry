@@ -26,7 +26,7 @@ import (
 // httpRepo 造一个仓库(工作树或裸仓库),返回路径。
 func httpRepo(t *testing.T, dir string, bare bool, files map[string]string) string {
 	t.Helper()
-	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.MkdirAll(dir, 0o750))
 	r, err := git.PlainInit(dir, bare)
 	require.NoError(t, err)
 	if bare {
@@ -36,8 +36,8 @@ func httpRepo(t *testing.T, dir string, bare bool, files map[string]string) stri
 	require.NoError(t, err)
 	for p, content := range files {
 		full := filepath.Join(dir, p)
-		require.NoError(t, os.MkdirAll(filepath.Dir(full), 0o755))
-		require.NoError(t, os.WriteFile(full, []byte(content), 0o644))
+		require.NoError(t, os.MkdirAll(filepath.Dir(full), 0o750))
+		require.NoError(t, os.WriteFile(full, []byte(content), 0o600))
 	}
 	require.NoError(t, wt.AddWithOptions(&git.AddOptions{All: true}))
 	sig := &object.Signature{Name: "http", Email: "http@local", When: time.Unix(1700000000, 0)}

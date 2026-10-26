@@ -105,12 +105,13 @@ func wantEvent(events []string, status string) bool {
 }
 
 func (n *Notifier) sendNtfy(ctx context.Context, cfg *NtfyConfig, ev *RunEvent) error {
-	url := cfg.URL
+	// 局部变量别叫 url:它遮蔽了 net/url 包(importShadow)。
+	endpoint := cfg.URL
 	if cfg.Topic != "" {
-		url = strings.TrimRight(url, "/") + "/" + cfg.Topic
+		endpoint = strings.TrimRight(endpoint, "/") + "/" + cfg.Topic
 	}
 	body := formatBody(ev)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -136,8 +137,8 @@ func (n *Notifier) sendGotify(ctx context.Context, cfg *GotifyConfig, ev *RunEve
 	if err != nil {
 		return err
 	}
-	url := strings.TrimRight(cfg.URL, "/") + "/message?token=" + cfg.Token
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
+	endpoint := strings.TrimRight(cfg.URL, "/") + "/message?token=" + cfg.Token
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
@@ -197,11 +198,11 @@ func (n *Notifier) sendWebhook(ctx context.Context, cfg *WebhookConfig, ev *RunE
 	if cfg == nil {
 		return nil
 	}
-	url := cfg.FailURL
+	endpoint := cfg.FailURL
 	if ev.Status != "failed" && cfg.SuccessURL != "" {
-		url = cfg.SuccessURL
+		endpoint = cfg.SuccessURL
 	}
-	if url == "" {
+	if endpoint == "" {
 		return nil
 	}
 	payload, err := json.Marshal(map[string]any{
@@ -219,7 +220,7 @@ func (n *Notifier) sendWebhook(ctx context.Context, cfg *WebhookConfig, ev *RunE
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}

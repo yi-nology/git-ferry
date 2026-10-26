@@ -73,7 +73,7 @@ func saveSecret(account, secret string) bool {
 	}
 	// 写回旧值（尽力而为）：别让一次失败把用户已存的密钥删掉。
 	if old != "" {
-		rb := exec.Command("security", "add-generic-password",
+		rb := exec.Command("security", "add-generic-password", //nolint:gosec // G204:调 macOS security CLI 写回本进程自己的 keychain 项
 			"-s", keychainService, "-a", account, "-w", old)
 		rb.Env = os.Environ()
 		_ = rb.Run()

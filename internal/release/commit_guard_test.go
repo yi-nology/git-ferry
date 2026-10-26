@@ -20,7 +20,7 @@ func newScratchRepo(t *testing.T) string {
 	dir := t.TempDir()
 	run := func(args ...string) {
 		t.Helper()
-		cmd := exec.Command("git", args...)
+		cmd := exec.Command("git", args...) //nolint:gosec // G204:测试内固定参数调用 git
 		cmd.Dir = dir
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, "git %s: %s", strings.Join(args, " "), out)
@@ -34,7 +34,7 @@ func newScratchRepo(t *testing.T) string {
 // gitOut 在指定目录跑 git 并返回输出。
 func gitOut(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command("git", args...)
+	cmd := exec.Command("git", args...) //nolint:gosec // G204:测试内固定参数调用 git
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "git %s: %s", strings.Join(args, " "), out)
@@ -46,7 +46,7 @@ func runScript(t *testing.T, dir string, args ...string) (string, int) {
 	t.Helper()
 	script, err := filepath.Abs(releaseCommitScript)
 	require.NoError(t, err)
-	cmd := exec.Command("bash", append([]string{script}, args...)...)
+	cmd := exec.Command("bash", append([]string{script}, args...)...) //nolint:gosec // G204:测试内跑临时脚本
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	code := 0
@@ -71,20 +71,20 @@ func runScript(t *testing.T, dir string, args ...string) (string, int) {
 func TestReleaseCommit_不带上别人的staged文件(t *testing.T) {
 	dir := newScratchRepo(t)
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base"), 0o600))
 	gitOut(t, dir, "add", "base.txt")
 	gitOut(t, dir, "commit", "-qm", "init")
 
 	// 另一会话:改了 a.txt 并 git add(进的是**共享的 index**)
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a2"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a2"), 0o600))
 	gitOut(t, dir, "add", "a.txt")
 
 	// 我:新增自己的文件
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o600))
 	gitOut(t, dir, "add", "b.txt")
 
 	msgFile := filepath.Join(dir, "msg.txt")
-	require.NoError(t, os.WriteFile(msgFile, []byte("chore: 只提交 b.txt\n"), 0o644))
+	require.NoError(t, os.WriteFile(msgFile, []byte("chore: 只提交 b.txt\n"), 0o600))
 
 	out, code := runScript(t, dir, msgFile, "b.txt")
 	require.Equal(t, 0, code, "脚本输出:%s", out)
@@ -106,8 +106,8 @@ func TestReleaseCommit_不带上别人的staged文件(t *testing.T) {
 func TestReleaseCommit_自检能抓出越界文件(t *testing.T) {
 	dir := newScratchRepo(t)
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o600))
 	gitOut(t, dir, "add", "a.txt", "b.txt")
 	gitOut(t, dir, "commit", "-qm", "越界提交")
 
@@ -125,15 +125,15 @@ func TestReleaseCommit_自检能抓出越界文件(t *testing.T) {
 func TestReleaseCommit_提交后自检通过(t *testing.T) {
 	dir := newScratchRepo(t)
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base"), 0o600))
 	gitOut(t, dir, "add", "base.txt")
 	gitOut(t, dir, "commit", "-qm", "init")
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o600))
 	gitOut(t, dir, "add", "b.txt")
 
 	msgFile := filepath.Join(dir, "msg.txt")
-	require.NoError(t, os.WriteFile(msgFile, []byte("chore: 提交 b\n"), 0o644))
+	require.NoError(t, os.WriteFile(msgFile, []byte("chore: 提交 b\n"), 0o600))
 
 	out, code := runScript(t, dir, msgFile, "b.txt")
 	require.Equal(t, 0, code, "脚本输出:%s", out)

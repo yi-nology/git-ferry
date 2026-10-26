@@ -541,7 +541,7 @@ func mergePathMethod(existing any, method string, op map[string]any) map[string]
 }
 
 // addCustomPaths 追加非 IDL 定义的端点(AI/Mirror/Health/Webhook receive/HistorySync)。
-func addCustomPaths(paths map[string]any, schemas map[string]any) {
+func addCustomPaths(paths, schemas map[string]any) {
 	// Health
 	paths["/health"] = map[string]any{
 		"get": map[string]any{

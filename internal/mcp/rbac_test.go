@@ -170,12 +170,6 @@ func respBody(t *testing.T, resp jsonrpcResp) string {
 }
 
 // mustJSON 把结果序列化(便于断言文本)。
-func mustJSON(t *testing.T, v any) []byte {
-	t.Helper()
-	raw, err := json.Marshal(v)
-	require.NoError(t, err)
-	return raw
-}
 
 // TestMCPToolResultCarriesStructuredContent 工具结果要**同时**给出结构化内容。
 //
