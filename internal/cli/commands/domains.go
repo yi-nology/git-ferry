@@ -39,14 +39,15 @@ func repoList(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string
 	setIf(cmd, q, "keyword", "search")
 	setIf(cmd, q, "platform", "platform")
 	if flagBool(cmd, "all") {
-		items, err := c.PaginateAll("/api/v1/repos", q)
+		items, meta, err := c.PaginateAll("/api/v1/repos", q)
 		if err != nil {
 			return nil, err
 		}
-		return output.Success(jsonRawArray(items), &output.Meta{TotalCount: len(items)}), nil
+		// **总数用服务端给的**:自算 len(items) 会把"被截断的 10 条"谎报成总数。
+		return output.Success(jsonRawArray(items), meta), nil
 	}
 	setIf(cmd, q, "page", "page")
-	setIf(cmd, q, "limit", "per_page")
+	setIf(cmd, q, "limit", "page_size")
 	return c.Get("/api/v1/repos", q)
 }
 
@@ -89,15 +90,55 @@ func repoCreate(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []stri
 	if denied := confirmDanger("创建仓库记录 " + platform + "/" + name); denied != nil {
 		return denied, nil
 	}
-	body := map[string]any{
-		"platform":  platform,
-		"name":      name,
-		"clone_url": flagStr(cmd, "clone-url"),
+	// 服务端的 CreateRepoReq 只有 name + remote_url;平台走 **query 的 platform_id**。
+	//
+	// 以前这里发的是 platform / clone_url / key —— 三个字段服务端都不认
+	// (绑定时被静默丢弃)⇒ RemoteUrl 为空 ⇒ 400 ⇒ **该命令从来没能成功过**。
+	remoteURL := flagStr(cmd, "clone-url")
+	if remoteURL == "" {
+		return nil, fmt.Errorf("--clone-url 不能为空(仓库的克隆地址)")
 	}
 	if v := flagStr(cmd, "key"); v != "" {
-		body["key"] = v
+		return nil, fmt.Errorf("服务端不支持自定义仓库 key(按平台与仓库地址推导)")
 	}
-	return c.Post("/api/v1/repo/create", body)
+	platformID, err := resolvePlatformID(c, platform)
+	if err != nil {
+		return nil, err
+	}
+	body := map[string]any{
+		"name":       name,
+		"remote_url": remoteURL,
+	}
+	q := url.Values{}
+	q.Set("platform_id", platformID)
+	return c.Do(http.MethodPost, "/api/v1/repo/create", body, q)
+}
+
+// resolvePlatformID 把平台 key 解析成服务端要的 platform_id。
+//
+// 服务端建仓接口要的是 **platform_id**(query),而 CLI 的 --platform 给的是
+// 平台 key ⇒ 必须先查一次平台列表做映射,否则把 key 直接发过去服务端拿不到 ID。
+func resolvePlatformID(c *client.Client, key string) (string, error) {
+	env, err := c.Get("/api/v1/platforms", nil)
+	if err != nil {
+		return "", err
+	}
+	if !env.OK {
+		return "", fmt.Errorf("查询平台列表失败: %s", env.Error.Message)
+	}
+	for _, raw := range client.ExtractItems(env.Data) {
+		var p struct {
+			ID  int64  `json:"id"`
+			Key string `json:"key"`
+		}
+		if err := json.Unmarshal(raw, &p); err != nil {
+			continue
+		}
+		if p.Key == key {
+			return strconv.FormatInt(p.ID, 10), nil
+		}
+	}
+	return "", fmt.Errorf("找不到平台 %q(用 `gitferry platform +list` 看可用的 key)", key)
 }
 
 func repoDelete(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
@@ -131,19 +172,20 @@ func newTaskCmd() *cobra.Command {
 
 func taskList(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
 	q := url.Values{}
-	// 服务端 ListTasksReq 只有 repo_key / page / page_size;
-	// keyword / status 不是它的字段,传过去会被忽略。
+	// 服务端 ListTasksReq 有 repo_key / page / page_size / status 四个字段,
+	// 这里一一对应。**status 是真的过滤条件**(服务端 ListTasksFiltered):
+	// 之前契约里没有 status ⇒ hertz 静默忽略 ⇒ 用户以为筛过了、拿到的却是全量。
 	setIf(cmd, q, "keyword", "repo_key")
 	setIf(cmd, q, "status", "status")
 	if flagBool(cmd, "all") {
-		items, err := c.PaginateAll("/api/v1/sync/tasks", q)
+		items, meta, err := c.PaginateAll("/api/v1/sync/tasks", q)
 		if err != nil {
 			return nil, err
 		}
-		return output.Success(jsonRawArray(items), &output.Meta{TotalCount: len(items)}), nil
+		return output.Success(jsonRawArray(items), meta), nil
 	}
 	setIf(cmd, q, "page", "page")
-	setIf(cmd, q, "limit", "limit")
+	setIf(cmd, q, "limit", "page_size")
 	return c.Get("/api/v1/sync/tasks", q)
 }
 
@@ -295,7 +337,18 @@ func taskBatchRun(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []st
 	if flagBool(cmd, "csv") {
 		payload["csv"] = batchResultsCSV(rows)
 	}
-	return output.Success(payload, nil), nil
+	env := output.Success(payload, nil)
+	if failCount > 0 {
+		// **部分失败 ⇒ 退出码非 0**:以前一律 ok:true ⇒ 脚本里
+		// `gitferry task +batch-run ... && echo ok` 会打印 ok,而实际 3/3 全失败
+		// (失败数被埋在 data 的 "failed" 字段里)。
+		env.OK = false
+		env.Error = &output.ErrorInfo{
+			Code:    "batch_failed",
+			Message: fmt.Sprintf("%d/%d 个任务失败", failCount, len(keys)),
+		}
+	}
+	return env, nil
 }
 
 func batchResultsCSV(rows []batchRow) string {
@@ -408,7 +461,7 @@ func newOpsCmd() *cobra.Command {
 		sc("+health", "健康评分（--with-drift 折入漂移）", opsHealth),
 		sc("+inventory", "资产盘点（孤儿仓库）", opsGet("/api/v1/ops/inventory")),
 		sc("+rpo", "RPO/RTO 观测", opsRPO),
-		sc("+drift", "漂移检测", opsPost("/api/v1/ops/drift")),
+		sc("+drift", "漂移检测", opsDrift),
 		sc("+integrity", "冷备完整性校验", opsGet("/api/v1/ops/backup-manifest/verify")),
 		sc("+audit", "审计哈希链校验", opsGet("/api/v1/ops/audit-chain/verify")),
 		sc("+audit-report", "审计日志导出（--csv 下载）", opsAuditReport),
@@ -463,8 +516,7 @@ func opsGet(path string) runFunc {
 }
 
 // opsPost 走 POST 的 ops 端点。
-// 有些 ops 端点只注册了 POST(如 /api/v1/ops/drift),CLI 用 GET 会拿到 404,
-// 命令看起来存在却永远调不通。
+// 有些 ops 端点只注册了 POST,CLI 用 GET 会拿到 404,命令看起来存在却永远调不通。
 func opsPost(path string) runFunc {
 	return func(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
 		q := url.Values{}
@@ -472,6 +524,20 @@ func opsPost(path string) runFunc {
 		setIf(cmd, q, "limit", "limit")
 		return c.Do(http.MethodPost, path, nil, q)
 	}
+}
+
+// opsDrift 漂移检测。
+//
+// **查询参数名与服务端一致**:服务端要的是 `task_keys`(复数数组),
+// 以前发 `task_key`(单数)⇒ 被静默忽略 ⇒ TaskKeys 为空 ⇒ 服务端走
+// **全量扫描**(用户要单任务报告,实际拿到全部任务的漂移)。
+// drift 也没有 `limit` 参数(扫描范围由服务端预算决定)⇒ 不发。
+func opsDrift(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
+	q := url.Values{}
+	for _, k := range stringx.SplitCSVNonEmpty(flagStr(cmd, "task")) {
+		q.Add("task_keys", k)
+	}
+	return c.Do(http.MethodPost, "/api/v1/ops/drift", nil, q)
 }
 
 // opsTrends 同步趋势（--limit 作 days）。

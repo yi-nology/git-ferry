@@ -55,7 +55,7 @@ func TestPaginateAll(t *testing.T) {
 
 	c := New(srv.URL, "")
 	q := url.Values{"per_page": {"2"}}
-	items, err := c.PaginateAll("/api/v1/repos", q)
+	items, _, err := c.PaginateAll("/api/v1/repos", q)
 	require.NoError(t, err)
 	assert.Len(t, items, 3)
 
@@ -77,7 +77,7 @@ func TestPaginateAll_StopsOnEmpty(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, "")
-	items, err := c.PaginateAll("/api/v1/sync/tasks", nil)
+	items, _, err := c.PaginateAll("/api/v1/sync/tasks", nil)
 	require.NoError(t, err)
 	assert.Len(t, items, 1)
 }
