@@ -6,6 +6,8 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	coremodel "github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -98,4 +100,34 @@ func errJSON(prefix string, err error) string {
 // msgJSON 构造 {found:false,...} 一类的说明性负载。
 func msgJSON(kv map[string]any) string {
 	return marshalJSON(kv)
+}
+
+// parseToolPayload 解析子工具的 JSON 负载,并**识别错误信封**。
+//
+// 为什么必须有这个函数:子工具(getSyncHealth / getRepoInventory)失败时
+// 返回的是 errJSON(...) —— 一个 `{"error": "..."}` 的 JSON,而
+// **Go error 恒为 nil**(errJSON 把错误编码进 JSON 后就 return nil)。
+//
+// ⇒ 只看 Go error 的写法**永远发现不了失败**:
+//   json.Unmarshal 那个 {"error":...} 不会报错(字段对不上就当没这个字段),
+//   结果结构体的 Items 是空的 ⇒ 子系统一挂,对应的待办**整段消失**,
+//   而调用方看到的只是一个"没有待办"的正常列表 ⇒ 报告与事实相反。
+//
+// 这个函数把两种失败都变成 Go error:
+//   - 负载里带 "error" 字段 ⇒ 返回该错误(子工具的业务失败)
+//   - 负载根本不是合法 JSON ⇒ 返回解析错误(子工具的结构变了)
+func parseToolPayload(raw string, out any) error {
+	var probe struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
+		return fmt.Errorf("结果解析失败: %w", err)
+	}
+	if probe.Error != "" {
+		return errors.New(probe.Error)
+	}
+	if err := json.Unmarshal([]byte(raw), out); err != nil {
+		return fmt.Errorf("结果解析失败: %w", err)
+	}
+	return nil
 }

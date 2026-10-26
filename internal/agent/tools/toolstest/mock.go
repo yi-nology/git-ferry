@@ -18,6 +18,8 @@ type Mock struct {
 
 	Tasks     []*corebridge.SyncTask
 	TaskTotal int64
+	// TaskErr 注入任务查询失败(健康维度会因此整段查不出来)。
+	TaskErr error
 
 	Runs     []*corebridge.SyncRun
 	RunTotal int64
@@ -41,6 +43,14 @@ type Mock struct {
 	RPOErr    error
 	Integrity *corebridge.ManifestVerifyResult
 	Drift     *corebridge.DriftReport
+
+	// HistoryRuns 历史同步执行记录(分页用)。
+	HistoryRuns      []*corebridge.HistoryRunDTO
+	HistoryRunsTotal int64
+	// HistoryRunsOffset/HistoryRunsLimit 记录上次调用的分页参数,
+	// 便于断言工具确实按页取数(而不是硬编码 50 条)。
+	HistoryRunsOffset int
+	HistoryRunsLimit  int
 
 	// mu 保护在请求 goroutine 与测试 goroutine 间并发的字段。
 	mu             sync.Mutex
@@ -84,6 +94,9 @@ func (m *Mock) TestConnection(context.Context, string) (*coremodel.TestConnectio
 }
 
 func (m *Mock) ListTasks(context.Context, string, int, int) ([]*corebridge.SyncTask, int64, error) {
+	if m.TaskErr != nil {
+		return nil, 0, m.TaskErr
+	}
 	return m.Tasks, m.TaskTotal, nil
 }
 
@@ -192,8 +205,21 @@ func (m *Mock) HistoryResolve(_ context.Context, _ uint) (*corebridge.HistoryPla
 }
 
 // ListHistoryRuns 返回假的执行记录列表。
-func (m *Mock) ListHistoryRuns(_ context.Context, _ uint, _, _ int) ([]*corebridge.HistoryRunDTO, int64, error) {
-	return []*corebridge.HistoryRunDTO{}, 0, nil
+func (m *Mock) ListHistoryRuns(_ context.Context, _ uint, offset, limit int) ([]*corebridge.HistoryRunDTO, int64, error) {
+	m.HistoryRunsOffset = offset
+	m.HistoryRunsLimit = limit
+	if m.HistoryRuns == nil {
+		return []*corebridge.HistoryRunDTO{}, 0, nil
+	}
+	// 模拟真分页:按 offset/limit 切片,total 始终是全量条数。
+	if offset > len(m.HistoryRuns) {
+		offset = len(m.HistoryRuns)
+	}
+	end := len(m.HistoryRuns)
+	if limit > 0 && offset+limit < end {
+		end = offset + limit
+	}
+	return m.HistoryRuns[offset:end], m.HistoryRunsTotal, nil
 }
 
 // VerifyHistoryChannelChain 返回假的链校验结果。

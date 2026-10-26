@@ -112,13 +112,51 @@ func (r *Registry) resolveHistoryChannel(ctx context.Context, in historyChannelR
 	return out, nil
 }
 
+// listHistoryRunsInput 是「列执行记录」的入参。
+//
+// **刻意带分页**:以前硬编码 50 条上限、且入参只有 channel_id ⇒
+// 模型想看更多也拿不到,而输出里的 total 却是**真实总数**
+// ⇒ 两个数字对不上,模型无从判断自己看到的是不是全部
+// (同一个坑在 list_histsync_channels 上已经修过一遍,这里是漏网的同一个)。
+type listHistoryRunsInput struct {
+	ChannelID uint `json:"channel_id" jsonschema:"历史同步通道 ID"`
+	Page      int  `json:"page,omitempty" jsonschema:"页码,从 1 开始,默认 1"`
+	Limit     int  `json:"limit,omitempty" jsonschema:"每页条数,默认 20,最大 100"`
+}
+
 // listHistoryRuns 列出通道的执行记录(审计与回滚锚点)。
-func (r *Registry) listHistoryRuns(ctx context.Context, in historyChannelRef) (map[string]any, error) {
-	list, total, err := r.svc.ListHistoryRuns(ctx, in.ChannelID, 0, 50)
+//
+// 截断必须**说出口**:returned / total 两个数字都在,且被截断时给 truncated +
+// notice ⇒ 模型能判断"还有更多,需要翻页",而不是把这一页当成全部。
+func (r *Registry) listHistoryRuns(ctx context.Context, in listHistoryRunsInput) (map[string]any, error) {
+	page := in.Page
+	if page <= 0 {
+		page = 1
+	}
+	limit := in.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	list, total, err := r.svc.ListHistoryRuns(ctx, in.ChannelID, (page-1)*limit, limit)
 	if err != nil {
 		return nil, fmt.Errorf("列出历史同步执行记录失败: %w", err)
 	}
-	return map[string]any{"total": total, "runs": list}, nil
+	out := map[string]any{
+		"channel_id": in.ChannelID,
+		"total":      total,
+		"page":       page,
+		"limit":      limit,
+		"returned":   len(list),
+		"runs":       list,
+	}
+	if int64(len(list)) < total {
+		out["truncated"] = true
+		out["notice"] = "本页只返回了部分执行记录,还有更多,请用 page 继续翻页"
+	}
+	return out, nil
 }
 
 // verifyHistoryChannelAudit 校验通道内执行记录的哈希链。

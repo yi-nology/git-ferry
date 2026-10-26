@@ -168,16 +168,31 @@ type todoInput struct {
 	MaxItems int `json:"max_items,omitempty" jsonschema:"最多返回条数,默认 20"`
 }
 
+// todoSourceFailure 记录一路数据源查询失败(哪个源、什么错)。
+type todoSourceFailure struct {
+	Source string `json:"source"`
+	Error  string `json:"error"`
+}
+
+// getOpsTodo 汇总三类待办:健康分偏低 / 孤儿仓库 / RPO 超标。
+//
+// **子数据源失败必须显式暴露**(以前全是静默丢):
+//   - 健康 / 孤儿两路走子工具,子工具失败时返回的是 `{"error": "..."}` 的 JSON,
+//     **Go error 恒为 nil** ⇒ 以前 `json.Unmarshal` 不报错、Items 为空
+//     ⇒ 子系统一挂,这一整类待办**无声消失**,调用方看到的是"没有待办";
+//   - RPO 一路连 Go error 都被 `_`/未检查直接丢掉。
+//
+// ⇒ 现在任何一路失败都会记进 failures,并在输出里带上 partial + warning;
+// 一条都没查到时额外给 message,避免"空列表"被当成"一切正常"。
 func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error) {
 	limit := in.MaxItems
 	if limit <= 0 {
 		limit = 20
 	}
-	// 复用 getSyncHealth 的维度结果 + 孤儿 + RPO
+	failures := []todoSourceFailure{}
+
+	// ① 健康(子工具:错误编码在 JSON 里,Go error 恒为 nil)
 	healthOut, err := r.getSyncHealth(ctx, healthInput{Limit: pageLimit})
-	if err != nil {
-		return errJSON("健康查询失败", err), nil
-	}
 	var healthParsed struct {
 		Items []struct {
 			Key     string   `json:"key"`
@@ -187,7 +202,11 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 			Actions []string `json:"actions"`
 		} `json:"items"`
 	}
-	_ = json.Unmarshal([]byte(healthOut), &healthParsed)
+	if err != nil {
+		failures = append(failures, todoSourceFailure{Source: "health", Error: err.Error()})
+	} else if perr := parseToolPayload(healthOut, &healthParsed); perr != nil {
+		failures = append(failures, todoSourceFailure{Source: "health", Error: perr.Error()})
+	}
 
 	todo := []map[string]any{}
 	for _, h := range healthParsed.Items {
@@ -209,8 +228,8 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 		})
 	}
 
-	// 孤儿
-	invOut, _ := r.getRepoInventory(ctx, inventoryInput{})
+	// ② 孤儿仓库(子工具:同样把错误编码在 JSON 里)
+	invOut, invErr := r.getRepoInventory(ctx, inventoryInput{})
 	var invParsed struct {
 		Items []struct {
 			Key      string `json:"key"`
@@ -218,7 +237,11 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 			Coverage string `json:"coverage"`
 		} `json:"items"`
 	}
-	_ = json.Unmarshal([]byte(invOut), &invParsed)
+	if invErr != nil {
+		failures = append(failures, todoSourceFailure{Source: "inventory", Error: invErr.Error()})
+	} else if perr := parseToolPayload(invOut, &invParsed); perr != nil {
+		failures = append(failures, todoSourceFailure{Source: "inventory", Error: perr.Error()})
+	}
 	for _, it := range invParsed.Items {
 		if it.HasTask {
 			continue
@@ -229,9 +252,12 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 		})
 	}
 
-	// RPO
+	// ③ RPO
 	rep, rerr := r.svc.RPOReport(86400)
-	if rerr == nil && rep != nil {
+	switch {
+	case rerr != nil:
+		failures = append(failures, todoSourceFailure{Source: "rpo", Error: rerr.Error()})
+	case rep != nil:
 		for mi := range rep.Metrics {
 			m := &rep.Metrics[mi]
 			if !m.RPOViolated {
@@ -250,11 +276,29 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 		pj, _ := todo[j]["priority"].(int)
 		return pi < pj
 	})
+	// **截断要说出来**:total 是**截断前**的真实条数,returned 是实际返回条数。
+	// 以前 total 报的是截断后的长度 ⇒ 模型看到"一共 20 条"却不知道还有更多。
+	total := len(todo)
+	truncated := false
 	if len(todo) > limit {
 		todo = todo[:limit]
+		truncated = true
 	}
-	return marshalJSON(map[string]any{
-		"items": todo, "total": len(todo),
+	out := map[string]any{
+		"items": todo, "total": total, "returned": len(todo),
 		"legend": "priority 1=紧急 2=待处理; kind health|orphan|rpo",
-	}), nil
+	}
+	if truncated {
+		out["truncated"] = true
+		out["notice"] = "待办条数超过 max_items,已截断;total 是截断前的真实条数"
+	}
+	if len(failures) > 0 {
+		out["partial"] = true
+		out["failures"] = failures
+		out["warning"] = "部分数据源查询失败,本列表**不完整**:失败数据源对应的待办不在其中,不要据此断言「没有待办」"
+		if len(todo) == 0 {
+			out["message"] = "所有数据源均查询失败,无法给出待办清单(见 failures)"
+		}
+	}
+	return marshalJSON(out), nil
 }
