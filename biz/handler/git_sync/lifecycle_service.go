@@ -54,7 +54,12 @@ func AutoDiscover(ctx context.Context, c *app.RequestContext) {
 // 比对本地 workdir 与目标远端分支 tip,发现静默漂移。
 func DetectDrift(ctx context.Context, c *app.RequestContext) {
 	var req ops.DetectDriftReq
-	_ = c.BindAndValidate(&req)
+	// **绑定错误不能丢**:丢了就当"没传过滤条件"⇒ 静默退化成**扫描全部任务**,
+	// 调用方以为做了筛选。
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
 	svc, ok := requireSyncService(c)
 	if !ok {
 		return

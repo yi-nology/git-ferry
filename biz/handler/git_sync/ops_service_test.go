@@ -22,8 +22,8 @@ func TestScoreLevelMapping(t *testing.T) {
 		"run_total": "10", "run_success": "10", "fail_streak": "0",
 		"step_fail_count": "0", "retry_total": "0",
 		"last_run_age_hours": "1",
-		"force_push_policy": "block",
-		"backup_enabled":    "true", "sync_wiki": "true",
+		"force_push_policy":  "block",
+		"backup_enabled":     "true", "sync_wiki": "true",
 	})
 	require.Equal(t, "gold", res.Level)
 }
