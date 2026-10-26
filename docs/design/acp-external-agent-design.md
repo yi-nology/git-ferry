@@ -821,6 +821,47 @@ HTTP 请求一结束,请求 ctx 就被取消 ⇒ 后台委派会被一起杀掉;
 2. **e2e 可能因外部服务状态变红**:不是代码回退。排查时先跑一遍裸命令
    (`mcode exec "..."`),分清是「服务侧拒绝」还是「我们的代码坏了」。
 
+### 17.6.3 多个外部 agent 并存(具名 profile 列表)
+
+`ai.external.agents` 是一张**具名 profile 列表** ⇒ 可以同时挂 Claude Code + Codex:
+
+```yaml
+ai:
+  backend: acpx
+  external:
+    current: mcode          # 驱动对话的 profile
+    agents:
+      - {name: mcode, transport: stdio, command: "mcode acp", permission: ask}
+      - {name: codex, transport: acpx, agent: codex, permission: approve_reads}
+```
+
+规则:
+- **列表为空** ⇒ 用旧的单 profile 字段(旧行为一个不变);
+- **列表非空** ⇒ 以列表为准:对话用 `current`(留空=第一个),
+  委派工具的 `agent` 参数**按名字命中 profile**;没命中就当 acpx 内置 agent 名(旧行为);
+- profile 的 `transport` 留空 ⇒ 跟随 `ai.backend`。
+
+**顺带修掉两个真问题**:
+1. **两份平行结构**:`ExternalConfig`(yaml)与 `ExternalSettings`(设置文件)
+   是两个 struct,字段逐个拷贝 ⇒ 这次新增 profile 列表时**就漏了**
+   (`ToConfig` 没带 `Agents`)。已合并成**同一个类型**(`ExternalSettings = ExternalConfig`),
+   并改成整体拷贝 —— 以后新增字段只改一处。
+2. **委派执行器在默认配置下装不上**:acpx 非交互 ⇒ `ask` 被校验拒掉 ⇒
+   `NewDelegateRunner` 失败 ⇒ 委派执行器**根本没装配** ⇒
+   `ai_code_delegate` 报「未配置」(看起来像用户没配)。
+   委派是**一次性执行**,弹不出授权卡 ⇒ `ask` 在这里没有对应物 ⇒
+   映射成 `approve_reads`,并在回执里明说(不静默降级)。
+   加了 `HasDelegator()` 探针:「装上了吗」从此是可断言的事实。
+
+### 17.6.4 思考过程在界面上的呈现
+
+外部 agent 的 `agent_thought_chunk` 映射成 `thinking` 事件(此前只在协议层可见)。
+界面侧:按回合累积、**默认折叠**、限长 2000 字(超出标注「已截断」),
+塞在助手气泡顶部的可展开块里。
+
+限长放在**前端**:思考内容的长度由 agent 决定,服务端截断会让流变得莫名其妙
+(突然不输出了);前端限长只是「显示多少」,不影响数据完整性。
+
 ### 17.7 新增测试
 
 - `biz/handler/git_sync/ai_config_test.go`:RBAC 三档(只读拒 / 治理项要 admin / 普通项放行)、

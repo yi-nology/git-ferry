@@ -478,6 +478,11 @@ What matters:
   **scrubbed** (the service's `ENCRYPTION_KEY` and admin key are removed), and the working
   directory is the sandbox boundary. **Real isolation belongs in the deployment**
   (dedicated user / container / read-only mounts).
+- **Several external agents at once**: configure `ai.external.agents` as a list of named
+  profiles (Claude Code + Codex…) — the conversation uses the one picked by `current`,
+  and delegation picks by name.
+- **Thinking process**: the external agent's reasoning arrives as `thinking` events and is
+  shown collapsed in the UI (collapsed by default, length-capped).
 - **Delegation**: the built-in assistant can hand a coding task to an external agent via
   the `ai_code_delegate` tool. Delegation is **asynchronous**: confirming returns a task id
   immediately (the external agent may run for minutes — waiting synchronously would hang

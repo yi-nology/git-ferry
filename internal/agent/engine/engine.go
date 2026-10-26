@@ -181,6 +181,16 @@ type DelegateStatus interface {
 	DelegateStatus(taskID string) (map[string]any, bool)
 }
 
+// DelegatorProbe 可查后端是否装配了「外部 agent 委派执行器」(诊断用)。
+//
+// 之所以要这个探针:委派执行器是**按需装配**的(没配外部 agent 就不装),
+// 而「装不上」的表现是 ai_code_delegate 报「未配置」——
+// 看起来像「用户没配」,实际是「装配失败」。有个能断言的探针,
+// 这类回归就藏不住了。
+type DelegatorProbe interface {
+	HasDelegator() bool
+}
+
 // PolicyBinder 支持注入工具权限策略。
 type PolicyBinder interface {
 	SetPolicy(p *tools.Policy)

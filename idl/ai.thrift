@@ -37,6 +37,30 @@ struct AIExternalConfig {
     9: string mcpApiKeyEnv (api.json="mcp_api_key_env")
     // mcpServers 额外挂给外部 agent 的 MCP 服务器(可多个)
     11: list<AIExternalMCPServer> mcpServers (api.json="mcp_servers")
+    // agents 具名的外部 agent profile 列表(可同时挂 Claude Code + Codex …)
+    12: list<AIExternalAgent> agents (api.json="agents")
+    // current 驱动对话的 profile 名(留空=列表第一个)
+    13: string current (api.json="current")
+}
+
+// AIExternalAgent 一个具名的外部 agent profile。
+struct AIExternalAgent {
+    1: string name (api.json="name")
+    // transport acpx | stdio;留空=跟随 ai.backend
+    2: string transport (api.json="transport")
+    // agent acpx 内置 agent 名(mcode/codex/claude…)
+    3: string agent (api.json="agent")
+    // command 自定义命令(stdio 形态如 "mcode acp")
+    4: string command (api.json="command")
+    5: list<string> args (api.json="args")
+    6: string cwd (api.json="cwd")
+    7: i32 timeoutSeconds (api.json="timeout_seconds")
+    // permission ask|approve_reads|approve_all|deny
+    8: string permission (api.json="permission")
+    9: bool mcpEnabled (api.json="mcp_enabled")
+    10: string mcpUrl (api.json="mcp_url")
+    11: string mcpApiKeyEnv (api.json="mcp_api_key_env")
+    12: list<AIExternalMCPServer> mcpServers (api.json="mcp_servers")
 }
 
 // AIExternalMCPServer 额外挂给外部 agent 的一个 MCP 服务器。

@@ -387,7 +387,11 @@ MCP 端点与 AI 助手**共用同一注册表**（`internal/agent/tools`），M
   夹具见 `internal/agent/engine/acp/testdata/`。
 - 外部 agent 是**跑在本机上的子进程**，工作目录即代码层能给到的沙箱边界。
 - 挂本服务 `/mcp` 给外部 agent 时，MCP 专用 key 固定**只读角色**（MCP 路径上危险工具不弹确认）。
-- 委派工具 `ai_code_delegate`（危险）让内置助手把一段编码任务派给外部 agent。
+- 委派工具 `ai_code_delegate`（危险）让内置助手把一段编码任务派给外部 agent；
+  委派是**异步**的（确认后立刻返回任务 ID，结果回填会话 + 轮询取回），
+  避免外部 agent 的耗时把对话连接挂到代理超时。
+- `ai.external.agents` 是**具名 profile 列表**：可同时挂多个外部 agent
+  （Claude Code + Codex…），对话用 `current` 选中的，委派时按名字选。
 - **AI 配置是治理面**：改配置要写角色；**换后端 / 改外部 agent 授权档仅 admin**，并写操作日志。
 - 详见 `docs/design/acp-external-agent-design.md`。
 

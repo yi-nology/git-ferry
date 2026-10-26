@@ -27,6 +27,28 @@ const agentSession = ref<{ id: string; label: string } | null>(null)
 
 let abort: AbortController | null = null
 
+/** 思考过程在界面上的长度上限(超出只留开头,并标注已截断)。 */
+const THINKING_MAX = 2000
+
+function handleThinking(text: string) {
+  if (!text) return
+  const last = messages.value[messages.value.length - 1]
+  let target = last
+  if (!last || last.role !== 'assistant' || !last.streaming) {
+    // 思考通常先于正文到达 ⇒ 先建一个空的 assistant 消息,正文接着往里追加
+    target = { role: 'assistant', content: '', streaming: true, thinking: '' }
+    messages.value.push(target)
+  }
+  const cur = target.thinking ?? ''
+  if (cur.length >= THINKING_MAX) {
+    target.thinkingTruncated = true
+    return
+  }
+  const room = THINKING_MAX - cur.length
+  target.thinking = cur + text.slice(0, room)
+  if (text.length > room) target.thinkingTruncated = true
+}
+
 function handleEvent(ev: AIEvent) {
   switch (ev.type) {
     case 'start':
@@ -41,6 +63,9 @@ function handleEvent(ev: AIEvent) {
       }
       break
     }
+    case 'thinking':
+      handleThinking(ev.content ?? '')
+      break
     case 'tool_start':
       messages.value.push({ role: 'tool', content: '调用中…', tool: ev.tool })
       break

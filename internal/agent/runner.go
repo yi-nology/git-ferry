@@ -181,6 +181,14 @@ func (r *Runner) ExecuteConfirmed(ctx context.Context, sess *Session, toolName, 
 	return c.ExecuteConfirmed(ctx, sess, toolName, token)
 }
 
+// HasDelegator 是否装配了委派执行器(诊断用)。
+func (r *Runner) HasDelegator() bool {
+	if p, ok := r.eng.(engine.DelegatorProbe); ok {
+		return p.HasDelegator()
+	}
+	return false
+}
+
 // DelegateStatus 查「外部 agent 委派任务」的状态(前端轮询用)。
 //
 // 委派是**异步**的:确认后立刻返回任务 ID,结果稍后才有。

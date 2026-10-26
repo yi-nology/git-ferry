@@ -116,6 +116,21 @@ log:
 #                              # 专用 key 的**环境变量名**(密钥不进配置);
 #                              # 该 key 固定为只读角色 —— MCP 路径上危险工具不弹确认
 #       # 额外挂给外部 agent 的 MCP 服务器(可多个;认证密钥同样只填环境变量名)
+#       # 具名 profile 列表:可同时挂多个外部 agent(如 Claude Code + Codex)。
+#       # 列表非空时以列表为准:current 选中的驱动对话,委派时按名字选。
+#       # (列表为空则用上面那组单 profile 字段 —— 旧写法照旧可用)
+#       current: mcode
+#       agents:
+#         - name: mcode
+#           transport: stdio      # acpx | stdio;留空=跟随 ai.backend
+#           command: "mcode acp"
+#           cwd: var/ai-workspace
+#           permission: ask       # stdio 传输支持逐次确认(弹授权卡)
+#         - name: codex
+#           transport: acpx
+#           agent: codex
+#           cwd: var/ai-workspace
+#           permission: approve_reads   # acpx 非交互 ⇒ 不能用 ask
 #       mcp_servers:
 #         - name: docs
 #           type: http

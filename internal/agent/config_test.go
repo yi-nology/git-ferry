@@ -179,3 +179,35 @@ func TestSettings_Save_拒绝存不可用的组合(t *testing.T) {
 	// 存量配置没被动过
 	assert.False(t, store.Get().Enabled)
 }
+
+// TestSettings_Save_profile用acpx加ask要拒 某个 profile 用 acpx + ask 时起不来;
+// 放过它 ⇒ 存下一份「部分后端起不来」的配置,界面显示已保存、实际行为不符。
+func TestSettings_Save_profile用acpx加ask要拒(t *testing.T) {
+	store, err := OpenSettings(filepath.Join(t.TempDir(), "ai-settings.json"))
+	require.NoError(t, err)
+
+	_, err = store.Save(&Settings{
+		Enabled: true,
+		Backend: BackendACPX,
+		External: ExternalSettings{
+			Agent: "mcode",
+			Agents: []ExternalAgentConfig{
+				{Name: "codex", Transport: BackendACPX, Agent: "codex", Permission: "ask"},
+			},
+		},
+	})
+	assert.ErrorContains(t, err, "codex", "错误信息要指出是哪个 profile")
+
+	// 换成 stdio 就没问题
+	_, err = store.Save(&Settings{
+		Enabled: true,
+		Backend: BackendACPX,
+		External: ExternalSettings{
+			Agent: "mcode",
+			Agents: []ExternalAgentConfig{
+				{Name: "codex", Transport: BackendStdio, Command: "codex-acp", Permission: "ask"},
+			},
+		},
+	})
+	assert.NoError(t, err, "stdio 传输支持逐次确认")
+}

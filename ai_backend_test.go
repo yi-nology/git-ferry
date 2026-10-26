@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/yi-nology/git-ferry/internal/agent"
+	"github.com/yi-nology/git-ferry/internal/agent/engine"
+	"github.com/yi-nology/git-ferry/internal/agent/engine/acp"
+	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
 )
 
 // TestMCPServersFor_本服务加额外 挂载清单 = 本服务自己的 /mcp + 额外的 MCP 服务器。
@@ -23,7 +26,7 @@ func TestMCPServersFor_本服务加额外(t *testing.T) {
 			{Name: "local", Type: "stdio", Command: "/usr/bin/mcp-server", Args: []string{"--stdio"}},
 		},
 	}
-	list, err := mcpServersFor(&ext, nil)
+	list, err := mcpServersFor(ext.MCPEnabled, ext.MCPURL, ext.MCPAPIKeyEnv, ext.MCPServers, nil)
 	require.NoError(t, err)
 	require.Len(t, list, 3)
 
@@ -53,7 +56,7 @@ func TestMCPServersFor_缺环境变量直接报错(t *testing.T) {
 			{Name: "x", Type: "http", URL: "https://x/mcp", APIKeyEnv: "GITFERRY_NOT_SET_XYZ"}, //nolint:gosec // G101:环境变量名,不是凭据
 		},
 	}
-	_, err := mcpServersFor(&ext, nil)
+	_, err := mcpServersFor(ext.MCPEnabled, ext.MCPURL, ext.MCPAPIKeyEnv, ext.MCPServers, nil)
 	assert.ErrorContains(t, err, "GITFERRY_NOT_SET_XYZ")
 }
 
@@ -62,6 +65,80 @@ func TestMCPServersFor_缺name报错(t *testing.T) {
 	ext := agent.ExternalConfig{
 		MCPServers: []agent.MCPServerConfig{{Type: "http", URL: "https://x/mcp"}},
 	}
-	_, err := mcpServersFor(&ext, nil)
+	_, err := mcpServersFor(ext.MCPEnabled, ext.MCPURL, ext.MCPAPIKeyEnv, ext.MCPServers, nil)
 	assert.ErrorContains(t, err, "name")
+}
+
+// TestResolveProfile_列表与旧行为 列表为空 ⇒ 单 profile 字段(旧行为,一个不变);
+// 列表非空 ⇒ 以列表为准(Current 选中的那个)。
+func TestResolveProfile_列表与旧行为(t *testing.T) {
+	// 旧行为:没有列表
+	old := &agent.Config{
+		Backend: agent.BackendACPX,
+		External: agent.ExternalConfig{
+			Agent: "mcode", Cwd: "/ws", Permission: "ask",
+		},
+	}
+	p := old.ResolveProfile("")
+	assert.Equal(t, "mcode", p.Agent)
+	assert.Equal(t, agent.BackendACPX, p.Transport, "没写 transport 时跟随 ai.backend")
+	assert.Equal(t, "/ws", p.Cwd)
+
+	// 列表模式:Current 选中
+	list := &agent.Config{
+		Backend: agent.BackendACPX,
+		External: agent.ExternalConfig{
+			Current: "codex",
+			Agents: []agent.ExternalAgentConfig{
+				{Name: "claude", Transport: agent.BackendStdio, Command: "claude-code-acp", Cwd: "/a"},
+				{Name: "codex", Transport: agent.BackendACPX, Agent: "codex", Cwd: "/b"},
+			},
+		},
+	}
+	p2 := list.ResolveProfile("")
+	assert.Equal(t, "codex", p2.Name, "应选 Current 指定的")
+	assert.Equal(t, agent.BackendACPX, p2.Transport)
+
+	// 按名字精确命中
+	p3, ok := list.ResolveProfileByName("claude")
+	require.True(t, ok)
+	assert.Equal(t, agent.BackendStdio, p3.Transport)
+	assert.Equal(t, "claude-code-acp", p3.Command)
+
+	// 没命中
+	_, ok = list.ResolveProfileByName("nope")
+	assert.False(t, ok)
+}
+
+// TestDelegatePermissionFor_ask映射成approve_reads 一次性执行弹不出授权卡,
+// `ask` 在委派场景没有对应物 ⇒ 映射成 approve_reads。
+//
+// **这个映射是必须的**:acpx 是非交互通道,`ask` 会被校验直接拒掉 ⇒
+// 不映射的话,默认配置下**委派执行器根本装不上**
+// (表现为 ai_code_delegate 报「未配置」,像没配过一样)。
+func TestDelegatePermissionFor_ask映射成approve_reads(t *testing.T) {
+	assert.Equal(t, acp.PermissionApproveReads, delegatePermissionFor(""))
+	assert.Equal(t, acp.PermissionApproveReads, delegatePermissionFor(acp.PermissionAsk))
+	assert.Equal(t, acp.PermissionApproveAll, delegatePermissionFor(acp.PermissionApproveAll))
+	assert.Equal(t, acp.PermissionDeny, delegatePermissionFor(acp.PermissionDeny))
+}
+
+// TestAttachDelegator_默认配置也要装得上 默认权限档(空)也必须能装配委派执行器,
+// 否则 ai_code_delegate 会一直报「未配置」。
+func TestAttachDelegator_默认配置也要装得上(t *testing.T) {
+	cfg := &agent.Config{
+		Backend: agent.BackendInternal,
+		External: agent.ExternalConfig{
+			Agent: "mcode",
+		},
+	}
+	eng, err := agent.NewEinoEngine(cfg, "key", toolstest.NewMock())
+	require.NoError(t, err)
+	attachDelegator(cfg, eng)
+
+	// **必须真的装上了** —— 装不上时 ai_code_delegate 会报「未配置」,
+	// 看起来像用户没配,实际是装配失败(例如授权档没映射对)。
+	probe, ok := eng.(engine.DelegatorProbe)
+	require.True(t, ok)
+	assert.True(t, probe.HasDelegator(), "默认配置下委派执行器必须装得上")
 }

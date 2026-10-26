@@ -58,6 +58,10 @@ export interface ChatMessage {
   streaming?: boolean
   /** 外部 agent 委派任务 ID(有它说明这行在等外部 agent 的结果) */
   taskId?: string
+  /** 外部 agent 的思考过程(折叠展示,按上限截断) */
+  thinking?: string
+  /** 思考过程是否被截断 */
+  thinkingTruncated?: boolean
 }
 
 export interface PendingConfirm {

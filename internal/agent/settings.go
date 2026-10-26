@@ -35,23 +35,13 @@ type Settings struct {
 
 // ExternalSettings 外部 coding agent 的界面可改配置。
 //
-// **不含密钥**:挂给 agent 的 MCP 专用 key 走环境变量(ExternalConfig.MCPAPIKeyEnv),
+// **与 ExternalConfig 是同一个类型** —— 之前是两份平行结构,
+// 改一边忘另一边就会漂移(已经踩过:yaml 里的 mcp_enabled 与界面对不上)。
+// 统一后 yaml 段与设置文件共用一套字段与 tag,新增字段只改一处。
+//
+// **不含密钥**:挂给 agent 的 MCP 专用 key 走环境变量(MCPAPIKeyEnv),
 // 界面上只填「环境变量名」。
-type ExternalSettings struct {
-	Agent          string   `json:"agent"`
-	Command        string   `json:"command"`
-	Args           []string `json:"args"`
-	Cwd            string   `json:"cwd"`
-	TimeoutSeconds int      `json:"timeout_seconds"`
-	Permission     string   `json:"permission"`
-	MCPEnabled     bool     `json:"mcp_enabled"`
-	MCPURL         string   `json:"mcp_url"`
-	MCPAPIKeyEnv   string   `json:"mcp_api_key_env"`
-	// MCPServers 额外挂给外部 agent 的 MCP 服务器(可多个)。
-	//
-	// 与 MCPServerConfig 同结构(共用一套类型,免得两套平行定义漂移)。
-	MCPServers []MCPServerConfig `json:"mcp_servers"`
-}
+type ExternalSettings = ExternalConfig
 
 // SettingsView 读接口视图(不泄密钥)。
 type SettingsView struct {
@@ -137,17 +127,38 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 				return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
 			}
 		case BackendACPX:
-			if in.External.Agent == "" && in.External.Command == "" {
-				return nil, fmt.Errorf("外部 agent 名为空(填 agent 如 mcode,或填自定义 command)")
+			// 校验**按模式分支**:配了 profile 列表就以列表为准
+			// (单 profile 字段这时只当委派的兜底,不参与对话后端)。
+			if len(in.External.Agents) == 0 {
+				if in.External.Agent == "" && in.External.Command == "" {
+					return nil, fmt.Errorf("外部 agent 名为空(填 agent 如 mcode,或填自定义 command)")
+				}
+				// acpx 是**非交互**的(它的 stdin/stdout 被我们的调用占着)⇒ 弹不出授权卡;
+				// 它的写操作按拒绝处理 ⇒ 这里的「问」名不副实。
+				// 校验放在**保存时**而不是只在启动时:否则会存下一份「后端起不来」的配置,
+				// 界面上显示已保存、实际 AI 是关的 —— 又是「配置与实际行为不符」。
+				if NormalizePermission(in.External.Permission) == "ask" {
+					return nil, fmt.Errorf(
+						"acpx 后端是非交互的,无法逐次弹授权卡(写操作会按拒绝处理):" +
+							"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio 后端")
+				}
 			}
-			// acpx 是**非交互**的(它的 stdin/stdout 被我们的调用占着)⇒ 弹不出授权卡;
-			// 它的写操作按拒绝处理 ⇒ 这里的「问」名不副实。
-			// 校验放在**保存时**而不是只在启动时:否则会存下一份「后端起不来」的配置,
-			// 界面上显示已保存、实际 AI 是关的 —— 又是「配置与实际行为不符」。
-			if NormalizePermission(in.External.Permission) == "ask" {
-				return nil, fmt.Errorf(
-					"acpx 后端是非交互的,无法逐次弹授权卡(写操作会按拒绝处理):" +
-						"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio 后端")
+			// **profile 也要查**:某个 profile 用 acpx + ask 时同样起不来。
+			// 放过它 ⇒ 存下一份「部分后端起不来」的配置,界面显示已保存、实际行为不符。
+			for i := range in.External.Agents {
+				p := &in.External.Agents[i]
+				if strings.TrimSpace(p.Name) == "" {
+					return nil, fmt.Errorf("profile 缺 name(名字是委派时选它的关键字)")
+				}
+				if !profileUsesACPX(p, in.Backend) {
+					continue
+				}
+				if NormalizePermission(p.Permission) == "ask" {
+					return nil, fmt.Errorf(
+						"profile %q 用的是 acpx(非交互),无法逐次弹授权卡:"+
+							"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio",
+						p.Name)
+				}
 			}
 		case BackendStdio:
 			if in.External.Command == "" {
@@ -232,18 +243,9 @@ func (st *Settings) ToConfig() *Config {
 		MaxTokens:          st.MaxTokens,
 		TimeoutSeconds:     st.TimeoutSeconds,
 		MaxConcurrentChats: st.MaxConcurrentChats,
-		External: ExternalConfig{
-			Agent:          st.External.Agent,
-			Command:        st.External.Command,
-			Args:           st.External.Args,
-			Cwd:            st.External.Cwd,
-			TimeoutSeconds: st.External.TimeoutSeconds,
-			Permission:     st.External.Permission,
-			MCPEnabled:     st.External.MCPEnabled,
-			MCPURL:         st.External.MCPURL,
-			MCPAPIKeyEnv:   st.External.MCPAPIKeyEnv,
-			MCPServers:     st.External.MCPServers,
-		},
+		// 外部 agent 配置**整体拷贝**:字段逐个列一遍迟早会漏
+		// (这次的具名 profile 列表就是这么漏的)。
+		External: st.External,
 	}
 	cfg.applyDefaults()
 	return cfg
@@ -314,4 +316,15 @@ func MergeSettings(yamlCfg *Config, st *Settings) Settings {
 		out.APIKey = APIKeyFromEnv()
 	}
 	return out
+}
+
+// profileUsesACPX 该 profile 最终走的是不是 acpx 传输。
+//
+// profile 没写 transport ⇒ 跟随 ai.backend。
+func profileUsesACPX(p *ExternalAgentConfig, backend string) bool {
+	t := p.Transport
+	if t == "" {
+		t = backend
+	}
+	return t == BackendACPX
 }

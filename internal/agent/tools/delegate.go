@@ -123,6 +123,9 @@ func (t *delegateTasks) prune(max int) {
 // 未注入时 ai_code_delegate 仍会注册,但调用时如实返回「未配置」。
 func (r *Registry) SetDelegator(d delegate.Runner) { r.delegator = d }
 
+// HasDelegator 是否装配了委派执行器(诊断用)。
+func (r *Registry) HasDelegator() bool { return r.delegator != nil }
+
 // delegateInput ai_code_delegate 的入参。
 type delegateInput struct {
 	Prompt string `json:"prompt" jsonschema:"交给外部 coding agent 的任务描述,要自包含(agent 看不到我们的上下文)"`

@@ -84,6 +84,107 @@ type ExternalConfig struct {
 	// (把**本服务自己的** /mcp 挂出去);这里是**别的** MCP 服务器。
 	// 最终挂载清单 = (MCPEnabled ? 本服务 /mcp : 无) + MCPServers。
 	MCPServers []MCPServerConfig `yaml:"mcp_servers"`
+
+	// Agents 具名的外部 agent profile 列表(可同时挂 Claude Code + Codex …)。
+	//
+	// **列表为空时**用上面那些单 profile 字段(保持既有语义,不改行为);
+	// **列表非空时**以列表为准:`Current` 选中的 profile 驱动对话,
+	// 委派工具的 agent 参数按名字选 profile。
+	Agents []ExternalAgentConfig `yaml:"agents"`
+
+	// Current 驱动对话的 profile 名(留空=列表第一个)。
+	Current string `yaml:"current"`
+}
+
+// ExternalAgentConfig 一个具名的外部 agent profile。
+//
+// 每个 profile 自带完整参数 ⇒ 切换 agent 只是换个名字,不用改一堆字段。
+type ExternalAgentConfig struct {
+	// Name profile 名(必填,也是委派工具里选它的关键字)。
+	Name string `yaml:"name" json:"name"`
+	// Transport 传输方式:acpx | stdio。留空=跟随 ai.backend。
+	Transport string `yaml:"transport" json:"transport"`
+	// Agent acpx 内置 agent 名(mcode/codex/claude…);stdio 形态留空。
+	Agent string `yaml:"agent" json:"agent"`
+	// Command 自定义命令(stdio 形态如 "mcode acp")。
+	Command string `yaml:"command" json:"command"`
+	// Args 追加参数。
+	Args []string `yaml:"args" json:"args"`
+	// Cwd 工作目录(沙箱边界)。
+	Cwd string `yaml:"cwd" json:"cwd"`
+	// TimeoutSeconds 单轮超时。
+	TimeoutSeconds int `yaml:"timeout_seconds" json:"timeout_seconds"`
+	// Permission 授权档:ask|approve_reads|approve_all|deny。
+	Permission string `yaml:"permission" json:"permission"`
+	// MCPEnabled 是否把 git-ferry 自己的 /mcp 挂给该 agent。
+	MCPEnabled bool `yaml:"mcp_enabled" json:"mcp_enabled"`
+	// MCPURL git-ferry 自己的 MCP 端点地址。
+	MCPURL string `yaml:"mcp_url" json:"mcp_url"`
+	// MCPAPIKeyEnv MCP 专用 key 的环境变量名(该 key 固定只读角色)。
+	MCPAPIKeyEnv string `yaml:"mcp_api_key_env" json:"mcp_api_key_env"`
+	// MCPServers 额外挂给该 agent 的 MCP 服务器。
+	MCPServers []MCPServerConfig `yaml:"mcp_servers"`
+}
+
+// ResolveProfile 解析出要用的外部 agent profile。
+//
+// 规则:
+//   - 列表非空 ⇒ 以列表为准:按 name 命中用它,否则用 Current 指定的,再否则用第一个;
+//   - 列表为空 ⇒ 回退到单 profile 字段(旧行为,一个也不变)。
+//
+// 返回值里的 Transport 为空表示「跟随 ai.backend」。
+func (c *Config) ResolveProfile(name string) ExternalAgentConfig {
+	if p, ok := c.ResolveProfileByName(name); ok {
+		return p
+	}
+	ext := c.External
+	if len(ext.Agents) == 0 {
+		// 旧行为:单 profile 字段。
+		return ExternalAgentConfig{
+			Name:           ext.Agent,
+			Transport:      c.Backend,
+			Agent:          ext.Agent,
+			Command:        ext.Command,
+			Args:           ext.Args,
+			Cwd:            ext.Cwd,
+			TimeoutSeconds: ext.TimeoutSeconds,
+			Permission:     ext.Permission,
+			MCPEnabled:     ext.MCPEnabled,
+			MCPURL:         ext.MCPURL,
+			MCPAPIKeyEnv:   ext.MCPAPIKeyEnv,
+			MCPServers:     ext.MCPServers,
+		}
+	}
+	for i := range ext.Agents {
+		if ext.Agents[i].Name == ext.Current {
+			return ext.Agents[i]
+		}
+	}
+	return ext.Agents[0]
+}
+
+// ResolveProfileByName 按名字**精确**找 profile;找不到返回 (零值,false)。
+//
+// 委派工具要靠它区分「命中某个 profile」与「把名字当 acpx 内置 agent 名用」。
+func (c *Config) ResolveProfileByName(name string) (ExternalAgentConfig, bool) {
+	if name == "" {
+		return ExternalAgentConfig{}, false
+	}
+	for i := range c.External.Agents {
+		if c.External.Agents[i].Name == name {
+			return c.External.Agents[i], true
+		}
+	}
+	return ExternalAgentConfig{}, false
+}
+
+// ExternalProfileNames 列出已配置的 profile 名(界面展示用)。
+func (c *Config) ExternalProfileNames() []string {
+	out := make([]string, 0, len(c.External.Agents))
+	for i := range c.External.Agents {
+		out = append(out, c.External.Agents[i].Name)
+	}
+	return out
 }
 
 // MCPServerConfig 一个额外的 MCP 服务器配置。

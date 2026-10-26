@@ -79,7 +79,7 @@
         },
         "type": "object"
       },
-      "AIExternalConfig": {
+      "AIExternalAgent": {
         "properties": {
           "agent": {
             "type": "string"
@@ -91,6 +91,63 @@
             "type": "array"
           },
           "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "mcp_api_key_env": {
+            "type": "string"
+          },
+          "mcp_enabled": {
+            "type": "boolean"
+          },
+          "mcp_servers": {
+            "items": {
+              "$ref": "#/components/schemas/AIExternalMCPServer"
+            },
+            "type": "array"
+          },
+          "mcp_url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "transport": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AIExternalConfig": {
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AIExternalAgent"
+            },
+            "type": "array"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "type": "string"
+          },
+          "current": {
             "type": "string"
           },
           "cwd": {

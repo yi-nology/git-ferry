@@ -227,7 +227,66 @@
               />
             </a-form-item>
 
-            <a-form-item label="额外 MCP 服务器">
+            <a-form-item label="外部 agent 配置">
+              <a-radio-group v-model:value="extMode" size="small">
+                <a-radio-button value="default">默认单个</a-radio-button>
+                <a-radio-button value="profiles">具名列表</a-radio-button>
+              </a-radio-group>
+              <div class="form-tip">
+                「具名列表」可同时挂多个外部 agent（如 Claude Code + Codex）：
+                对话用其中一个，委派时按名字选。
+              </div>
+            </a-form-item>
+
+            <template v-if="extMode === 'profiles'">
+              <a-form-item label="当前对话使用">
+                <a-select
+                  v-model:value="form.external.current"
+                  placeholder="留空=列表第一个"
+                  style="width: 100%"
+                >
+                  <a-select-option v-for="p in form.external.agents" :key="p.name" :value="p.name">
+                    {{ p.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+
+              <a-form-item label="profile 列表">
+                <div class="profile-list">
+                  <div v-for="(p, i) in form.external.agents" :key="i" class="profile-item">
+                    <div class="profile-head">
+                      <span class="profile-title">{{ p.name || '未命名' }}</span>
+                      <a-button size="small" type="text" danger @click="removeProfile(i)">
+                        移除
+                      </a-button>
+                    </div>
+                    <div class="profile-grid">
+                      <a-input v-model:value="p.name" placeholder="名称" size="small" />
+                      <a-select v-model:value="p.transport" size="small" style="width: 100px">
+                        <a-select-option value="">跟随</a-select-option>
+                        <a-select-option value="acpx">acpx</a-select-option>
+                        <a-select-option value="stdio">stdio</a-select-option>
+                      </a-select>
+                      <a-input v-model:value="p.agent" placeholder="agent 名" size="small" />
+                      <a-input v-model:value="p.command" placeholder="命令(stdio)" size="small" />
+                      <a-input v-model:value="p.cwd" placeholder="工作目录" size="small" />
+                      <a-select v-model:value="p.permission" size="small" style="width: 130px">
+                        <a-select-option value="ask">每次都问</a-select-option>
+                        <a-select-option value="approve_reads">只读放行</a-select-option>
+                        <a-select-option value="approve_all">全部放行</a-select-option>
+                        <a-select-option value="deny">全部拒绝</a-select-option>
+                      </a-select>
+                    </div>
+                  </div>
+                  <a-button size="small" @click="addProfile">
+                    <template #icon><PlusOutlined /></template>
+                    添加 profile
+                  </a-button>
+                </div>
+              </a-form-item>
+            </template>
+
+            <a-form-item v-if="extMode === 'default'" label="额外 MCP 服务器">
               <div class="mcp-list">
                 <div v-for="(srv, i) in form.external.mcp_servers" :key="i" class="mcp-item">
                   <div class="mcp-item-head">
@@ -367,6 +426,9 @@ const remoteModels = ref<AIModelItem[]>([])
 
 const { backendLabel, ready, readyMsg, loadStatus } = useAIChat()
 
+/** 外部 agent 配置的编辑形态:默认单个 | 具名列表。 */
+const extMode = ref<'default' | 'profiles'>('default')
+
 /** acpx 内置 agent（节选）。空值也允许手输。 */
 const AGENT_NAMES = [
   'mcode',
@@ -401,6 +463,8 @@ const emptyExternal = (): AIExternalConfig => ({
   mcp_url: '',
   mcp_api_key_env: 'GITFERRY_AI_MCP_API_KEY',
   mcp_servers: [],
+  agents: [],
+  current: '',
 })
 
 function addMcpServer() {
@@ -418,6 +482,27 @@ function addMcpServer() {
 
 function removeMcpServer(i: number) {
   form.external.mcp_servers.splice(i, 1)
+}
+
+function addProfile() {
+  form.external.agents.push({
+    name: '',
+    transport: '',
+    agent: '',
+    command: '',
+    args: [],
+    cwd: 'var/ai-workspace',
+    timeout_seconds: 600,
+    permission: 'ask',
+    mcp_enabled: false,
+    mcp_url: '',
+    mcp_api_key_env: '',
+    mcp_servers: [],
+  })
+}
+
+function removeProfile(i: number) {
+  form.external.agents.splice(i, 1)
 }
 
 const form = reactive({
@@ -680,6 +765,39 @@ onMounted(load)
 
 .test-result {
   margin-top: 8px;
+}
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.profile-item {
+  border: 1px solid $border-light;
+  border-radius: $radius-md;
+  padding: 10px;
+  background: $bg-subtle;
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.profile-title {
+  font-size: $fs-caption;
+  color: $text-secondary;
+  font-family: $font-mono;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
 }
 
 .mcp-list {

@@ -124,6 +124,48 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 			MCPEnabled:     req.External.McpEnabled,
 			MCPURL:         req.External.McpUrl,
 			MCPAPIKeyEnv:   req.External.McpApiKeyEnv,
+			Current:        req.External.Current,
+		}
+		// 具名 profile 列表(可同时挂 Claude Code + Codex …)
+		for _, a := range req.External.Agents {
+			if a == nil {
+				continue
+			}
+			profile := agent.ExternalAgentConfig{
+				Name:           a.Name,
+				Transport:      a.Transport,
+				Agent:          a.Agent,
+				Command:        a.Command,
+				Args:           a.Args,
+				Cwd:            a.Cwd,
+				TimeoutSeconds: int(a.TimeoutSeconds),
+				Permission:     a.Permission,
+				MCPEnabled:     a.McpEnabled,
+				MCPURL:         a.McpUrl,
+				MCPAPIKeyEnv:   a.McpApiKeyEnv,
+			}
+			for _, m := range a.McpServers {
+				if m == nil {
+					continue
+				}
+				srv := agent.MCPServerConfig{
+					Name:         m.Name,
+					Type:         m.Type,
+					URL:          m.URL,
+					APIKeyEnv:    m.ApiKeyEnv,
+					APIKeyHeader: m.ApiKeyHeader,
+					Command:      m.Command,
+					Args:         m.Args,
+				}
+				for _, e := range m.Env {
+					if e == nil {
+						continue
+					}
+					srv.Env = append(srv.Env, agent.EnvConfig{Name: e.Name, Value: e.Value})
+				}
+				profile.MCPServers = append(profile.MCPServers, srv)
+			}
+			ext.Agents = append(ext.Agents, profile)
 		}
 		for _, m := range req.External.McpServers {
 			if m == nil {

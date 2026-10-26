@@ -89,9 +89,15 @@
             <div class="bubble error-bubble">{{ m.content }}</div>
           </div>
 
-          <!-- 对话气泡 -->
+          <!-- 对话气泡(带可折叠的思考过程) -->
           <div v-else :class="['msg', m.role]">
             <div class="bubble">
+              <details v-if="m.thinking" class="thinking">
+                <summary class="thinking-summary">
+                  思考过程{{ m.thinkingTruncated ? '(已截断)' : '' }}
+                </summary>
+                <pre class="thinking-body">{{ m.thinking }}</pre>
+              </details>
               {{ m.content }}<span v-if="m.streaming" class="cursor">▍</span>
             </div>
           </div>
@@ -481,6 +487,41 @@ watch(
 .cursor {
   animation: blink 1s step-start infinite;
   margin-left: 1px;
+}
+
+/* 思考过程:默认折叠,点开看 */
+.thinking {
+  margin: 0 0 8px;
+  border-left: 2px solid $border-light;
+  padding-left: 8px;
+}
+
+.thinking-summary {
+  cursor: pointer;
+  font-size: $fs-caption;
+  color: $text-tertiary;
+  list-style: none;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    color: $text-secondary;
+  }
+}
+
+.thinking-body {
+  margin: 6px 0 0;
+  font-family: $font-mono;
+  font-size: 11px;
+  line-height: 1.6;
+  color: $text-tertiary;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
 }
 
 @keyframes blink {

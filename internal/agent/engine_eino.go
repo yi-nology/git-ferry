@@ -120,6 +120,11 @@ func (e *einoEngine) DelegateStatus(taskID string) (map[string]any, bool) {
 	return e.reg.DelegateStatus(taskID)
 }
 
+// HasDelegator 是否装配了委派执行器(诊断用)。
+func (e *einoEngine) HasDelegator() bool {
+	return e.reg != nil && e.reg.HasDelegator()
+}
+
 // SetMemory 注入记忆库与 prompt 摘要(可选)。
 func (e *einoEngine) SetMemory(mem tools.MemStore, manifest string) {
 	if e.reg != nil {

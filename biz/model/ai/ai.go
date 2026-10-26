@@ -616,6 +616,10 @@ type AIExternalConfig struct {
 	McpApiKeyEnv string `thrift:"mcpApiKeyEnv,9" form:"mcp_api_key_env" json:"mcp_api_key_env" query:"mcp_api_key_env"`
 	// mcpServers 额外挂给外部 agent 的 MCP 服务器(可多个)
 	McpServers []*AIExternalMCPServer `thrift:"mcpServers,11,default,list<AIExternalMCPServer>" form:"mcp_servers" json:"mcp_servers" query:"mcp_servers"`
+	// agents 具名的外部 agent profile 列表(可同时挂 Claude Code + Codex …)
+	Agents []*AIExternalAgent `thrift:"agents,12,default,list<AIExternalAgent>" form:"agents" json:"agents" query:"agents"`
+	// current 驱动对话的 profile 名(留空=列表第一个)
+	Current string `thrift:"current,13" form:"current" json:"current" query:"current"`
 }
 
 func NewAIExternalConfig() *AIExternalConfig {
@@ -665,6 +669,14 @@ func (p *AIExternalConfig) GetMcpServers() (v []*AIExternalMCPServer) {
 	return p.McpServers
 }
 
+func (p *AIExternalConfig) GetAgents() (v []*AIExternalAgent) {
+	return p.Agents
+}
+
+func (p *AIExternalConfig) GetCurrent() (v string) {
+	return p.Current
+}
+
 var fieldIDToName_AIExternalConfig = map[int16]string{
 	1:  "agent",
 	2:  "command",
@@ -676,6 +688,8 @@ var fieldIDToName_AIExternalConfig = map[int16]string{
 	8:  "mcpUrl",
 	9:  "mcpApiKeyEnv",
 	11: "mcpServers",
+	12: "agents",
+	13: "current",
 }
 
 func (p *AIExternalConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -772,6 +786,22 @@ func (p *AIExternalConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -940,6 +970,40 @@ func (p *AIExternalConfig) ReadField11(iprot thrift.TProtocol) error {
 	p.McpServers = _field
 	return nil
 }
+func (p *AIExternalConfig) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AIExternalAgent, 0, size)
+	values := make([]AIExternalAgent, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Agents = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Current = _field
+	return nil
+}
 
 func (p *AIExternalConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -985,6 +1049,14 @@ func (p *AIExternalConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -1191,11 +1263,744 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
+func (p *AIExternalConfig) writeField12(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("agents", thrift.LIST, 12); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Agents)); err != nil {
+		return err
+	}
+	for _, v := range p.Agents {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField13(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("current", thrift.STRING, 13); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Current); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *AIExternalConfig) String() string {
 	if p == nil {
 		return "<nil>"
 	}
 	return fmt.Sprintf("AIExternalConfig(%+v)", *p)
+
+}
+
+// AIExternalAgent 一个具名的外部 agent profile。
+type AIExternalAgent struct {
+	Name string `thrift:"name,1" form:"name" json:"name" query:"name"`
+	// transport acpx | stdio;留空=跟随 ai.backend
+	Transport string `thrift:"transport,2" form:"transport" json:"transport" query:"transport"`
+	// agent acpx 内置 agent 名(mcode/codex/claude…)
+	Agent string `thrift:"agent,3" form:"agent" json:"agent" query:"agent"`
+	// command 自定义命令(stdio 形态如 "mcode acp")
+	Command        string   `thrift:"command,4" form:"command" json:"command" query:"command"`
+	Args           []string `thrift:"args,5,default,list<string>" form:"args" json:"args" query:"args"`
+	Cwd            string   `thrift:"cwd,6" form:"cwd" json:"cwd" query:"cwd"`
+	TimeoutSeconds int32    `thrift:"timeoutSeconds,7" form:"timeout_seconds" json:"timeout_seconds" query:"timeout_seconds"`
+	// permission ask|approve_reads|approve_all|deny
+	Permission   string                 `thrift:"permission,8" form:"permission" json:"permission" query:"permission"`
+	McpEnabled   bool                   `thrift:"mcpEnabled,9" form:"mcp_enabled" json:"mcp_enabled" query:"mcp_enabled"`
+	McpUrl       string                 `thrift:"mcpUrl,10" form:"mcp_url" json:"mcp_url" query:"mcp_url"`
+	McpApiKeyEnv string                 `thrift:"mcpApiKeyEnv,11" form:"mcp_api_key_env" json:"mcp_api_key_env" query:"mcp_api_key_env"`
+	McpServers   []*AIExternalMCPServer `thrift:"mcpServers,12,default,list<AIExternalMCPServer>" form:"mcp_servers" json:"mcp_servers" query:"mcp_servers"`
+}
+
+func NewAIExternalAgent() *AIExternalAgent {
+	return &AIExternalAgent{}
+}
+
+func (p *AIExternalAgent) InitDefault() {
+}
+
+func (p *AIExternalAgent) GetName() (v string) {
+	return p.Name
+}
+
+func (p *AIExternalAgent) GetTransport() (v string) {
+	return p.Transport
+}
+
+func (p *AIExternalAgent) GetAgent() (v string) {
+	return p.Agent
+}
+
+func (p *AIExternalAgent) GetCommand() (v string) {
+	return p.Command
+}
+
+func (p *AIExternalAgent) GetArgs() (v []string) {
+	return p.Args
+}
+
+func (p *AIExternalAgent) GetCwd() (v string) {
+	return p.Cwd
+}
+
+func (p *AIExternalAgent) GetTimeoutSeconds() (v int32) {
+	return p.TimeoutSeconds
+}
+
+func (p *AIExternalAgent) GetPermission() (v string) {
+	return p.Permission
+}
+
+func (p *AIExternalAgent) GetMcpEnabled() (v bool) {
+	return p.McpEnabled
+}
+
+func (p *AIExternalAgent) GetMcpUrl() (v string) {
+	return p.McpUrl
+}
+
+func (p *AIExternalAgent) GetMcpApiKeyEnv() (v string) {
+	return p.McpApiKeyEnv
+}
+
+func (p *AIExternalAgent) GetMcpServers() (v []*AIExternalMCPServer) {
+	return p.McpServers
+}
+
+var fieldIDToName_AIExternalAgent = map[int16]string{
+	1:  "name",
+	2:  "transport",
+	3:  "agent",
+	4:  "command",
+	5:  "args",
+	6:  "cwd",
+	7:  "timeoutSeconds",
+	8:  "permission",
+	9:  "mcpEnabled",
+	10: "mcpUrl",
+	11: "mcpApiKeyEnv",
+	12: "mcpServers",
+}
+
+func (p *AIExternalAgent) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AIExternalAgent[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AIExternalAgent) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Transport = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Agent = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Command = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Args = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Cwd = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TimeoutSeconds = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Permission = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.McpEnabled = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.McpUrl = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.McpApiKeyEnv = _field
+	return nil
+}
+func (p *AIExternalAgent) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AIExternalMCPServer, 0, size)
+	values := make([]AIExternalMCPServer, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.McpServers = _field
+	return nil
+}
+
+func (p *AIExternalAgent) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AIExternalAgent"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Name); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("transport", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Transport); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("agent", thrift.STRING, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Agent); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("command", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Command); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("args", thrift.LIST, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.Args)); err != nil {
+		return err
+	}
+	for _, v := range p.Args {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("cwd", thrift.STRING, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Cwd); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("timeoutSeconds", thrift.I32, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.TimeoutSeconds); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("permission", thrift.STRING, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Permission); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpEnabled", thrift.BOOL, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.McpEnabled); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField10(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpUrl", thrift.STRING, 10); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.McpUrl); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField11(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpApiKeyEnv", thrift.STRING, 11); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.McpApiKeyEnv); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) writeField12(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpServers", thrift.LIST, 12); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.McpServers)); err != nil {
+		return err
+	}
+	for _, v := range p.McpServers {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *AIExternalAgent) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AIExternalAgent(%+v)", *p)
 
 }
 

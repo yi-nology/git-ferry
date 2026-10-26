@@ -18,6 +18,26 @@ export interface AIExternalMCPServer {
   env: { name: string; value: string }[]
 }
 
+/** 一个具名的外部 agent profile。 */
+export interface AIExternalAgent {
+  name: string
+  /** acpx | stdio;留空=跟随 ai.backend */
+  transport: string
+  /** acpx 内置 agent 名 */
+  agent: string
+  /** 自定义命令(stdio 形态) */
+  command: string
+  args: string[]
+  cwd: string
+  timeout_seconds: number
+  /** ask | approve_reads | approve_all | deny */
+  permission: string
+  mcp_enabled: boolean
+  mcp_url: string
+  mcp_api_key_env: string
+  mcp_servers: AIExternalMCPServer[]
+}
+
 /** 外部 coding agent 配置。 */
 export interface AIExternalConfig {
   agent: string
@@ -33,6 +53,10 @@ export interface AIExternalConfig {
   mcp_api_key_env: string
   /** 额外挂给外部 agent 的 MCP 服务器 */
   mcp_servers: AIExternalMCPServer[]
+  /** 具名 profile 列表(可同时挂多个外部 agent) */
+  agents: AIExternalAgent[]
+  /** 驱动对话的 profile 名(留空=列表第一个) */
+  current: string
 }
 
 export interface AIConfig {

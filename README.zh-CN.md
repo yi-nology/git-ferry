@@ -478,6 +478,9 @@ make install-skills
   挂 MCP 用的专用 key 固定**只读角色**（危险工具对它直接不可见）、
   子进程环境**净化**（摘掉本服务的 `ENCRYPTION_KEY` 与 admin key）、
   工作目录即沙箱边界。**真正的隔离要靠部署侧**（专用用户 / 容器 / 只读挂载）。
+- **多个外部 agent**：把 `ai.external.agents` 配成具名 profile 列表即可同时挂多个
+  （Claude Code + Codex…）；对话用 `current` 选中的那个，委派时按名字选。
+- **思考过程**：外部 agent 的思考内容以 `thinking` 事件送达，界面折叠展示（默认收起、限长）。
 - **委派**：内置助手也可以用 `ai_code_delegate` 把一段编码任务派给外部 agent。
   委派是**异步**的：确认后立刻返回任务 ID（外部 agent 可能跑几分钟，
   同步等会把对话连接挂到超时），结果稍后回到会话，界面轮询取回。

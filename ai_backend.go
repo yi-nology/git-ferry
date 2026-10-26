@@ -54,7 +54,7 @@ func buildAIEngine(cfg *agent.Config, apiKey string, svc tools.SyncService,
 			Timeout:    timeout,
 			Permission: ext.Permission,
 		}
-		servers, serr := mcpServersFor(&ext, shellCfg)
+		servers, serr := mcpServersFor(ext.MCPEnabled, ext.MCPURL, ext.MCPAPIKeyEnv, ext.MCPServers, shellCfg)
 		if serr != nil {
 			return nil, serr
 		}
@@ -100,20 +100,36 @@ func externalAuditFunc(svc *corebridge.Service, ext *agent.ExternalConfig) acp.A
 	}
 }
 
+// acpConfigFor 由 profile 生成 acp 后端配置。
+//
+// transport 留空 ⇒ 跟随 ai.backend。
+func acpConfigFor(p *agent.ExternalAgentConfig, permission string) acp.Config {
+	return acp.Config{
+		Transport:  p.Transport,
+		Agent:      p.Agent,
+		Command:    p.Command,
+		Args:       p.Args,
+		Cwd:        p.Cwd,
+		Timeout:    time.Duration(p.TimeoutSeconds) * time.Second,
+		Permission: permission,
+	}
+}
+
 // mcpServersFor 组装最终挂给外部 agent 的 MCP 服务器清单。
 //
 // 清单 = (mcp_enabled ? 本服务自己的 /mcp : 无) + external.mcp_servers(额外的)。
-func mcpServersFor(ext *agent.ExternalConfig, shellCfg *corebridge.ShellConfig) ([]acp.MCPServer, error) {
+func mcpServersFor(enabled bool, url, apiKeyEnv string,
+	extra []agent.MCPServerConfig, shellCfg *corebridge.ShellConfig) ([]acp.MCPServer, error) {
 	var out []acp.MCPServer
-	if ext.MCPEnabled {
-		srv, err := mcpServerFor(ext, shellCfg)
+	if enabled {
+		srv, err := mcpServerFor(url, apiKeyEnv, shellCfg)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, srv)
 	}
-	for i := range ext.MCPServers {
-		srv, err := mcpServerFromConfig(&ext.MCPServers[i])
+	for i := range extra {
+		srv, err := mcpServerFromConfig(&extra[i])
 		if err != nil {
 			return nil, err
 		}
@@ -159,8 +175,8 @@ func mcpServerFromConfig(c *agent.MCPServerConfig) (acp.MCPServer, error) {
 //
 // **专用 key 是只读角色**:MCP 路径上危险工具不弹确认,只过角色闸门。
 // key 从环境变量取(不进 yaml、不进设置文件)。
-func mcpServerFor(ext *agent.ExternalConfig, shellCfg *corebridge.ShellConfig) (acp.MCPServer, error) {
-	url := ext.MCPURL
+func mcpServerFor(mcpURL, apiKeyEnv string, shellCfg *corebridge.ShellConfig) (acp.MCPServer, error) {
+	url := mcpURL
 	if url == "" {
 		port := 0
 		if shellCfg != nil {
@@ -172,14 +188,14 @@ func mcpServerFor(ext *agent.ExternalConfig, shellCfg *corebridge.ShellConfig) (
 		url = fmt.Sprintf("http://127.0.0.1:%d/mcp", port)
 	}
 	srv := acp.MCPServer{Name: "gitferry", Type: "http", URL: url}
-	if ext.MCPAPIKeyEnv == "" {
+	if apiKeyEnv == "" {
 		// 没配专用 key ⇒ 外部 agent 带的是别人的凭据或匿名,一律视为不可用。
 		return srv, fmt.Errorf("ai.external.mcp_enabled 需要 ai.external.mcp_api_key_env " +
 			"(挂给外部 agent 的 MCP 专用 key 的环境变量名;该 key 固定为只读角色)")
 	}
-	key := os.Getenv(ext.MCPAPIKeyEnv)
+	key := os.Getenv(apiKeyEnv)
 	if key == "" {
-		return srv, fmt.Errorf("环境变量 %s 未设置(外部 agent 的 MCP 专用 key)", ext.MCPAPIKeyEnv)
+		return srv, fmt.Errorf("环境变量 %s 未设置(外部 agent 的 MCP 专用 key)", apiKeyEnv)
 	}
 	srv.Headers = []acp.HttpHeader{{Name: "X-API-Key", Value: key}}
 	// 注册成带角色的附加 key(固定只读);旧的同用途 key 立即失效。
@@ -187,34 +203,55 @@ func mcpServerFor(ext *agent.ExternalConfig, shellCfg *corebridge.ShellConfig) (
 	return srv, nil
 }
 
+// delegatePermissionFor 委派用的**一次性**授权档。
+//
+// 一次性执行弹不出授权卡 ⇒ `ask` 在委派场景没有对应物。
+// 映射成 approve_reads(只读自动放行),并在回执里明说 —— **不静默降级**。
+//
+// 注:这个映射是必须的,不是可选:acpx 是非交互通道,
+// `ask` 会被校验直接拒掉 ⇒ 不映射的话,默认配置下**委派执行器根本装不上**
+// (表现为 ai_code_delegate 报「未配置」,像没配过一样)。
+func delegatePermissionFor(p string) string {
+	if p == "" || p == acp.PermissionAsk {
+		return acp.PermissionApproveReads
+	}
+	return p
+}
+
 // attachDelegator 装配「把任务委派给外部 coding agent」的执行器。
 //
 // 与后端选择**正交**:即便主后端是内置助手,也允许把编码任务派给外部 agent
 // (ai_code_delegate 工具)。没配外部 agent 时不装配 ——
 // 工具会如实返回「外部 coding agent 未配置」,而不是静默失败。
+//
+// **支持多个 profile**:委派时按名字选(命中 profile 用它的全部参数;
+// 没命中就当 acpx 内置 agent 名用,保持旧行为)。
 func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 	ext := cfg.External
-	if ext.Agent == "" && ext.Command == "" {
+	if len(ext.Agents) == 0 && ext.Agent == "" && ext.Command == "" {
 		return
 	}
-	dr, err := acp.NewDelegateRunner(&acp.Config{
-		Agent:      ext.Agent,
-		Command:    ext.Command,
-		Args:       ext.Args,
-		Cwd:        ext.Cwd,
-		Timeout:    time.Duration(ext.TimeoutSeconds) * time.Second,
-		Permission: ext.Permission,
-	})
+	base := cfg.ResolveProfile(ext.Current)
+	baseCfg := acpConfigFor(&base, delegatePermissionFor(base.Permission))
+	dr, err := acp.NewDelegateRunner(&baseCfg)
 	if err != nil {
 		slog.Warn("委派执行器未装配(外部 agent 不可用)", "error", err)
 		return
 	}
+	dr.WithResolver(func(name string) (acp.Config, bool) {
+		p, ok := cfg.ResolveProfileByName(name)
+		if !ok {
+			return acp.Config{}, false
+		}
+		return acpConfigFor(&p, delegatePermissionFor(p.Permission)), true
+	})
 	b, ok := eng.(engine.DelegatorBinder)
 	if !ok {
 		return
 	}
 	b.SetDelegator(dr)
-	slog.Info("ai delegate ready", "agent", ext.Agent, "command", ext.Command)
+	slog.Info("ai delegate ready", "agent", base.Agent, "command", base.Command,
+		"profiles", cfg.ExternalProfileNames())
 }
 
 // logAIBackend 记录后端装配结果(启动日志)。
