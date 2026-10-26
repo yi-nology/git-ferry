@@ -26,6 +26,9 @@ import (
 type Runner struct {
 	eng      engine.Engine
 	sessions *SessionStore
+	// stopCtx 用来停掉会话回收 goroutine(Close 时 cancel)。
+	stopCtx context.Context
+	stop    context.CancelFunc
 	// gate 是全局在飞闸门(并发上限 = maxConcurrentChats)。
 	// 用 oekit concurrency/syncx.Gate 的 TryAcquire(满额即拒,不排队):
 	// 语义与迁移前的 chan 缓冲 + select/default 完全一致,
@@ -38,14 +41,31 @@ func NewRunner(eng engine.Engine, maxConcurrentChats int) *Runner {
 	if maxConcurrentChats <= 0 {
 		maxConcurrentChats = defaultMaxConcurrentChats
 	}
+	stopCtx, stop := context.WithCancel(context.Background())
 	r := &Runner{
 		eng:      eng,
 		sessions: NewSessionStore(sessionTTL, sessionMaxRounds),
 		gate:     syncx.NewGate(maxConcurrentChats),
+		stopCtx:  stopCtx,
+		stop:     stop,
 	}
 	// 进程级生命周期:回收再无人访问的过期会话,防内存慢涨
-	r.sessions.StartJanitor(context.Background(), 5*time.Minute)
+	r.sessions.StartJanitor(stopCtx, 5*time.Minute)
 	return r
+}
+
+// Close 释放后端资源(关掉外部 agent 子进程)并停掉回收 goroutine。
+//
+// **热重建时必须调**:外部后端每个会话对应一个**长驻子进程**
+// (原生 ACP transport),换后端不关旧的话,机器上会留下一堆孤儿 agent 进程。
+func (r *Runner) Close() error {
+	if r.stop != nil {
+		r.stop()
+	}
+	if r.eng != nil {
+		return r.eng.Close()
+	}
+	return nil
 }
 
 // Sessions 暴露会话存储(handler 建会话用)。

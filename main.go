@@ -137,8 +137,16 @@ func main() {
 			return err
 		}
 		aiRunnerMu.Lock()
+		old := aiRunner
 		aiRunner = r
 		aiRunnerMu.Unlock()
+		// **关掉旧后端**:外部后端每个会话对应一个长驻 agent 子进程,
+		// 换后端不关旧的话,机器上会攒下一堆孤儿进程。
+		if old != nil {
+			if cerr := old.Close(); cerr != nil {
+				slog.Warn("close previous ai backend failed", "error", cerr)
+			}
+		}
 		return nil
 	})
 
@@ -180,6 +188,15 @@ func main() {
 
 	cleanup := func() {
 		watchCancel()
+		// 退出前关掉 AI 后端(关外部 agent 子进程)
+		aiRunnerMu.Lock()
+		runner := aiRunner
+		aiRunnerMu.Unlock()
+		if runner != nil {
+			if err := runner.Close(); err != nil {
+				slog.Warn("close ai backend failed", "error", err)
+			}
+		}
 		syncSvc.Stop()
 		// webhook 限流器带后台空闲回收 goroutine,退出前关闭
 		git_sync.CloseWebhookRateLimiter()
