@@ -471,9 +471,13 @@ What matters:
 - **Permission mode**: `ask` (ask every time, default) / `approve_reads` / `approve_all` / `deny`.
 - **Switching backend or changing the permission mode is a governance action — admin only**
   (ordinary model parameters do not need admin).
-- **Security**: the external agent is a **subprocess on this host**; its working directory
-  (`cwd`) is the sandbox boundary the code layer can enforce. The dedicated key used for the
-  mounted MCP is pinned to a **read-only role** (the MCP path does not prompt before dangerous tools).
+- **Security**: the external agent is a **subprocess on this host**, so its real boundary is
+  **OS-level** (run user / working directory / container) — not the MCP role. What the code
+  layer adds is defence in depth: the dedicated key for the mounted MCP is pinned to a
+  **read-only role** (dangerous tools are not even visible to it), the subprocess environment is
+  **scrubbed** (the service's `ENCRYPTION_KEY` and admin key are removed), and the working
+  directory is the sandbox boundary. **Real isolation belongs in the deployment**
+  (dedicated user / container / read-only mounts).
 - **Delegation**: the built-in assistant can hand a coding task to an external agent via
   the `ai_code_delegate` tool.
 

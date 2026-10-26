@@ -400,6 +400,7 @@ struct AIChatRequest {
 |---|------|------|
 | S1 | agent 读写服务目录/密钥文件 | `cwd` 固定到专用工作区(默认 `var/ai-workspace`);**不**指向服务目录;代码层校验 cwd 必须在允许根下 |
 | S2 | agent 拿到 admin 权限的 MCP key | 专用 key 从环境变量取(`GITFERRY_AI_MCP_API_KEY`),**角色=readonly**;不复用 admin key |
+| S2b | **agent 子进程继承服务密钥** | Go 的 `exec.Cmd.Env` 为 nil ⇒ 继承父进程环境 ⇒ agent 能读到 `ENCRYPTION_KEY`(凭据加密主密钥!)与 admin 主 key ⇒ **绕开 MCP 的只读边界**直调写接口。修法:给 agent 进程**净化环境**(精确摘掉 `ENCRYPTION_KEY` 与 `GIT_SYNC_*`/`GITFERRY_*` 前缀;agent 自己的 provider 鉴权要留) |
 | S3 | 外部 agent 绕过 git-ferry 确认链路 | 默认权限档 `ask`;`approve_all` 仅 admin 可切且留审计 |
 | S4 | 改后端/改权限档是治理动作 | `ai.backend` 与 `ai.external.permission` 的修改走 admin 闸门(复用 `AdminGuard` 语义),并写操作日志 |
 | S5 | 外部 agent 的行为不进审计 | `tool_call` / permission 决策落 `operation_logs`(走既有审计链),字段含 agent 名、cwd、权限档 |
@@ -743,7 +744,42 @@ POST /api/v1/ai/chat  (backend=stdio, command="mcode acp", MCP 挂本服务 /mcp
 ⇒ **要「逐次确认」或「挂本服务 MCP」就得用 stdio 后端**;acpx 适合「一个命令面对
 20+ 个 agent、免写协议」的轻量场景。这个差异在配置校验阶段就告诉操作者,不留到运行时才发现。
 
-### 17.6 新增测试
+### 17.6 一次「只读边界」的实测,以及它被捅穿的路径
+
+做「外部 agent 能不能写 git-ferry」的实测时,发现了**两件事**:
+
+**① 只读边界生效,但靠的不是我以为的机制。**
+让 agent 调 `create_sync_task` → 工具**根本不在它的列表里**:
+MCP 端点对只读角色做 `tools/list` 过滤 ⇒ 危险工具对它**不可见**(不只是被拒)。
+agent 自己的结论是「MCP 服务端只暴露了 31 个只读/运维工具,没有 create_sync_task」。
+
+**② 但它会绕路 —— 而且差点成功。**
+agent 接着用自带的 `bash` 去翻 git-ferry 源码,找到了 CLI 的 `task create`
+(→ `POST /api/v1/sync/task/create`),开始找「MCP 之外的写入通道」。
+
+顺着这条线查下去,发现了**真漏洞**:agent 子进程**继承了服务的环境变量**。
+实测让 agent 打印自己的 env,拿到的是:
+
+```
+GIT_SYNC_SERVER_API_KEY=local-shot-9f2a4c7b     ← admin 角色的主 key
+ENCRYPTION_KEY=6ed209e9…                          ← 凭据加密主密钥(可解密库里所有 git 凭据)
+GITFERRY_AI_MCP_API_KEY=readonly-mcp-key-3a91
+```
+
+⇒ **MCP 的「只读角色」只是纵深防御,不是边界**:
+拿到 admin key 就能直接调写接口,拿到 ENCRYPTION_KEY 就能解密库里的凭据。
+
+修法:`internal/agent/engine/acp/env.go` 的 `scrubEnv` —— 给外部 agent 进程
+**净化环境**(精确摘 `ENCRYPTION_KEY` 与 `GIT_SYNC_*`/`GITFERRY_*` 前缀;
+agent 自己的 provider 鉴权必须留,不能一刀切清空)。
+修完再实测:agent 打印 env ⇒ **一无所获**。
+
+**结论(写进设计的边界声明)**:外部 agent 的真实边界是**操作系统级**的
+(运行用户 / 工作目录 / 容器),**不是** MCP 角色、也**不是**环境变量。
+代码层能做的是把纵深防御补齐(只读 key + 环境净化 + 工作目录),
+真正的隔离要靠部署侧(专用用户 / 容器 / 只读挂载)。
+
+### 17.7 新增测试
 
 - `biz/handler/git_sync/ai_config_test.go`:RBAC 三档(只读拒 / 治理项要 admin / 普通项放行)、
   归一化不误判。
@@ -755,3 +791,5 @@ POST /api/v1/ai/chat  (backend=stdio, command="mcode acp", MCP 挂本服务 /mcp
   顺带钉住「agent 会话 ID 要透出」。
 - `internal/agent/engine/acp/acp_test.go`:acpx + ask 档被拒;其它档位可用。
 - `internal/agent/config_test.go`:布尔的 yaml 值要生效;acpx+ask 存不下去。
+- `internal/agent/engine/acp/env_test.go`:环境净化(摘本服务密钥、不误伤 agent 自己的 provider key)。
+- `internal/agent/delegate_e2e_test.go`:委派链路端到端(模型发起 → 危险工具要确认 → 确认后真的派出去)。

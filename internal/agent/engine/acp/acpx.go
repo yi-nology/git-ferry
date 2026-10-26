@@ -213,6 +213,8 @@ func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string,
 	// 二进制与参数由管理员在配置里指定(不是外部请求输入)。
 	cmd := exec.CommandContext(ctx, e.cfg.Binary, args...) //nolint:gosec // G204:命令来自部署配置
 	cmd.Dir = e.cfg.Cwd
+	// 环境净化:acpx 自己不碰密钥,但它会再去起 agent 进程 —— 密钥不能从它这条链漏出去。
+	cmd.Env = scrubbedEnv()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", fmt.Errorf("acpx stdout 管道失败: %w", err)
@@ -372,6 +374,7 @@ func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
 
 	cmd := exec.CommandContext(ctx, cfg.Binary, args...) //nolint:gosec // G204:命令来自部署配置
 	cmd.Dir = cfg.Cwd
+	cmd.Env = scrubbedEnv()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", fmt.Errorf("acpx stdout 管道失败: %w", err)

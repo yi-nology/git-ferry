@@ -279,6 +279,9 @@ func (e *Engine) start(ctx context.Context, key string) (*sessionProc, error) {
 	// 命令由管理员在配置里指定(不是外部请求输入);工作目录即沙箱边界。
 	cmd := exec.CommandContext(pctx, fields[0], fields[1:]...) //nolint:gosec // G204:命令来自部署配置
 	cmd.Dir = e.cfg.Cwd
+	// **环境要净化**:默认继承父进程 ⇒ agent 能读到 ENCRYPTION_KEY 与 admin key,
+	// 绕开 MCP 的只读边界。见 env.go 的说明。
+	cmd.Env = scrubbedEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		cancel()
