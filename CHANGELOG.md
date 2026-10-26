@@ -2,6 +2,59 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.36.0] - 2026-10-26
+
+### Changed
+
+- **core pin → v0.30.0**：
+  - **rebuild 语义下沉到 core**：清工作目录必须在**拿到执行权之后**做。
+    ① 壳层 `POST /api/v1/ops/rebuild` 原来「先删目录、再受理」—— 任务正在跑时
+    目录已经被删（跑着的工作树被删 ⇒ 那次同步必炸），受理又因 `ErrTaskRunning`
+    失败 ⇒ 净效果是「把活着的同步搞死，重建还没排上」；② MCP 的 `rebuild_task`
+    描述写「清空任务工作目录并全量重建」，实现却只是重新触发一次同步 ⇒
+    **workdir 损坏 / 浅克隆永远修不了**（工具描述与行为相反）。
+    修法：core 在拿到执行权后清目录，抢不到执行权就一步都不动；壳层不再自己删。
+  - **卡在进行中的镜像执行永不回收 ⇒ 通道永久占用**：僵尸 run（进程被 SIGKILL /
+    崩溃 / OOM 杀掉）状态永远停在 `pending|running` ⇒ 该通道**永久**报
+    「该通道有执行中的任务」，再也无法触发任何发布 / 校验。
+  - **版本矩阵取最旧一次执行 / tag 用字符串序 / verify 列永远 unverified** ——
+    三处都让矩阵**报告与事实相反**。
+  - **执行历史按保留期清理**：`CleanupOldData` 此前从未被调用 ⇒ 三张表无限增长。
+- **SDK pin → v0.99.7**：跨 host 重定向**泄漏 URL query 里的凭据**
+  （go-gitee 把令牌放 `access_token` 且每跳都重加 ⇒ 平台 302 到 CDN 时令牌
+  发给第三方主机）；Gitee 归档下载 100% 失败；Gitee / GitCode 文件内容返回
+  base64 串；`ListCRs` 零值 State 被当成「只看 open」。
+
+### Fixed
+
+- **CLI 的请求形状与服务端契约对齐**（hertz 静默忽略未知 query 参数 ⇒
+  契约漂移的表现是「命令存在、参数也传了，但永远不生效」）：
+  - `repo +create` 发的是 `platform` / `clone_url` / `key`，而服务端的
+    CreateRepoReq 只有 **name + remote_url**（平台走 query 的 **platform_id**）
+    ⇒ 三个字段全被丢弃 ⇒ 400 ⇒ **这个命令从来没能成功过**。
+  - `ops +drift --task` 发的是 `task_key`，服务端要的是 `task_keys`
+    ⇒ 绑定失败 ⇒ **静默退化成扫描全部任务**，调用方以为做了筛选。
+  - `PaginateAll` 只读第一页且**谎报总数** ⇒ `--all` 拿到的不是全量，
+    而信封里的总数看着又是对的。
+  - `task +batch-run` 部分失败时**退出码仍是 0** ⇒ 脚本按退出码判断会以为全成功。
+- **审计导出的 stdout 被 Envelope 污染**：`ops +audit-report --csv` 先打印 CSV，
+  再让框架把 Envelope JSON 也打到 stdout ⇒ `> out.csv` 得到的文件尾部多一段
+  JSON ⇒ 任何 CSV 解析器都读不了这个导出文件。
+  改法：CSV 模式下命令自己输出后返回 nil Envelope，框架不再打信封。
+- **`auth status` 对 4xx / 5xx / 连不上仍报 ok**：以前无论服务端返回什么都
+  `output.Success(...)` ⇒ 信封里**永远 ok=true** ⇒ 脚本按 ok 判断就会把
+  「密钥无效 / 服务不可达」当成「一切正常」。改法：失败如实报失败并非 0 退出。
+- **漂移检测的绑定错误被丢弃**：`DetectDrift` 原来 `_ = c.BindAndValidate(&req)`
+  ⇒ 绑定失败被当成「没传过滤条件」⇒ **静默退化成扫描全部任务**。
+  改法：绑定失败即 400。
+
+### Added
+
+- **任务列表支持 `status` 过滤、执行历史支持按 `run_id` 精确查**：CLI 的
+  `task +list --status` / `history +detail --run-id` 一直在发这两个参数，
+  但契约里没有 ⇒ **用户以为筛过了、拿到的却是全量**（`history +detail`
+  翻不到就是空列表）。IDL / model / handler 全链对齐，查不到的 run_id 报 404。
+
 ## [v1.35.0] - 2026-10-25
 
 ### Changed
