@@ -20,6 +20,7 @@ export type AIEventType =
   | 'tool_end'
   | 'tool_confirm'
   | 'permission'
+  | 'agent_session'
   | 'done'
   | 'error'
 
@@ -40,6 +41,10 @@ export interface AIEvent {
   token?: string
   session_id?: string
   usage?: { input_tokens: number; output_tokens: number }
+  /** 外部 agent 侧的会话 ID(可在 agent 自己的界面里找到这次会话) */
+  agent_session_id?: string
+  /** 外部 agent 的展示名 */
+  agent_label?: string
   /** 授权请求 id(回传时原样带回) */
   permission_id?: string
   /** 授权选项 */

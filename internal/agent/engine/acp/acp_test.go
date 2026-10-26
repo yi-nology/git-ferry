@@ -173,9 +173,10 @@ func fakeAcpx(t *testing.T, fixture string) string {
 func TestAcpxEngine_Run(t *testing.T) {
 	dir := t.TempDir()
 	eng, err := NewAcpxEngine(&Config{
-		Binary: fakeAcpx(t, "acpx_exec.ndjson"),
-		Agent:  "mcode",
-		Cwd:    dir,
+		Binary:     fakeAcpx(t, "acpx_exec.ndjson"),
+		Agent:      "mcode",
+		Cwd:        dir,
+		Permission: PermissionApproveReads, // acpx 非交互,ask 档不可用
 	})
 	require.NoError(t, err)
 	defer func() { _ = eng.Close() }()
@@ -228,11 +229,15 @@ func TestConfigValidate(t *testing.T) {
 	c4 := Config{Transport: TransportACPX, Agent: "mcode", Permission: "whatever"}
 	assert.ErrorContains(t, c4.Validate(), "permission")
 
-	// 正常
-	c5 := Config{Transport: TransportACPX, Agent: "mcode"}
+	// 正常:acpx 要显式选一个能兑现的授权档(ask 弹不出授权卡,见 stdio_test.go)
+	c5 := Config{Transport: TransportACPX, Agent: "mcode", Permission: PermissionApproveReads}
 	require.NoError(t, c5.Validate())
-	assert.Equal(t, PermissionAsk, c5.Permission)
 	assert.Equal(t, acpxBinary, c5.Binary)
+
+	// stdio 后端才是能逐次确认的那个
+	c6 := Config{Transport: TransportStdio, Command: "mcode acp"}
+	require.NoError(t, c6.Validate())
+	assert.Equal(t, PermissionAsk, c6.Permission, "默认档是 ask")
 }
 
 func TestFsHandler_Sandbox(t *testing.T) {

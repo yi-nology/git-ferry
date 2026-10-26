@@ -167,6 +167,17 @@ func (s *Settings) applyDefaults() {
 	}
 }
 
+// NormalizePermission 归一化授权档(空 = 默认 ask)。
+//
+// 比较「有没有变更」与校验时都必须先过它:空串与默认值要等价,
+// 否则「没填」会被当成「改了值」。
+func NormalizePermission(p string) string {
+	if p == "" {
+		return "ask"
+	}
+	return p
+}
+
 // ErrBusy 并发会话已达上限。
 var ErrBusy = errors.New("ai_busy: 当前会话数已达上限,请稍后再试")
 

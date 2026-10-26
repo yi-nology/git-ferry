@@ -83,25 +83,36 @@ func TestAIUpdateConfig_普通参数改动不需要admin(t *testing.T) {
 }
 
 // TestAIUpdateConfig_admin可换后端 admin 是唯一能换后端的角色。
+//
+// 注意:acpx 后端的授权档必须是 approve_reads|approve_all|deny ——
+// 「ask」在非交互通道上名不副实,保存时就会被拒(见 agent 包的 Save 校验)。
 func TestAIUpdateConfig_admin可换后端(t *testing.T) {
 	h := newAIConfigEnv(t, RoleAdmin)
-	w := postAIConfig(t, h, `{"enabled":true,"backend":"acpx","external":{"agent":"mcode"}}`)
+	w := postAIConfig(t, h, `{"enabled":true,"backend":"acpx","external":{"agent":"mcode","permission":"approve_reads"}}`)
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestAIUpdateConfig_acpx用ask档被拒 acpx 非交互,弹不出授权卡 ⇒ 直接拒。
+func TestAIUpdateConfig_acpx用ask档被拒(t *testing.T) {
+	h := newAIConfigEnv(t, RoleAdmin)
+	w := postAIConfig(t, h, `{"enabled":true,"backend":"acpx","external":{"agent":"mcode","permission":"ask"}}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "非交互")
 }
 
 // TestAIUpdateConfig_未填授权档不算变更 「没填」与「显式填默认值」是同一件事,
 // 不该被误判成治理动作变更(否则第一次保存就被 admin 闸门卡住)。
 func TestAIUpdateConfig_未填授权档不算变更(t *testing.T) {
-	// 第一次存:从默认切到 acpx = 治理变更 ⇒ 用 admin
+	// 用 **stdio** 后端(它才支持逐次确认 ⇒ ask 是合法档位)
 	store, err := agent.OpenSettings(filepath.Join(t.TempDir(), "ai-settings.json"))
 	require.NoError(t, err)
 	hAdmin := newAIConfigEnvWithStore(t, RoleAdmin, store)
-	w0 := postAIConfig(t, hAdmin, `{"enabled":true,"backend":"acpx","external":{"agent":"mcode","permission":"ask"}}`)
+	w0 := postAIConfig(t, hAdmin, `{"enabled":true,"backend":"stdio","external":{"command":"mcode acp","permission":"ask"}}`)
 	require.Equal(t, http.StatusOK, w0.Code)
 
 	// 再存一次:后端不变、授权档不填 ⇒ 不算治理变更 ⇒ operator 也该放行
 	h := newAIConfigEnvWithStore(t, RoleOperator, store)
-	w1 := postAIConfig(t, h, `{"enabled":true,"backend":"acpx","external":{"agent":"mcode"}}`)
+	w1 := postAIConfig(t, h, `{"enabled":true,"backend":"stdio","external":{"command":"mcode acp"}}`)
 	assert.Equal(t, http.StatusOK, w1.Code,
 		"未填授权档(等价默认 ask)不该被当成变更而要求 admin")
 }
@@ -139,7 +150,8 @@ func TestAIGetConfig_设置文件覆盖yaml(t *testing.T) {
 		Backend: agent.BackendACPX,
 		Model:   "from-file",
 		External: agent.ExternalSettings{
-			Agent: "mcode",
+			Agent:      "mcode",
+			Permission: "approve_reads",
 		},
 	})
 	require.NoError(t, err)

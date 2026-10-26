@@ -24,6 +24,9 @@
           <div class="ai-header-text">
             <div class="ai-title">AI 运维助手</div>
             <div class="ai-sub">
+              <span v-if="agentSession" class="model-chip agent-chip" :title="agentSessionTitle">
+                外部会话 {{ agentSession.id }}
+              </span>
               <span v-if="backendLabel" class="model-chip">{{ backendLabel }}</span>
               <span v-else-if="model" class="model-chip">{{ model }}</span>
               <span v-else class="model-chip muted">只读查询 · 危险操作需确认</span>
@@ -191,6 +194,7 @@ const {
   streaming,
   pendingConfirm,
   pendingPermission,
+  agentSession,
   send,
   confirm,
   deny,
@@ -214,6 +218,12 @@ const suggestions = [
 const permissionOptions = computed(() =>
   (pendingPermission.value?.options ?? []).filter((o) => !o.kind || o.kind.startsWith('allow')),
 )
+
+const agentSessionTitle = computed(() => {
+  const a = agentSession.value
+  if (!a) return ''
+  return `外部 agent 的会话 ID：${a.id}${a.label ? `（${a.label}）` : ''}\n可在该 agent 自己的会话列表里打开这次会话（查看记录、接着聊）。`
+})
 
 const prettyArgs = computed(() => {
   if (!pendingConfirm.value?.args) return ''
@@ -320,6 +330,13 @@ watch(
     background: $bg-subtle;
     border-color: $border-light;
   }
+}
+
+.agent-chip {
+  color: $success;
+  background: $success-soft;
+  border-color: $success-border;
+  margin-right: 6px;
 }
 
 .ai-header-actions {

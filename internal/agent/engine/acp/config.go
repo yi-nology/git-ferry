@@ -188,6 +188,13 @@ func (c *Config) Validate() error {
 		return errConfig("未知 permission 档: " + c.Permission +
 			"(可选 ask|approve_reads|approve_all|deny)")
 	}
+	// acpx 是**非交互**的(它的 stdin/stdout 被我们占着)⇒ 弹不出授权卡。
+	// 它的 nonInteractivePermissions 默认是 deny ⇒ 这里的「问」实际等于「拒绝」。
+	// 配置与实际行为不符是最坏的一种坑 ⇒ **直接拒绝这个组合**,让操作者明确选。
+	if c.Transport == TransportACPX && c.Permission == PermissionAsk {
+		return errConfig("acpx 后端是非交互的,无法逐次弹授权卡(它的写操作会按拒绝处理):" +
+			"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio 后端")
+	}
 	return nil
 }
 

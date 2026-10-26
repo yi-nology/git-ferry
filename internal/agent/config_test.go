@@ -157,3 +157,25 @@ func TestMergeSettings_布尔的yaml值要生效(t *testing.T) {
 	})
 	assert.False(t, got2.External.MCPEnabled, "设置文件写过之后,它的值优先")
 }
+
+// TestSettings_Save_拒绝存不可用的组合 存下一份「后端起不来」的配置,
+// 界面上显示已保存、实际 AI 是关的 —— 又是「配置与实际行为不符」。
+func TestSettings_Save_拒绝存不可用的组合(t *testing.T) {
+	dir := t.TempDir()
+	store, err := OpenSettings(filepath.Join(dir, "ai-settings.json"))
+	require.NoError(t, err)
+
+	// acpx + ask:非交互通道弹不出授权卡 ⇒ 拒
+	_, err = store.Save(&Settings{
+		Enabled: true,
+		Backend: BackendACPX,
+		External: ExternalSettings{
+			Agent:      "mcode",
+			Permission: "ask",
+		},
+	})
+	assert.ErrorContains(t, err, "非交互")
+
+	// 存量配置没被动过
+	assert.False(t, store.Get().Enabled)
+}

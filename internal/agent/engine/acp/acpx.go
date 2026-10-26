@@ -294,6 +294,13 @@ func (e *AcpxEngine) baseArgs() []string {
 		args = append(args, "--approve-reads")
 	case PermissionDeny:
 		args = append(args, "--deny-all")
+	case PermissionAsk:
+		// acpx **非交互**(它的 stdin/stdout 都被我们占着)⇒ 弹不出授权卡。
+		// 它的 nonInteractivePermissions 默认是 deny ⇒ 「问」在这里等于「拒绝」。
+		// 配置校验阶段已经拒绝这个组合(见 Config.Validate),这里只是兜底:
+		// 显式给 --approve-reads(而不是"不传 flag 吃默认值"),
+		// 免得 acpx 改了默认档就把行为带偏。
+		args = append(args, "--approve-reads")
 	}
 	return args
 }
@@ -351,6 +358,9 @@ func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
 		args = append(args, "--approve-reads")
 	case PermissionDeny:
 		args = append(args, "--deny-all")
+	case PermissionAsk:
+		// 同上:非交互通道没法逐次确认,兜底走 approve-reads。
+		args = append(args, "--approve-reads")
 	}
 	if cfg.Command != "" {
 		args = append(args, "--agent", cfg.Command)

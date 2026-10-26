@@ -173,6 +173,15 @@ func (e *Engine) prompt(ctx context.Context, proc *sessionProc, message string, 
 	})
 	defer proc.setSink(nil)
 
+	// **把外部 agent 的会话 ID 透出去**:外部 agent 与本服务可能共用同一个
+	// 会话库(如 MiniMax Code 的 CLI 与桌面版)—— 用户要能据此在那个界面上
+	// 找到这次会话(看记录、接着聊),否则这个能力等于没有入口。
+	proc.sinkEvent(&engine.Event{
+		Type:           engine.EventAgentSession,
+		AgentSessionID: proc.sessionID,
+		AgentLabel:     proc.agentName,
+	})
+
 	// 取消时通知 agent 停下(session/cancel 是通知,无需响应)。
 	// finished 用于区分「正常结束」与「被取消」—— 否则回合结束时的
 	// defer cancel 会误发一次 cancel,把**下一轮**也取消掉。

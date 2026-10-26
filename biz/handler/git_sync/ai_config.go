@@ -156,7 +156,7 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	if curBackend == "" {
 		curBackend = agent.BackendInternal
 	}
-	if backend != curBackend || normalizePermission(ext.Permission) != normalizePermission(cur.External.Permission) {
+	if backend != curBackend || agent.NormalizePermission(ext.Permission) != agent.NormalizePermission(cur.External.Permission) {
 		if GetAuthRole(c) != RoleAdmin {
 			response.Error(c, consts.StatusForbidden,
 				"forbidden: 切换 AI 后端或修改外部 agent 授权档需要 admin 角色")
@@ -164,7 +164,7 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 		}
 		// 治理动作留审计:谁在什么时候把 AI 换成了什么、授权档改成了什么。
 		recordAuditDetail(ctx, c, "ai.backend.change", "AIConfig", backend,
-			"backend="+backend+",permission="+normalizePermission(ext.Permission),
+			"backend="+backend+",permission="+agent.NormalizePermission(ext.Permission),
 			"from="+curBackend+",to="+backend)
 	}
 	saved, err := st.Save(&agent.Settings{
@@ -412,15 +412,4 @@ func probeOpenAICompat(ctx context.Context, client *http.Client, base, key, mode
 		}
 	}
 	return resp.StatusCode, true, "端点连接正常"
-}
-
-// normalizePermission 归一化授权档(空 = 默认 ask)。
-//
-// 比较「有没有变更」前必须归一:否则「没填」与「显式填默认值」
-// 会被误判成治理动作变更,把本该放行的请求卡在 admin 闸门上。
-func normalizePermission(p string) string {
-	if p == "" {
-		return "ask"
-	}
-	return p
 }

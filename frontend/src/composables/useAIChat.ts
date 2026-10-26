@@ -22,6 +22,8 @@ const streaming = ref(false)
 const error = ref('')
 const pendingConfirm = ref<PendingConfirm | null>(null)
 const pendingPermission = ref<PendingPermission | null>(null)
+// 外部 agent 侧的会话(可在 agent 自己的界面里找到这次会话)
+const agentSession = ref<{ id: string; label: string } | null>(null)
 
 let abort: AbortController | null = null
 
@@ -64,6 +66,11 @@ function handleEvent(ev: AIEvent) {
     }
     case 'tool_confirm':
       pendingConfirm.value = { tool: ev.tool ?? '', token: ev.token ?? '', args: ev.args }
+      break
+    case 'agent_session':
+      if (ev.agent_session_id) {
+        agentSession.value = { id: ev.agent_session_id, label: ev.agent_label ?? '' }
+      }
       break
     case 'permission':
       // 外部 agent 请求授权(ACP session/request_permission)。
@@ -172,6 +179,7 @@ export function useAIChat() {
     messages.value = []
     pendingConfirm.value = null
     pendingPermission.value = null
+    agentSession.value = null
     error.value = ''
   }
 
@@ -194,6 +202,7 @@ export function useAIChat() {
     error,
     pendingConfirm,
     pendingPermission,
+    agentSession,
     toolActivity,
     loadStatus,
     send,

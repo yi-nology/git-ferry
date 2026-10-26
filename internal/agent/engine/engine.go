@@ -43,6 +43,12 @@ const (
 	EventToolConfirm = "tool_confirm"
 	// EventPermission 外部 agent 请求授权(ACP session/request_permission)。
 	EventPermission = "permission"
+	// EventAgentSession 外部 agent 的会话已建立(带它在 agent 侧的会话 ID)。
+	//
+	// 用途:外部 agent 与本服务**共用同一个会话库**(如 MiniMax Code 的
+	// CLI 与桌面版),把这个 ID 透出来,用户就能在那个界面上找到这次会话
+	// (查看记录、接着聊),而不必在对方的会话列表里大海捞针。
+	EventAgentSession = "agent_session"
 	// EventDone 一轮结束。
 	EventDone = "done"
 	// EventError 出错。
@@ -62,6 +68,11 @@ type Event struct {
 	Token     string `json:"token,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
 	Usage     *Usage `json:"usage,omitempty"`
+
+	// AgentSessionID 外部 agent 侧的会话 ID(可用于在 agent 自己的界面里找到这次会话)。
+	AgentSessionID string `json:"agent_session_id,omitempty"`
+	// AgentLabel 外部 agent 的展示名(如 "MiniMax Code")。
+	AgentLabel string `json:"agent_label,omitempty"`
 
 	// PermissionID 授权请求 id(ACP permission 链路);非空时前端应回传 option_id。
 	PermissionID string `json:"permission_id,omitempty"`

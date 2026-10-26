@@ -140,6 +140,15 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 			if in.External.Agent == "" && in.External.Command == "" {
 				return nil, fmt.Errorf("外部 agent 名为空(填 agent 如 mcode,或填自定义 command)")
 			}
+			// acpx 是**非交互**的(它的 stdin/stdout 被我们的调用占着)⇒ 弹不出授权卡;
+			// 它的写操作按拒绝处理 ⇒ 这里的「问」名不副实。
+			// 校验放在**保存时**而不是只在启动时:否则会存下一份「后端起不来」的配置,
+			// 界面上显示已保存、实际 AI 是关的 —— 又是「配置与实际行为不符」。
+			if NormalizePermission(in.External.Permission) == "ask" {
+				return nil, fmt.Errorf(
+					"acpx 后端是非交互的,无法逐次弹授权卡(写操作会按拒绝处理):" +
+						"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio 后端")
+			}
 		case BackendStdio:
 			if in.External.Command == "" {
 				return nil, fmt.Errorf("外部 agent 命令为空(如 \"mcode acp\")")
