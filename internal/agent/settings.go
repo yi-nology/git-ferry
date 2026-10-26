@@ -295,6 +295,12 @@ func MergeSettings(yamlCfg *Config, st *Settings) Settings {
 	if !st.Enabled && st.UpdatedAt.IsZero() {
 		out.Enabled = yamlCfg.Enabled
 	}
+	// **布尔字段同理**:布尔没法区分「未设置」与「显式 false」,
+	// 所以在设置文件还没写过之前,yaml 的布尔值说了算。
+	// 少了这一句 ⇒ yaml 里的 mcp_enabled: true 永远不生效(被当成 false 覆盖掉)。
+	if st.UpdatedAt.IsZero() {
+		out.External.MCPEnabled = yamlCfg.External.MCPEnabled
+	}
 	if out.APIKey == "" {
 		out.APIKey = APIKeyFromEnv()
 	}

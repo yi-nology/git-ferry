@@ -680,6 +680,7 @@ docs/design/acp-external-agent-design.md     新增  本文档
 | F6 | 文档不可达 | README(中英)补「换成外部 AI coding 工具(ACP)」一节 |
 | F7 | MCP 挂载**只支持一个源**(布尔开关 + URL) | 改为**列表**:`external.mcp_servers` 可挂多个第三方 MCP;最终清单 = 本服务 /mcp(若启用)+ 列表 |
 | F8 | **换后端热重建时旧后端不关** | 外部后端每会话一个**长驻 agent 子进程**,不关旧的就攒孤儿进程 ⇒ 补 `Runner.Close()`(同时停掉会话回收 goroutine),重建与进程退出路径都调 |
+| F9 | **yaml 的 `mcp_enabled: true` 永远不生效** | 布尔的「未设置 vs 显式 false」没法区分 ⇒ `MergeSettings` 漏合并它 ⇒ 设置文件没写过之前,yaml 的布尔值说了算 |
 
 ### 17.2 测试逼出来的三个真 bug
 
@@ -702,7 +703,30 @@ docs/design/acp-external-agent-design.md     新增  本文档
 这是刻意的:委派结果要**回到助手的上下文里**,异步化就得另建一套「取回结果」通道。
 代价是**确认请求会挂很久**,已写进 `skills/gitferry-histsync/SKILL.md` 的治理清单。
 
-### 17.4 新增测试
+### 17.4 与 MiniMax Code Desktop 的对接(实测结论)
+
+对接时查清的三件事(都不是文档里写的,是实测出来的):
+
+| # | 事实 | 依据 |
+|---|------|------|
+| D1 | **桌面版本身不能当 ACP agent** | `/Applications/MiniMax Code.app` 的 asar 里**没有任何 acp 入口**(36077 个条目里 acp 只匹配到两个编解码器);它是 `@mmx-agent/electron` 纯 GUI,无 bin |
+| D2 | ACP server 在 **CLI**:`mcode acp`(同产品的终端 agent) | `mcode --help`:`acp — Run MiniMax Code as an Agent Client Protocol server over stdio` |
+| D3 | **CLI 与桌面版共用同一个 v2 会话库** ⇒ git-ferry 驱动的外部会话**会出现在桌面版的会话列表里** | ACP 建的会话落 `~/.minimax/v2/sessions/YYYY/MM/DD/HH-MM-SS-mmm-session_<base64(sessionId)>/`,与桌面版同格式(`source: local-runtime`, `layout: v2-final-dated-session`) |
+
+**完整回路实测通过**(git-ferry → 外部 agent → 经 MCP 调回 git-ferry 自己的工具):
+
+```
+POST /api/v1/ai/chat  (backend=stdio, command="mcode acp", MCP 挂本服务 /mcp, 专用只读 key)
+  → 事件流:start → thinking* → delta* → tool_start(mcp__gitferry__list_repos) → tool_end
+            → thinking* → delta*(答案) → done
+  → agent 拿到真实数据(total=311,分页 20/页)并给出观察(平台全是 gitea、默认分支不统一)
+  → 该会话在桌面版会话库里可见,messages.jsonl 里有完整的 user/assistant/toolResult/assistant 四条
+```
+
+**因此「对接 desktop」的真实落点**是:桌面版作为**会话与人工接管的界面**,agent 运行时由 CLI 提供。
+要在桌面版继续这次会话,靠的是同一份会话库,不是另开一条协议。
+
+### 17.5 新增测试
 
 - `biz/handler/git_sync/ai_config_test.go`:RBAC 三档(只读拒 / 治理项要 admin / 普通项放行)、
   归一化不误判。

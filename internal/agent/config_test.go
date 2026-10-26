@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -130,4 +131,29 @@ func TestSettings_后端与外部配置往返(t *testing.T) {
 	v := View(&st)
 	assert.Equal(t, BackendACPX, v.Backend)
 	assert.Equal(t, "mcode", v.External.Agent)
+}
+
+// TestMergeSettings_布尔的yaml值要生效 布尔没法区分「未设置」与「显式 false」,
+// 所以在设置文件还没写过之前,yaml 的布尔值说了算。
+// 少了这一句 ⇒ yaml 里的 mcp_enabled: true 永远不生效。
+func TestMergeSettings_布尔的yaml值要生效(t *testing.T) {
+	yamlCfg := &Config{
+		Enabled: true,
+		Backend: BackendStdio,
+		External: ExternalConfig{
+			Command:    "mcode acp",
+			MCPEnabled: true,
+		},
+	}
+	// 设置文件为空(首次未写)
+	got := MergeSettings(yamlCfg, &Settings{})
+	assert.True(t, got.External.MCPEnabled, "yaml 的 mcp_enabled 应生效")
+	assert.Equal(t, "mcode acp", got.External.Command)
+
+	// 设置文件写过了 ⇒ 它的值说了算(哪怕是 false)
+	got2 := MergeSettings(yamlCfg, &Settings{
+		UpdatedAt: time.Now(),
+		External:  ExternalSettings{MCPEnabled: false},
+	})
+	assert.False(t, got2.External.MCPEnabled, "设置文件写过之后,它的值优先")
 }
