@@ -2,6 +2,43 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.0.1] - 2026-10-26
+
+### Fixed
+
+- **CLI 的 401 提示不指路**：密钥存放在 macOS Keychain 时，配置文件里的
+  `api_key` 是空的 ⇒ 非交互环境（keychain 锁住 / `security` 不可用 / 换了用户）
+  取不到 ⇒ CLI 不带任何认证发请求 ⇒ 服务端 401，而提示写的是通用的
+  「请设置 GITFERRY_TOKEN 或运行 gitferry auth login」
+  ⇒ 用户以为自己没配过，反复重新设置 token，而真正的解法是
+  「这个环境取不到 Keychain 里的密钥」。
+  改法：本机**确实没有**可用密钥时，提示改成「本机没有可用的 API Key
+  （可能已存在 macOS Keychain，但当前环境取不到）」；本机**有**密钥时
+  保留原提示（那就是密钥不对 / 权限不足）。
+- **密钥来源不可见**：密钥在 Keychain 模式下，从配置文件上根本看不出
+  「本机到底有没有密钥」。改法：配置增加运行时字段 `KeySource`
+  （`env:GITFERRY_TOKEN` / `env:GITFERRY_API_KEY` / `file` / `keychain` / `none`，
+  **不落盘**）+ `KeychainErr`（取不到的具体原因），`auth status` 一并报出。
+- **Keychain 写失败会把旧密钥删掉**：`saveSecret` 是「先删旧项、再 add」，
+  而 `security add-generic-password` 在条目已存在时会失败 ⇒ 必须先删；
+  但 add 失败（keychain 锁住 / `security` 不可用）时**旧密钥就没了**
+  ⇒ 用户的凭据被静默删掉，而调用方以为写成功了。
+  改法：删之前把旧值读出来，add 失败就写回去。
+  同时把取密钥的失败分成两类：条目不存在（`security` 返回码 44）与
+  「取不到」（其它错误）—— 两者的用户建议完全不同。
+
+### Added
+
+- **发版提交助手**（`scripts/release-commit.sh`）：多个 agent 会话共享同一个
+  工作树 ⇒ 共享**同一个 `.git/index`** ⇒ `git commit`（不带 `--only`）
+  提交的是**整个暂存区** ⇒ 别人 `git add` 的文件会被一起带进你的提交
+  （本项目真实发生过：另一会话的 `docs/design/*.md` 进了发版提交，
+  被我的 tag 一起发布出去）。
+  改法：脚本用 `git commit --only <路径>`，只提交给定路径、忽略暂存区里的
+  其它内容；提交后自检"本次提交的文件是否全在给定路径内"，发现越界文件就
+  **自动撤销**这次提交（`git reset --soft HEAD~1`，不丢内容）并非 0 退出。
+  `--check <路径>...` 模式可单独检查当前 HEAD。
+
 ## [v2.0.0] - 2026-10-26
 
 GitFerry **v2**：契约语义摆正。
