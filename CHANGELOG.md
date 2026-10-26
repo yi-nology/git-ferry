@@ -2,6 +2,28 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v1.37.0] - 2026-10-26
+
+### Fixed
+
+- **MCP `get_ops_todo` 的三路子查询失败全部被静默吞掉**（报告与事实相反）：
+  健康 / 孤儿两路走子工具，子工具失败时返回的是 `{"error": "..."}` 的 JSON 而
+  **Go error 恒为 nil** ⇒ 以前 `json.Unmarshal` 那个负载不报错、Items 为空
+  ⇒ **子系统一挂，这一整类待办无声消失**，调用方看到的是「没有待办」；
+  RPO 一路连 Go error 都被直接丢掉。
+  修法：新增 `parseToolPayload`（错误信封与解析失败都变成 Go error），
+  三路失败全部记进 `failures`，输出带 `partial` + `warning`；一条都没查到时
+  额外给 `message`，避免「空列表」被当成「一切正常」。
+  顺带把截断也说出口：`total` 改为**截断前**的真实条数，并给出
+  `returned` / `truncated`（以前 `total` 报的是截断后的长度）。
+- **MCP `list_histsync_runs` 硬编码 50 条**：入参只有 `channel_id`
+  ⇒ 模型想看更多也拿不到，而输出里的 `total` 却是**真实总数**
+  ⇒ 两个数字对不上，模型无从判断自己看到的是不是全部
+  （同一个坑在 `list_histsync_channels` 上已修过一遍，这里是漏网的同一个）。
+  修法：给 `page` / `limit` 入参（默认 20、上限 100，与
+  `list_histsync_channels` 一致），真分页取数，并给出 `returned` / `truncated` /
+  `notice`。
+
 ## [v1.36.0] - 2026-10-26
 
 ### Changed
