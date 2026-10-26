@@ -3,19 +3,24 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"github.com/yi-nology/git-ferry/biz/model/ops"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/pkg/pathx"
+	"github.com/yi-nology/git-ferry/biz/model/ops"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
 // RebuildRepo POST /api/v1/ops/rebuild
-// 删除任务临时工作目录后触发一次同步,等价于「冷启动全量拉取」。
-// 用于 workdir 损坏、浅克隆修复、或需要强制全量刷新时。
+// 触发一次「冷启动全量拉取」:由 core 在**拿到该任务的执行权之后**清空工作目录,
+// 强制从源重新克隆。
+//
+// **这里不再自己删目录**:workdir 按 taskKey 共享,受理阶段就删会和正在跑的
+// 同步抢同一个目录(把跑着的工作树删掉),而且任务在跑时受理会失败,
+// 结果是"目录被删了、重建没排上"。清目录的语义归 core
+// (git-ferry-core service/rebuild.go),这里是唯一的 rebuild 语义入口。
 func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 	var req ops.RebuildReq
 	if err := c.BindAndValidate(&req); err != nil {
@@ -41,31 +46,14 @@ func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// workdir 路径与 core.GetTempDir 一致:<temp>/<taskKey>
-	tempDir := ""
-	if cfg := svc.GetConfig(); cfg != nil {
-		tempDir = cfg.Git.TempDir
-	}
-	if tempDir != "" {
-		workDir, err := safeWorkDir(tempDir, req.TaskKey)
-		if err != nil {
-			response.BadRequest(c, err.Error())
-			return
-		}
-		if err := os.RemoveAll(workDir); err != nil {
-			response.InternalError(c, err.Error())
-			return
-		}
-	}
-
-	if err := svc.RunTaskAsync(req.TaskKey, "rebuild", nil); err != nil {
+	if err := svc.RunTaskAsync(req.TaskKey, corebridge.RebuildTrigger, nil); err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}
 	recordAudit(ctx, c, "rebuild", "task", req.TaskKey, "从源重建 "+req.TaskKey)
 	response.Success(c, map[string]any{
 		"success":  true,
-		"message":  "workdir cleared, full resync started",
+		"message":  "full resync started; workdir will be cleared under the task lock",
 		"task_key": req.TaskKey,
 	})
 }
