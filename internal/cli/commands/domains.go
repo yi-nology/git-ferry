@@ -578,6 +578,12 @@ func opsHealth(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []strin
 }
 
 // opsAuditReport 审计导出；--csv 原样输出 CSV 文本（不包 Envelope）。
+//
+// **stdout 只能有 CSV**:之前 --csv 先把 CSV 打到 stdout,再让框架把
+// Envelope JSON 也打到 stdout ⇒ `> out.csv` 得到的文件尾部多一段 JSON
+// ⇒ CSV 解析器直接报错(导出文件是坏的)。
+//
+// 修法:CSV 模式下返回 nil Envelope,并让 runWith 看到 nil 就不再输出信封。
 func opsAuditReport(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
 	q := url.Values{}
 	setIf(cmd, q, "limit", "limit")
@@ -592,20 +598,21 @@ func opsAuditReport(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []
 	if !flagBool(cmd, "csv") {
 		return env, nil
 	}
-	// CSV：把 data 当原文写到 stdout
-	if raw, ok := env.Data.(json.RawMessage); ok {
-		var s string
-		if json.Unmarshal(raw, &s) == nil {
-			fmt.Print(s)
-			if !strings.HasSuffix(s, "\n") {
-				fmt.Println()
-			}
-			return output.Success(map[string]any{"exported": true, "format": "csv"}, nil), nil
-		}
-		fmt.Print(string(raw))
-		return output.Success(map[string]any{"exported": true, "format": "csv"}, nil), nil
+	// 服务端出错(4xx/5xx)⇒ 原样输出失败信封,退出码非 0;别把错误当 CSV 打出去。
+	if !env.OK {
+		return env, nil
 	}
-	return env, nil
+	// 服务端 CSV 走 render.CSV ⇒ 响应体是**裸 CSV 文本**,不是 JSON 信封。
+	raw, ok := env.Data.(json.RawMessage)
+	if !ok {
+		return env, nil
+	}
+	fmt.Print(string(raw))
+	if len(raw) > 0 && !strings.HasSuffix(string(raw), "\n") {
+		fmt.Println()
+	}
+	// 已经自己输出原始内容了 ⇒ 不要再输出 Envelope。
+	return nil, nil
 }
 
 func opsRPO(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {

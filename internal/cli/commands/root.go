@@ -77,7 +77,13 @@ func newClient() (*client.Client, *config.Config, error) {
 }
 
 // emit 输出 Envelope；失败时返回非 nil error 以便 cobra 退出码非 0。
+//
+// env == nil 表示"命令已经把原始内容写到 stdout 了"(如 --csv 导出),
+// 这时**什么都不打印** —— 打印信封会污染 stdout(导出的 CSV 尾部多一段 JSON)。
 func emit(env *output.Envelope, format string) error {
+	if env == nil {
+		return nil
+	}
 	if err := output.Print(os.Stdout, env, format); err != nil {
 		return err
 	}
@@ -99,6 +105,10 @@ func runWith(fn func(c *client.Client, cfg *config.Config, cmd *cobra.Command, a
 		if err != nil {
 			_ = emit(output.Fail(0, err.Error(), ""), cfg.Format)
 			os.Exit(1)
+		}
+		// env == nil ⇒ 命令自己输出了原始内容(如 --csv),不要再打信封。
+		if env == nil {
+			return
 		}
 		if err := emit(env, cfg.Format); err != nil {
 			os.Exit(1)

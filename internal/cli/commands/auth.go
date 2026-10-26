@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/yi-nology/git-ferry/internal/cli/client"
 	"github.com/yi-nology/git-ferry/internal/cli/config"
 	"github.com/yi-nology/git-ferry/internal/cli/output"
 )
@@ -70,29 +71,54 @@ func newAuthStatusCmd() *cobra.Command {
 				_ = emit(output.Fail(0, err.Error(), ""), "json")
 				os.Exit(1)
 			}
-			info := map[string]any{
-				"base_url":    cfg.BaseURL,
-				"has_api_key": cfg.APIKey != "",
-				"config_path": mustConfigPath(),
-			}
-			env, err := c.Get("/api/v1/system/status", nil)
-			if err != nil {
-				info["reachable"] = false
-				info["error"] = err.Error()
-				_ = emit(output.Success(info, nil), "json")
-				return
-			}
-			info["reachable"] = env.OK
-			if !env.OK {
-				info["error"] = env.Error
-			} else {
-				info["system"] = env.Data
-			}
-			if err := emit(output.Success(info, nil), "json"); err != nil {
+			_, env := authStatus(c, cfg)
+			// emit 对 !env.OK 返回 error ⇒ 退出码非 0(失败必须以失败告终)。
+			if err := emit(env, "json"); err != nil {
 				os.Exit(1)
 			}
 		},
 	}
+}
+
+// authStatus 采集本地认证配置与服务连通状态,返回信息体与最终信封。
+//
+// **服务端报错(401/403/5xx)必须如实报失败**:以前这里无论成功失败都
+// output.Success(...)⇒ 信封里永远 ok=true,脚本按 ok 判断就会把
+// "密钥无效/服务不可达"当成"一切正常"。
+//
+// 拆成独立函数是为了能测:原实现里 os.Exit 会把测试进程带走。
+func authStatus(c *client.Client, cfg *config.Config) (map[string]any, *output.Envelope) {
+	info := map[string]any{
+		"base_url":    cfg.BaseURL,
+		"has_api_key": cfg.APIKey != "",
+		"config_path": mustConfigPath(),
+	}
+	env, err := c.Get("/api/v1/system/status", nil)
+	if err != nil {
+		// 真·传输层错误(Do 把 HTTP 错误包成 Fail 信封,所以这里极少走到)。
+		info["reachable"] = false
+		info["error"] = err.Error()
+		return info, output.Fail(0, err.Error(), "检查 GITFERRY_BASE_URL 与服务是否启动（GET /health）")
+	}
+	if !env.OK {
+		msg, suggestion := "服务返回错误", ""
+		code := 0
+		if env.Error != nil {
+			if env.Error.Message != "" {
+				msg = env.Error.Message
+			}
+			suggestion = env.Error.Suggestion
+			if n, ok := env.Error.Code.(int); ok {
+				code = n
+			}
+		}
+		info["reachable"] = false
+		info["error"] = msg
+		return info, output.Fail(code, msg, suggestion)
+	}
+	info["reachable"] = true
+	info["system"] = env.Data
+	return info, output.Success(info, nil)
 }
 
 func newAuthLogoutCmd() *cobra.Command {
