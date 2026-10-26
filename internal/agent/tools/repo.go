@@ -28,10 +28,17 @@ type Registry struct {
 	policy *Policy
 	// delegator 外部 coding agent 委派执行器(可选;未装配时工具如实报「未配置」)。
 	delegator delegate.Runner
+	// tasks 委派任务登记表(异步派发 + 按 ID 取回)。
+	tasks *delegateTasks
 }
 
 func NewRegistry(svc SyncService) *Registry {
-	r := &Registry{svc: svc, byName: map[string]tool.InvokableTool{}, danger: map[string]bool{}}
+	r := &Registry{
+		svc:    svc,
+		byName: map[string]tool.InvokableTool{},
+		danger: map[string]bool{},
+		tasks:  newDelegateTasks(),
+	}
 	r.registerAll()
 	return r
 }
@@ -103,7 +110,10 @@ func (r *Registry) registerAll() {
 	// 记忆会进**每次会话的 system prompt** ⇒ 持久化提示注入的通道。
 	// 写/删记忆按危险工具处理:需用户确认,且只读角色一律拒绝。
 	r.addDanger(must(utils.InferTool("ai_code_delegate",
-		"把一段编码任务委派给外部 coding agent 执行(危险操作,需用户确认:外部 agent 在服务端主机上运行)", r.delegateIn)))
+		"把一段编码任务派发给外部 coding agent 执行(危险操作,需用户确认:外部 agent 在服务端主机上运行;异步派发,返回任务 ID)", r.delegateIn)))
+	// 取回委派结果:只读工具(只是查一张表)⇒ 不标危险。
+	r.add(must(utils.InferTool("ai_delegate_result",
+		"按任务 ID 取回 ai_code_delegate 派发的外部 agent 委派结果(仍在进行中则返回当前状态)", r.delegateResultIn)))
 	r.addDanger(must(utils.InferTool("remember",
 		"把用户偏好/故障模式/事实写入长期记忆(危险操作,需用户确认:记忆会进每次会话的提示)", r.rememberIn)))
 	r.add(must(utils.InferTool("recall_memory", "按关键字检索已记住的偏好与经验", r.recallIn)))

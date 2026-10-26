@@ -479,7 +479,10 @@ What matters:
   directory is the sandbox boundary. **Real isolation belongs in the deployment**
   (dedicated user / container / read-only mounts).
 - **Delegation**: the built-in assistant can hand a coding task to an external agent via
-  the `ai_code_delegate` tool.
+  the `ai_code_delegate` tool. Delegation is **asynchronous**: confirming returns a task id
+  immediately (the external agent may run for minutes — waiting synchronously would hang
+  the chat connection until the proxy times it out), and the result flows back into the
+  session, where the UI polls for it.
 
 界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
 

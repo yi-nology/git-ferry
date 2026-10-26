@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { chatStream, getAIStatus, respondPermission } from '@/api/ai'
+import { chatStream, getAIDelegateStatus, getAIStatus, respondPermission } from '@/api/ai'
 import type {
   AIEvent,
   AIStatus,
@@ -47,10 +47,15 @@ function handleEvent(ev: AIEvent) {
     case 'tool_end': {
       // 提取结果摘要(错误/信息)附到工具行,直达执行的结果经此透出
       let extra = ''
+      let taskId = ''
       try {
         const r = ev.result ? (JSON.parse(ev.result) as Record<string, unknown>) : null
         if (r?.error) extra = `失败:${String(r.error).slice(0, 120)}`
-        else if (r?.message) extra = String(r.message).slice(0, 80)
+        else if (r?.status === 'dispatched' && r?.task_id) {
+          // 外部 agent 委派是**异步**的 ⇒ 行上先标「已派出」,再轮询结果
+          taskId = String(r.task_id)
+          extra = `已派出（${taskId}）· 等待外部 agent…`
+        } else if (r?.message) extra = String(r.message).slice(0, 80)
         else extra = '完成'
       } catch {
         extra = '完成'
@@ -59,6 +64,10 @@ function handleEvent(ev: AIEvent) {
         const m = messages.value[i]
         if (m.role === 'tool' && m.content === '调用中…') {
           m.content = extra
+          if (taskId) {
+            m.taskId = taskId
+            pollDelegate(m, taskId)
+          }
           break
         }
       }
@@ -88,6 +97,43 @@ function handleEvent(ev: AIEvent) {
       streaming.value = false
       break
   }
+}
+
+/**
+ * 轮询外部 agent 委派任务,完成后把结果写回那一行。
+ *
+ * 委派是异步的:确认后工具立刻返回任务 ID,外部 agent 在本机子进程里跑
+ * (可能几分钟)⇒ 不轮询的话用户只能干等。
+ */
+function pollDelegate(row: ChatMessage, taskId: string) {
+  let tries = 0
+  const timer = window.setInterval(async () => {
+    tries += 1
+    // 上限 ~10 分钟:外部 agent 跑更久也不该无限轮询
+    if (tries > 200) {
+      window.clearInterval(timer)
+      row.content = `已派出（${taskId}）· 等待超时，请稍后询问助手`
+      return
+    }
+    try {
+      const st = await getAIDelegateStatus(taskId)
+      if (st.status === 'done') {
+        window.clearInterval(timer)
+        row.content = `外部 agent 完成：${(st.result ?? '').slice(0, 200)}`
+        row.taskId = undefined
+      } else if (st.status === 'failed') {
+        window.clearInterval(timer)
+        row.content = `外部 agent 失败：${(st.error ?? '').slice(0, 160)}`
+        row.taskId = undefined
+      }
+    } catch (e) {
+      // 轮询失败不打断界面(可能只是网络抖动)
+      if (tries > 20) {
+        window.clearInterval(timer)
+        row.content = `已派出（${taskId}）· 结果查询失败`
+      }
+    }
+  }, 3000)
 }
 
 export function useAIChat() {

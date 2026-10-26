@@ -56,6 +56,8 @@ export interface ChatMessage {
   content: string
   tool?: string
   streaming?: boolean
+  /** 外部 agent 委派任务 ID(有它说明这行在等外部 agent 的结果) */
+  taskId?: string
 }
 
 export interface PendingConfirm {

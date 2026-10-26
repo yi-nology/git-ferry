@@ -172,6 +172,15 @@ type MemoryBinder interface {
 	SetMemory(mem tools.MemStore, manifest string)
 }
 
+// DelegateStatus 可查「外部 agent 委派任务」状态的后端。
+//
+// 委派是异步的(见 tools 包的 delegate.go):确认后立刻返回任务 ID,
+// 结果稍后才有 ⇒ 前端需要一个轮询入口。
+type DelegateStatus interface {
+	// DelegateStatus 返回 (状态快照, 是否存在)。
+	DelegateStatus(taskID string) (map[string]any, bool)
+}
+
 // PolicyBinder 支持注入工具权限策略。
 type PolicyBinder interface {
 	SetPolicy(p *tools.Policy)

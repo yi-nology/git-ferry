@@ -586,6 +586,22 @@ func addCustomPaths(paths, schemas map[string]any) {
 			},
 		},
 	}
+	// 外部 agent 委派是**异步**的(确认后立刻返回任务 ID)⇒ 前端轮询取结果。
+	paths["/api/v1/ai/delegate/{task_id}"] = map[string]any{
+		"get": map[string]any{
+			"tags":    []string{"AI"},
+			"summary": "查外部 agent 委派任务状态",
+			"parameters": []map[string]any{{
+				"name": "task_id", "in": "path", "required": true,
+				"schema":      map[string]any{"type": "string"},
+				"description": "委派任务 ID(ai_code_delegate 返回)",
+			}},
+			"responses": map[string]any{
+				"200": map[string]any{"description": "任务状态(running|done|failed)"},
+				"404": map[string]any{"description": "任务不存在或已过期"},
+			},
+		},
+	}
 	paths["/api/v1/ai/chat"] = map[string]any{
 		"post": map[string]any{
 			"tags":        []string{"AI"},

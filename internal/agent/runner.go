@@ -181,6 +181,16 @@ func (r *Runner) ExecuteConfirmed(ctx context.Context, sess *Session, toolName, 
 	return c.ExecuteConfirmed(ctx, sess, toolName, token)
 }
 
+// DelegateStatus 查「外部 agent 委派任务」的状态(前端轮询用)。
+//
+// 委派是**异步**的:确认后立刻返回任务 ID,结果稍后才有。
+func (r *Runner) DelegateStatus(taskID string) (map[string]any, bool) {
+	if ds, ok := r.eng.(engine.DelegateStatus); ok {
+		return ds.DelegateStatus(taskID)
+	}
+	return nil, false
+}
+
 // RespondPermission 把用户选定的授权项回传给外部后端(ACP permission)。
 // 内置后端不支持 —— 它没有 permission 请求。
 func (r *Runner) RespondPermission(ctx context.Context, sessionID, requestID, optionID string) error {

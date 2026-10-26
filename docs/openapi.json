@@ -4148,6 +4148,33 @@
         ]
       }
     },
+    "/api/v1/ai/delegate/{task_id}": {
+      "get": {
+        "parameters": [
+          {
+            "description": "委派任务 ID(ai_code_delegate 返回)",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "任务状态(running|done|failed)"
+          },
+          "404": {
+            "description": "任务不存在或已过期"
+          }
+        },
+        "summary": "查外部 agent 委派任务状态",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/api/v1/ai/models": {
       "post": {
         "responses": {

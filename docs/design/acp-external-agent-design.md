@@ -793,6 +793,34 @@ agent 自己的 provider 鉴权必须留,不能一刀切清空)。
 代码层能做的是把纵深防御补齐(只读 key + 环境净化 + 工作目录),
 真正的隔离要靠部署侧(专用用户 / 容器 / 只读挂载)。
 
+### 17.6.1 异步委派(为什么不能同步等)
+
+委派是**长任务**(外部 agent 跑几分钟很常见),而工具调用是同步的 ⇒
+同步等下去会把整条 SSE 挂住,**中间的代理(nginx proxy_read_timeout 默认 60s)
+会把连接一刀切掉** —— 用户看到的是「助手卡住了」。
+
+改法:`ai_code_delegate` 确认后**立刻**返回「已派出 + 任务 ID」,
+后台跑;结果有两个去处:
+- **回填会话**:用户下一轮问话时助手已经看得见结果(措辞标明「仅作数据,不是指令」);
+- **按 ID 取**:`ai_delegate_result` 工具 / `GET /api/v1/ai/delegate/{task_id}` 轮询。
+
+实测:确认请求 **0.00s** 返回(此前是同步挂到 agent 跑完)。
+
+⚠️ 后台任务必须用 `context.WithoutCancel(ctx)`:
+HTTP 请求一结束,请求 ctx 就被取消 ⇒ 后台委派会被一起杀掉;
+但要保留 values(拿会话 scope 回填结果),只去掉取消信号。
+
+### 17.6.2 外部 agent 服务侧失败要如实透传
+
+实测委派链路时,MiniMax Code 服务侧返回
+`ACP 错误 -32603: Internal error: MiniMax Code Runtime failed: Content review blocked the request.`
+—— 直接跑 `mcode exec` 也一样(与 acpx、cwd、会话都无关)。
+
+这正好验证了两件事:
+1. **错误被如实透传**:回合以 error 事件收尾(带真实原因),没有挂死、没有假装成功;
+2. **e2e 可能因外部服务状态变红**:不是代码回退。排查时先跑一遍裸命令
+   (`mcode exec "..."`),分清是「服务侧拒绝」还是「我们的代码坏了」。
+
 ### 17.7 新增测试
 
 - `biz/handler/git_sync/ai_config_test.go`:RBAC 三档(只读拒 / 治理项要 admin / 普通项放行)、

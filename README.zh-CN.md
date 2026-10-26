@@ -479,6 +479,8 @@ make install-skills
   子进程环境**净化**（摘掉本服务的 `ENCRYPTION_KEY` 与 admin key）、
   工作目录即沙箱边界。**真正的隔离要靠部署侧**（专用用户 / 容器 / 只读挂载）。
 - **委派**：内置助手也可以用 `ai_code_delegate` 把一段编码任务派给外部 agent。
+  委派是**异步**的：确认后立刻返回任务 ID（外部 agent 可能跑几分钟，
+  同步等会把对话连接挂到超时），结果稍后回到会话，界面轮询取回。
 
 界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
 

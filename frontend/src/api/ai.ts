@@ -22,6 +22,29 @@ export async function getAIStatus(): Promise<AIStatus> {
   }
 }
 
+/** 外部 agent 委派任务的状态快照。 */
+export interface AIDelegateStatus {
+  status: 'running' | 'done' | 'failed'
+  task_id: string
+  result?: string
+  error?: string
+  message?: string
+}
+
+/**
+ * 查外部 agent 委派任务状态(轮询用)。
+ *
+ * 委派是**异步**的:确认后工具立刻返回任务 ID,外部 agent 在本机子进程里跑,
+ * 可能几分钟 ⇒ 前端轮询取结果,而不是干等。
+ */
+export async function getAIDelegateStatus(taskId: string): Promise<AIDelegateStatus> {
+  const auth = useAuthStore()
+  const { data } = await statusHttp.get(`/ai/delegate/${encodeURIComponent(taskId)}`, {
+    headers: { 'X-API-Key': auth.getApiKey() ?? '' },
+  })
+  return (data?.data ?? data) as AIDelegateStatus
+}
+
 export interface ChatStreamOptions {
   sessionId: string
   message: string

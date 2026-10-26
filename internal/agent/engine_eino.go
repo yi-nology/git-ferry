@@ -112,6 +112,14 @@ func (e *einoEngine) SetDelegator(d delegate.Runner) {
 	}
 }
 
+// DelegateStatus 查委派任务状态(外部 agent 委派是异步的)。
+func (e *einoEngine) DelegateStatus(taskID string) (map[string]any, bool) {
+	if e.reg == nil {
+		return nil, false
+	}
+	return e.reg.DelegateStatus(taskID)
+}
+
 // SetMemory 注入记忆库与 prompt 摘要(可选)。
 func (e *einoEngine) SetMemory(mem tools.MemStore, manifest string) {
 	if e.reg != nil {

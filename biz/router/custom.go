@@ -42,6 +42,8 @@ func CustomizedRegister(r *server.Hertz) {
 	// POST(不是 GET):api_key 走 **body** 而不是 query ——
 	// query 会进浏览器历史 / Referer / 反向代理 access log ⇒ 密钥泄漏。
 	ai.POST("/models", git_sync.AIListModels)
+	// 外部 agent 委派是异步的(确认后立刻返回任务 ID)⇒ 前端轮询取结果
+	ai.GET("/delegate/:task_id", git_sync.AIDelegateStatus)
 
 	// MCP Streamable HTTP：与 eino 工具同表，供 Claude Code / Cursor 直连
 	mcpGroup := r.Group("/mcp", routergitsync.AuthMiddleware())
