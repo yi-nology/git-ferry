@@ -2,6 +2,69 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.1.0] - 2026-10-26
+
+外部 AI coding 工具接入（ACP）。**AI 助手的执行后端现在可插拔**：
+除内置 eino 助手外，可把整段对话交给外部成熟的 AI coding 工具
+（MiniMax Code / Claude Code / Codex / Gemini CLI / OpenCode…），
+经 [ACP](https://agentclientprotocol.com)（Agent Client Protocol，JSON-RPC over stdio）驱动。
+
+### Added
+
+- **执行后端可插拔**：`ai.backend` 可选 `internal`（内置 eino）/ `acpx`（经 acpx CLI 驱动，
+  一个命令面对 20+ 个 agent）/ `stdio`（原生 ACP，自己当 client）。
+  抽象落在**回合层**（一轮对话进、一串与后端无关的事件出）而不是模型层 ——
+  ACP 不是「另一个模型端点」，它是「编辑器 ↔ coding agent」的协议，agent 是**子进程**，
+  硬塞进 `model.BaseModel` 只会得到一堆假动作。
+  `internal/agent/engine/` 是中立契约，`internal/agent/engine/acp/` 是外部后端。
+  **对外零破坏**：`/api/v1/ai/chat` 的 SSE 契约与 `Runner` 的公开方法不变。
+- **领域工具不重写**：外部 agent 经 MCP 客户端挂回本服务自己的 `/mcp`，
+  42 个工具（同步 / 镜像 / 运维 / 历史同步）直接可用。挂载清单支持**多源**
+  （`ai.external.mcp_servers`），认证密钥只走环境变量（不进 yaml、不进设置文件）。
+- **授权卡**：外部 agent 的 `session/request_permission` 接进界面的确认卡
+  （复用危险工具那套交互，新增 `permission` 事件与 `permission_call` 回传）。
+- **委派工具 `ai_code_delegate`**（危险）：内置助手可以把一段编码任务派给外部 agent，
+  结果回到助手上下文。走既有确认链路（外部 agent 是本机子进程 ⇒ 必须让人知道）。
+- **按 key 分角色的鉴权**：原先只有**单一全局 key + 单一全局角色**，给不出「只读 key」；
+  补 `SetScopedAPIKey` / `ResolveAPIKeyRole`，外部 agent 的 MCP 专用 key 固定只读
+  （MCP 路径上危险工具**不弹确认**，给 admin key 等于交出「无需确认的写操作」）。
+- **外部 agent 会话 ID 透出**：事件流新增 `agent_session` 事件（带 `agent_session_id`
+  + `agent_label`）。外部 agent 与本服务可能**共用同一个会话库**
+  （如 MiniMax Code 的 CLI 与桌面版：ACP 建的会话落在 `~/.minimax/v2/sessions/…`，
+  与桌面版同格式）⇒ 透出来，用户才能在那个界面上找到这次会话、接着聊。
+- **AI 配置的治理闸门**：改 AI 配置要写角色；**换后端 / 改外部 agent 授权档仅 admin**
+  （换后端 = 让另一个程序接管本机上的 AI 助手），且写操作日志。
+
+### Fixed
+
+- **外部 agent 子进程继承了服务密钥**（安全）：Go 的 `exec.Cmd.Env` 为 nil ⇒
+  子进程继承父进程环境 ⇒ agent 能读到 `ENCRYPTION_KEY`（**凭据加密主密钥**，
+  可解密库里所有 git 凭据）与 admin 主 key ⇒ **绕开 MCP 的只读边界**直调写接口。
+  改法：给外部 agent 进程**净化环境**（精确摘 `ENCRYPTION_KEY` 与
+  `GIT_SYNC_*` / `GITFERRY_*` 前缀；agent 自己的 provider 鉴权要留，不能一刀切清空）。
+  实测复验：修完 agent 打印 env ⇒ 一无所获。
+- **AI 配置页显示的不是生效配置**：`GET /api/v1/ai/config` 直接回设置文件，
+  而真正生效的是「yaml 默认 + 设置文件覆盖」⇒ **用 yaml 部署时界面是空表单**，
+  用户得把配置全部重敲一遍才能保存。改法：handler 侧注入 yaml 段并合并后回显；
+  「有没有变更」的判定也改用合并后的值。
+- **yaml 的 `mcp_enabled: true` 永远不生效**：布尔字段分不清「未设置」与「显式 false」，
+  合并时被当成 false 覆盖掉。改法：设置文件还没写过之前，yaml 的布尔值说了算。
+- **换后端热重建不关旧后端**：外部后端每会话一个**长驻 agent 子进程**，
+  不关旧的就攒孤儿进程；会话回收 goroutine 也每次重建多留一个。
+  改法：补 `Runner.Close()`（关后端 + 停回收 goroutine），重建与进程退出路径都调。
+- **acpx 通道的 `ask` 档名不副实**：acpx 是**非交互**的（它的 stdin/stdout 被我们占着）
+  ⇒ 弹不出授权卡，写操作按拒绝处理 ⇒ 配置写「每次都问」而实际是「拒绝」。
+  改法：配置校验阶段直接拒绝该组合并给出出路；参数映射改成显式给 `--approve-reads`。
+  同类的还有「存下一份后端起不来的配置」——校验放在**保存时**，不是只在启动时。
+
+### Changed
+
+- **文档重组**：历史过程文档（`docs/history`、`docs/superpowers`）与静态 HTML 稿已从
+  仓库清出，规格文档移入 `docs/design/` 并加索引；README / ARCHITECTURE / CONTRIBUTING
+  按「描述当前架构」重写。`docs/design/acp-external-agent-design.md` 是本特性的设计文档。
+  （这属于文档侧整理，接口与行为均无变化 ⇒ 发 minor 版本。）
+- **工具数 41 → 42**（新增 `ai_code_delegate`）。
+
 ## [v2.0.1] - 2026-10-26
 
 ### Fixed
