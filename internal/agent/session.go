@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/oekit/concurrency/loop"
+	"github.com/yi-nology/git-ferry/internal/agent/engine"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
@@ -44,6 +45,9 @@ type Session struct {
 
 	muPerm   sync.Mutex
 	permMode string // 本会话的工具权限模式(空 = 用进程级默认档)
+
+	// muMsgs 保护「无 store 的游离 Session」的消息追加。
+	muMsgs sync.Mutex
 }
 
 // SessionStore 内存会话存储。服务重启即失效(前端收到 404 后重开会话)。
@@ -105,6 +109,44 @@ func (st *SessionStore) Snapshot(s *Session) []Message {
 	out := make([]Message, len(s.Messages))
 	copy(out, s.Messages)
 	return out
+}
+
+// history 返回中立历史(engine.Turn),供后端拼装上下文。
+// 走 store 加锁:与并发 Append 竞态时不能读到半截消息。
+func (st *SessionStore) history(s *Session) []engine.Turn {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	out := make([]engine.Turn, 0, len(s.Messages))
+	for _, m := range s.Messages {
+		out = append(out, engine.Turn{Role: m.Role, Content: m.Content})
+	}
+	return out
+}
+
+// SessionID 会话标识(engine.Session 契约)。
+func (s *Session) SessionID() string { return s.ID }
+
+// History 会话历史拷贝(engine.Session 契约)。
+func (s *Session) History() []engine.Turn {
+	if s.store == nil {
+		return nil
+	}
+	return s.store.history(s)
+}
+
+// Append 追加一条消息(engine.Session 契约)。
+//
+// 走 store 而不是直接改 s.Messages:store.Append 还负责
+// 淘汰超出 maxRounds 的旧消息并刷新活跃时间。
+func (s *Session) Append(role, content string) {
+	if s.store != nil {
+		s.store.Append(s, role, content)
+		return
+	}
+	// 无 store 的游离 Session(测试构造):自行追加。
+	s.muMsgs.Lock()
+	defer s.muMsgs.Unlock()
+	s.Messages = append(s.Messages, Message{Role: role, Content: content})
 }
 
 // StartJanitor 启动周期性过期回收:Get 只做惰性清理,再无人访问的会话

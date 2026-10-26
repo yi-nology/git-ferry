@@ -1,0 +1,438 @@
+package acp
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os/exec"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/oekit/concurrency/async"
+
+	"github.com/yi-nology/git-ferry/internal/agent/engine"
+)
+
+// AcpxEngine 通过 acpx CLI 驱动外部 coding agent。
+//
+// acpx 是 ACP 的无头 CLI 客户端:它自己当 ACP client,把整段 JSON-RPC 流
+// 打到 stdout。本引擎只做两件事:起进程、读流、把 session/update 映射成事件。
+//
+// **能力边界(如实告知,不要假装有)**:
+//   - 拿不到 session/request_permission(权限决策在 acpx 侧按档位自动处理);
+//   - 挂不了 git-ferry 自己的 MCP(要看各 adapter 自己的 MCP 配置)。
+//
+// 需要这两项 ⇒ 用 stdio transport(Engine)。
+type AcpxEngine struct {
+	cfg Config
+
+	// audit 外部 agent 行为的审计出口(可选)。
+	audit AuditFunc
+
+	mu sync.Mutex
+	// created 记录本进程内已建过 acpx 会话的 git-ferry 会话。
+	// acpx 的会话存在磁盘上(~/.acpx/sessions),git-ferry 重启后仍在,
+	// 所以「建过」只是省一次调用,不是正确性依赖 —— 失败时会自愈。
+	created map[string]bool
+}
+
+// NewAcpxEngine 构造 acpx 后端。
+func NewAcpxEngine(cfg *Config) (*AcpxEngine, error) {
+	cfg.Transport = TransportACPX
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return &AcpxEngine{cfg: *cfg, created: make(map[string]bool)}, nil
+}
+
+// ID 后端标识。
+func (e *AcpxEngine) ID() string { return TransportACPX }
+
+// Label 展示名。
+func (e *AcpxEngine) Label() string {
+	if e.cfg.Agent != "" {
+		return "外部 coding agent (" + e.cfg.Agent + " / acpx)"
+	}
+	return "外部 coding agent (acpx)"
+}
+
+// ModelName 展示用 agent 名。
+func (e *AcpxEngine) ModelName() string {
+	if e.cfg.Agent != "" {
+		return e.cfg.Agent
+	}
+	return e.cfg.Command
+}
+
+// Close 无长驻资源。
+func (e *AcpxEngine) Close() error { return nil }
+
+// Ready 静态就位性:acpx 在不在 + agent 在不在(快,不启动进程)。
+func (e *AcpxEngine) Ready() (bool, string) {
+	if _, err := exec.LookPath(e.cfg.Binary); err != nil {
+		return false, "找不到 acpx(" + e.cfg.Binary + "): " + err.Error() +
+			" —— 请先 npm install -g acpx"
+	}
+	name := e.cfg.Agent
+	if name == "" {
+		// 自定义命令:查它本身
+		if e.cfg.Command != "" {
+			fields := splitCommand(e.cfg.Command)
+			if len(fields) > 0 {
+				if _, err := exec.LookPath(fields[0]); err != nil {
+					return false, "找不到命令 " + fields[0] + ": " + err.Error()
+				}
+			}
+		}
+		return true, "acpx 就绪"
+	}
+	// 内置 agent 名:已知以本地可执行文件安装的才查 PATH
+	// (其余走 npx adapter,不在 PATH 上也正常)。
+	if bin, ok := localAgentBins[name]; ok {
+		if _, err := exec.LookPath(bin); err != nil {
+			return false, "找不到 " + name + "(" + bin + "): " + err.Error()
+		}
+	}
+	return true, "acpx 与 " + name + " 就绪"
+}
+
+// localAgentBins 已知以本地可执行文件形式安装的 agent。
+// 其余内置名(codex/claude/kilocode 等)走 npx adapter,不在 PATH 上也正常。
+var localAgentBins = map[string]string{
+	"mcode": "mcode", "claude": "claude", "codex": "codex", "gemini": "gemini",
+	"opencode": "opencode", "qwen": "qwen", "cursor-agent": "cursor-agent",
+	"copilot": "copilot", "kimi": "kimi", "iflow": "iflow", "openclaw": "openclaw",
+	"pi": "pi", "droid": "droid", "trae": "trae", "zeroclaw": "zeroclaw",
+}
+
+// SetAudit 注入审计出口(可选)。
+func (e *AcpxEngine) SetAudit(f AuditFunc) { e.audit = f }
+
+// auditCall 记一条审计(失败只告警,不影响主流程)。
+func (e *AcpxEngine) auditCall(action, tool, detail string) {
+	if e.audit == nil {
+		return
+	}
+	e.audit(context.Background(), action, tool, detail)
+}
+
+// Run 执行一轮对话。
+func (e *AcpxEngine) Run(ctx context.Context, sess engine.Session, in engine.Input) (<-chan engine.Event, context.CancelFunc, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	out := make(chan engine.Event, 64)
+
+	emit := func(ev engine.Event) {
+		select {
+		case out <- ev:
+		case <-ctx.Done():
+		}
+	}
+
+	sessionName := sess.SessionID()
+	async.GoSafe(func() {
+		defer close(out)
+		defer cancel()
+		text, err := e.runTurn(ctx, sessionName, in.Message, emit)
+		if err != nil {
+			emit(engine.Event{Type: engine.EventError, Content: err.Error()})
+			return
+		}
+		sess.Append("assistant", text)
+		emit(engine.Event{Type: engine.EventDone})
+	})
+	return out, cancel, nil
+}
+
+// runTurn 跑一轮:起 acpx → 读流 → 收尾。
+func (e *AcpxEngine) runTurn(ctx context.Context, sessionName, prompt string, emit func(engine.Event)) (string, error) {
+	// 第一次用这个会话时先建 acpx 会话(agent 侧才有真正的多轮记忆)。
+	if !e.hasSession(sessionName) {
+		if err := e.ensureSession(ctx, sessionName); err != nil {
+			return "", err
+		}
+	}
+	text, err := e.execPrompt(ctx, sessionName, prompt, emit)
+	if err == nil {
+		return text, nil
+	}
+	// 会话可能已被 acpx 清掉(磁盘上的会话被手工删了/过期了)⇒ 建一次再重试。
+	if !isNoSessionError(err) {
+		return "", err
+	}
+	e.forgetSession(sessionName)
+	if err2 := e.ensureSession(ctx, sessionName); err2 != nil {
+		return "", fmt.Errorf("%w(重建 acpx 会话也失败: %v)", err, err2)
+	}
+	return e.execPrompt(ctx, sessionName, prompt, emit)
+}
+
+// hasSession 本进程内是否建过。
+func (e *AcpxEngine) hasSession(name string) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.created[name]
+}
+
+// forgetSession 忘掉已建标记。
+func (e *AcpxEngine) forgetSession(name string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	delete(e.created, name)
+}
+
+// ensureSession 建 acpx 会话。
+func (e *AcpxEngine) ensureSession(ctx context.Context, name string) error {
+	args := e.baseArgs()
+	args = append(args, e.agentToken()...)
+	args = append(args, "sessions", "new", "--name", name)
+	// 二进制与参数由管理员在配置里指定(不是外部请求输入)。
+	cmd := exec.CommandContext(ctx, e.cfg.Binary, args...) //nolint:gosec // G204:命令来自部署配置
+	cmd.Dir = e.cfg.Cwd
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("acpx 建会话失败(%s): %v: %s", acpxBinary, err, strings.TrimSpace(string(out)))
+	}
+	e.mu.Lock()
+	e.created[name] = true
+	e.mu.Unlock()
+	return nil
+}
+
+// execPrompt 跑一轮提示,读 stdout 的 ACP 流。
+func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string, emit func(engine.Event)) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, e.cfg.Timeout)
+	defer cancel()
+
+	args := e.baseArgs()
+	args = append(args, e.agentToken()...)
+	args = append(args, e.cfg.Args...)
+	args = append(args, "-s", sessionName, prompt)
+
+	// 二进制与参数由管理员在配置里指定(不是外部请求输入)。
+	cmd := exec.CommandContext(ctx, e.cfg.Binary, args...) //nolint:gosec // G204:命令来自部署配置
+	cmd.Dir = e.cfg.Cwd
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", fmt.Errorf("acpx stdout 管道失败: %w", err)
+	}
+	stderr := newRingBuffer(8 * 1024)
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("acpx 启动失败(%s): %w", e.cfg.Binary, err)
+	}
+
+	mapper := newUpdateMapper()
+	var text strings.Builder
+	var streamErr error
+
+	reader := newLineReader(stdout)
+	for {
+		msg, err := reader.next()
+		if err != nil {
+			streamErr = fmt.Errorf("读取 acpx 输出失败: %w", err)
+			break
+		}
+		if msg == nil {
+			break // 流结束
+		}
+		if msg.Error != nil {
+			// acpx 用 JSON-RPC error 回执(比如 NO_SESSION)。
+			streamErr = msg.Error
+			break
+		}
+		if msg.isNotification() && msg.Method == "session/update" {
+			var params struct {
+				Update *sessionUpdate `json:"update"`
+			}
+			if err := json.Unmarshal(msg.Params, &params); err != nil || params.Update == nil {
+				continue
+			}
+			if ev := mapper.mapUpdate(params.Update); ev != nil {
+				if ev.Type == engine.EventDelta {
+					text.WriteString(ev.Content)
+				}
+				if ev.Type == engine.EventToolStart {
+					e.auditCall(auditActionToolCall, ev.Tool, ev.Args)
+				}
+				emit(*ev)
+			}
+			continue
+		}
+		if msg.isResponse() {
+			// 回合结果:{stopReason:"end_turn"}。
+			var res struct {
+				StopReason string `json:"stopReason"`
+			}
+			if err := json.Unmarshal(msg.Result, &res); err == nil && res.StopReason != "" {
+				break
+			}
+		}
+	}
+
+	waitErr := cmd.Wait()
+	if streamErr != nil {
+		return "", streamErr
+	}
+	if waitErr != nil {
+		return "", fmt.Errorf("acpx 执行失败: %v: %s", waitErr, strings.TrimSpace(stderr.String()))
+	}
+	return text.String(), nil
+}
+
+// baseArgs acpx 的公共参数。
+func (e *AcpxEngine) baseArgs() []string {
+	args := []string{"--format", "json"}
+	if e.cfg.Cwd != "" {
+		args = append(args, "--cwd", e.cfg.Cwd)
+	}
+	switch e.cfg.Permission {
+	case PermissionApproveAll:
+		args = append(args, "--approve-all")
+	case PermissionApproveReads:
+		args = append(args, "--approve-reads")
+	case PermissionDeny:
+		args = append(args, "--deny-all")
+	}
+	return args
+}
+
+// agentToken agent 选择:自定义命令走 --agent,否则用内置名。
+func (e *AcpxEngine) agentToken() []string {
+	if e.cfg.Command != "" {
+		return []string{"--agent", e.cfg.Command}
+	}
+	return []string{e.cfg.Agent}
+}
+
+// isNoSessionError 判断是否「acpx 会话不存在」。
+//
+// 实测 acpx 的回执形如:
+//
+//	{"error":{"code":-32002,"message":"⚠ No acpx session found ...","data":{"acpxCode":"NO_SESSION"}}}
+func isNoSessionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var re *rpcError
+	if errors.As(err, &re) {
+		var data struct {
+			AcpxCode string `json:"acpxCode"`
+		}
+		if len(re.Data) > 0 && json.Unmarshal(re.Data, &data) == nil {
+			return data.AcpxCode == "NO_SESSION"
+		}
+		return strings.Contains(re.Message, "No acpx session found")
+	}
+	return strings.Contains(err.Error(), "No acpx session found")
+}
+
+// RunOnce 用 acpx 跑一次**一次性**任务,返回 agent 的最终文本。
+//
+// 供「委派」场景使用(内置助手把一段编码任务派给外部 agent):
+// 无会话、无记忆、跑完即走。
+func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
+	cfg.Transport = TransportACPX
+	if err := cfg.Validate(); err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+	defer cancel()
+
+	args := []string{"--format", "json"}
+	if cfg.Cwd != "" {
+		args = append(args, "--cwd", cfg.Cwd)
+	}
+	switch cfg.Permission {
+	case PermissionApproveAll:
+		args = append(args, "--approve-all")
+	case PermissionApproveReads:
+		args = append(args, "--approve-reads")
+	case PermissionDeny:
+		args = append(args, "--deny-all")
+	}
+	if cfg.Command != "" {
+		args = append(args, "--agent", cfg.Command)
+	} else {
+		args = append(args, cfg.Agent)
+	}
+	args = append(args, cfg.Args...)
+	args = append(args, "exec", prompt)
+
+	cmd := exec.CommandContext(ctx, cfg.Binary, args...) //nolint:gosec // G204:命令来自部署配置
+	cmd.Dir = cfg.Cwd
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", fmt.Errorf("acpx stdout 管道失败: %w", err)
+	}
+	stderr := newRingBuffer(8 * 1024)
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("acpx 启动失败(%s): %w", cfg.Binary, err)
+	}
+
+	mapper := newUpdateMapper()
+	var text strings.Builder
+	var streamErr error
+	reader := newLineReader(stdout)
+	for {
+		msg, err := reader.next()
+		if err != nil {
+			streamErr = fmt.Errorf("读取 acpx 输出失败: %w", err)
+			break
+		}
+		if msg == nil {
+			break
+		}
+		if msg.Error != nil {
+			streamErr = msg.Error
+			break
+		}
+		if msg.isNotification() && msg.Method == "session/update" {
+			var params struct {
+				Update *sessionUpdate `json:"update"`
+			}
+			if err := json.Unmarshal(msg.Params, &params); err != nil || params.Update == nil {
+				continue
+			}
+			if ev := mapper.mapUpdate(params.Update); ev != nil && ev.Type == engine.EventDelta {
+				text.WriteString(ev.Content)
+			}
+		}
+	}
+	waitErr := cmd.Wait()
+	if streamErr != nil {
+		return "", streamErr
+	}
+	if waitErr != nil {
+		return "", fmt.Errorf("acpx 执行失败: %v: %s", waitErr, strings.TrimSpace(stderr.String()))
+	}
+	if strings.TrimSpace(text.String()) == "" {
+		return "", errors.New("acpx 没有返回任何文本")
+	}
+	return text.String(), nil
+}
+
+// Probe 检查 acpx 是否可用(命令存在 + 能跑起来)。
+//
+// 用于「测试连接」:不真正发提示,只验证二进制在不在、agent 认不认。
+func Probe(ctx context.Context, cfg *Config) (string, error) {
+	cfg.Transport = TransportACPX
+	if err := cfg.Validate(); err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+
+	bin, err := exec.LookPath(cfg.Binary)
+	if err != nil {
+		return "", fmt.Errorf("找不到 acpx(%s): %w —— 请先 npm install -g acpx", cfg.Binary, err)
+	}
+	cmd := exec.CommandContext(ctx, bin, "--version") //nolint:gosec // G204:路径来自配置
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("acpx --version 失败: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return strings.TrimSpace(string(out)), nil
+}

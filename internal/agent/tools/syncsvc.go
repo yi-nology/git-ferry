@@ -128,9 +128,10 @@ func (e *historyQueryError) Error() string { return e.msg }
 // **Go error 恒为 nil**(errJSON 把错误编码进 JSON 后就 return nil)。
 //
 // ⇒ 只看 Go error 的写法**永远发现不了失败**:
-//   json.Unmarshal 那个 {"error":...} 不会报错(字段对不上就当没这个字段),
-//   结果结构体的 Items 是空的 ⇒ 子系统一挂,对应的待办**整段消失**,
-//   而调用方看到的只是一个"没有待办"的正常列表 ⇒ 报告与事实相反。
+//
+//	json.Unmarshal 那个 {"error":...} 不会报错(字段对不上就当没这个字段),
+//	结果结构体的 Items 是空的 ⇒ 子系统一挂,对应的待办**整段消失**,
+//	而调用方看到的只是一个"没有待办"的正常列表 ⇒ 报告与事实相反。
 //
 // 这个函数把两种失败都变成 Go error:
 //   - 负载里带 "error" 字段 ⇒ 返回该错误(子工具的业务失败)

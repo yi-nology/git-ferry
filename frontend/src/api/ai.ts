@@ -15,6 +15,10 @@ export async function getAIStatus(): Promise<AIStatus> {
   return {
     enabled: body?.enabled === true,
     model: body?.model ?? '',
+    backend: body?.backend ?? '',
+    backend_label: body?.backend_label ?? '',
+    ready: body?.ready !== false,
+    ready_msg: body?.ready_msg ?? '',
   }
 }
 
@@ -80,4 +84,27 @@ export async function chatStream(opts: ChatStreamOptions): Promise<void> {
       }
     }
   }
+}
+
+/**
+ * 外部 agent 的授权回传(ACP session/request_permission)。
+ *
+ * **不是 SSE**:这条路径只是把用户选定的选项送回给 agent,
+ * 真正的输出仍在原来那条 SSE 流里继续。
+ */
+export async function respondPermission(payload: {
+  request_id: string
+  option_id: string
+  session_id?: string
+}): Promise<void> {
+  const auth = useAuthStore()
+  await statusHttp.post(
+    '/ai/chat',
+    {
+      message: ' ',
+      session_id: payload.session_id,
+      permission_call: payload,
+    },
+    { headers: { 'X-API-Key': auth.getApiKey() ?? '' } },
+  )
 }

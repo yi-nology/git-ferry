@@ -2,126 +2,105 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"log/slog"
-	"strings"
 	"time"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
-	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/components/model"
-	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/compose"
-	"github.com/cloudwego/eino/schema"
 	"github.com/oekit/concurrency/async"
 	"github.com/oekit/concurrency/syncx"
 
+	"github.com/yi-nology/git-ferry/internal/agent/engine"
+	"github.com/yi-nology/git-ferry/internal/agent/engine/delegate"
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
 
-// Runner AI 助手编排器:eino ChatModelAgent + 工具装饰器 + 会话存储。
+// Runner AI 助手门面:并发闸门 + 会话存储 + 事件转发。
+//
+// **执行交给后端引擎**(engine.Engine):
+//
+//   - 内置后端(eino):进程内调 OpenAI 兼容模型,41 个领域工具在本进程直调 core;
+//   - 外部后端(acpx/acp):把回合交给外部 coding agent 子进程,
+//     工具在 agent 侧执行(经 git-ferry 自己的 /mcp)。
+//
+// 门面只做三件**与后端无关**的事:并发闸门、会话记账、事件转发。
+// 它不知道工具长什么样、也不知道是谁在执行 —— 这正是可插拔的前提。
 type Runner struct {
-	memManifest string
-	runner      *adk.Runner
-	reg         *tools.Registry
-	sessions    *SessionStore
-	// gate 是全局在飞闸门(并发上限 = MaxConcurrentChats)。
+	eng      engine.Engine
+	sessions *SessionStore
+	// gate 是全局在飞闸门(并发上限 = maxConcurrentChats)。
 	// 用 oekit concurrency/syncx.Gate 的 TryAcquire(满额即拒,不排队):
 	// 语义与迁移前的 chan 缓冲 + select/default 完全一致,
 	// 但 release 幂等(重复调用只归还一次),不会重复归还名额。
-	gate      *syncx.Gate
-	modelName string
+	gate *syncx.Gate
 }
 
-// NewRunner 生产构造:OpenAI 兼容模型(BaseURL 可指内网 vLLM/Ollama)。
-func NewRunner(cfg *Config, apiKey string, svc tools.SyncService) (*Runner, error) {
-	temp := float32(cfg.Temperature)
-	maxTokens := cfg.MaxTokens
-	cm, err := openai.NewChatModel(context.Background(), &openai.ChatModelConfig{
-		APIKey:      apiKey,
-		BaseURL:     cfg.BaseURL,
-		Model:       cfg.Model,
-		Temperature: &temp,
-		MaxTokens:   &maxTokens,
-		Timeout:     time.Duration(cfg.TimeoutSeconds) * time.Second,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("构建模型失败: %w", err)
-	}
-	return NewRunnerWithModel(cfg, cm, tools.NewRegistry(svc))
-}
-
-// NewRunnerWithModel 以注入模型构造(测试用)。
-func NewRunnerWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *tools.Registry) (*Runner, error) {
-	agent, err := adk.NewChatModelAgent(context.Background(), &adk.ChatModelAgentConfig{
-		Name:          "git-sync-assistant",
-		Description:   "仓库同步服务运维助手",
-		Instruction:   BuildPrompt(cfg.MemoryManifest),
-		Model:         cm,
-		MaxIterations: 10,
-		ToolsConfig: adk.ToolsConfig{
-			ToolsNodeConfig: compose.ToolsNodeConfig{Tools: decoratedTools(reg)},
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("构建 ChatModelAgent 失败: %w", err)
-	}
-	maxChats := cfg.MaxConcurrentChats
-	if maxChats <= 0 {
-		maxChats = defaultMaxConcurrentChats
+// NewRunner 构造门面。maxConcurrentChats <= 0 时用默认值。
+func NewRunner(eng engine.Engine, maxConcurrentChats int) *Runner {
+	if maxConcurrentChats <= 0 {
+		maxConcurrentChats = defaultMaxConcurrentChats
 	}
 	r := &Runner{
-		runner: adk.NewRunner(context.Background(), adk.RunnerConfig{
-			Agent:           agent,
-			EnableStreaming: true, // 真实模型走 Stream,SSE 增量输出
-		}),
-		reg:       reg,
-		sessions:  NewSessionStore(sessionTTL, sessionMaxRounds),
-		gate:      syncx.NewGate(maxChats),
-		modelName: cfg.Model,
+		eng:      eng,
+		sessions: NewSessionStore(sessionTTL, sessionMaxRounds),
+		gate:     syncx.NewGate(maxConcurrentChats),
 	}
 	// 进程级生命周期:回收再无人访问的过期会话,防内存慢涨
 	r.sessions.StartJanitor(context.Background(), 5*time.Minute)
-	return r, nil
-}
-
-func decoratedTools(reg *tools.Registry) []tool.BaseTool {
-	names := reg.Names()
-	out := make([]tool.BaseTool, 0, len(names))
-	for _, name := range names {
-		out = append(out, DecorateTool(name, reg.ByName(name)))
-	}
-	return out
+	return r
 }
 
 // Sessions 暴露会话存储(handler 建会话用)。
 func (r *Runner) Sessions() *SessionStore { return r.sessions }
 
 // ModelName 返回模型名(状态接口展示)。
-func (r *Runner) ModelName() string { return r.modelName }
+func (r *Runner) ModelName() string { return r.eng.ModelName() }
+
+// BackendID 返回后端标识(internal|acpx|acp)。
+func (r *Runner) BackendID() string { return r.eng.ID() }
+
+// BackendLabel 返回后端展示名。
+func (r *Runner) BackendLabel() string { return r.eng.Label() }
+
+// Ready 后端的静态就位性(快,不启动进程)。
+//
+// 内置后端没有这个概念(它的就位性 = 模型端点可达,由「测试连接」验);
+// 外部后端答的是「装没装」。
+func (r *Runner) Ready() (bool, string) {
+	if rd, ok := r.eng.(engine.Readiness); ok {
+		return rd.Ready()
+	}
+	return true, ""
+}
 
 // SetMemory 注入记忆库与 prompt 摘要(可选)。
 // SetPolicy 注入工具权限策略。
+//
+// 两者都是**可选能力**:外部后端没有本地工具表,注入即无意义,
+// 此时如实忽略(而不是假装生效)。
 func (r *Runner) SetPolicy(p *tools.Policy) {
-	if r.reg != nil {
-		r.reg.SetPolicy(p)
+	if b, ok := r.eng.(engine.PolicyBinder); ok {
+		b.SetPolicy(p)
+	}
+}
+
+// SetDelegator 注入外部 coding agent 委派执行器(可选)。
+//
+// 只有内置后端用得上(委派是内置助手的工具能力)。
+func (r *Runner) SetDelegator(d delegate.Runner) {
+	if b, ok := r.eng.(engine.DelegatorBinder); ok {
+		b.SetDelegator(d)
 	}
 }
 
 func (r *Runner) SetMemory(mem tools.MemStore, manifest string) {
-	if r.reg != nil {
-		r.reg.SetMemoryStore(mem)
+	if b, ok := r.eng.(engine.MemoryBinder); ok {
+		b.SetMemory(mem, manifest)
 	}
-	r.memManifest = manifest
 }
 
-// Run 执行一轮对话:写入用户消息 → 跑 agent → 事件推入返回的 chan。
+// Run 执行一轮对话:记账 → 交给后端 → 转发事件。
 // chan 关闭即本轮结束;error 事件后 chan 也会关闭。
 // 返回的 cancel 供消费方提前终止(如客户端断开):取消后所有事件发送与
-// 模型流读取立即收敛,goroutine 退出并释放并发信号量,不再产生 token 消耗。
+// 后端执行立即收敛,goroutine 退出并释放并发信号量,不再产生 token 消耗。
 func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan Event, context.CancelFunc, error) {
 	// 并发闸门:满额立即拒(ErrBusy),不排队——与迁移前的 chan + select/default 语义一致
 	release, ok := r.gate.TryAcquire()
@@ -129,155 +108,65 @@ func (r *Runner) Run(ctx context.Context, sess *Session, userMsg string) (<-chan
 		return nil, nil, ErrBusy
 	}
 
-	// 独立可取消:消费方断开时 cancel,模型流与事件发送随之终止
+	// 独立可取消:消费方断开时 cancel,后端执行与事件发送随之终止
 	ctx, cancel := context.WithCancel(ctx)
 
-	out := make(chan Event, 64)
-	// emit 是唯一的事件出口:select 双路保证消费方消失后 goroutine 必然收敛,
-	// 不会因 chan 无消费者而永久阻塞(否则信号量永不释放,AI 功能自锁)。
-	emit := func(e Event) {
-		select {
-		case out <- e:
-		case <-ctx.Done():
-		}
-	}
-	ctx = withEventSink(ctx, func(e Event) { emit(e) })
-	ctx = tools.WithScope(ctx, sess)
-	// 角色由入口放进 ctx(HTTP 的 AI chat 经鉴权中间件设角色)。
-	// **这里不做「无角色当 admin」的兜底** —— 那会让「某个入口忘了设角色」
-	// 变成「以管理员身份运行」。缺角色就只能是只读(安全侧)。
-
+	// 会话记账:**与后端无关**,两条链路都走这里。
+	// 用户消息先入账,后端据此拼装上下文;助手回复由后端在回合结束时追加。
 	r.sessions.Append(sess, "user", userMsg)
 	// 上下文压缩:超过阈值丢弃远古细节
 	if histMax := 40; histMax > 0 {
 		r.sessions.Compact(sess, histMax)
 	}
-	msgs := historyMessages(r.sessions.Snapshot(sess))
+
+	ch, engCancel, err := r.eng.Run(ctx, sess, engine.Input{Message: userMsg})
+	if err != nil {
+		release()
+		cancel()
+		return nil, nil, err
+	}
+
+	out := make(chan Event, 64)
+	// start 先发:前端据此建立本轮上下文(会话 id)。
+	// 缓冲为空,此处同步发送不会阻塞。
+	out <- Event{Type: engine.EventStart, SessionID: sess.ID}
 
 	async.GoSafe(func() {
 		defer close(out)
-		defer cancel()
 		defer release()
-		// 自带 recover:panic 要作为 error 事件推给客户端,不能只靠 GoSafe 的全局日志。
-		defer func() {
-			if rec := recover(); rec != nil {
-				emit(Event{Type: "error", Content: fmt.Sprintf("内部错误: %v", rec)})
-				slog.Error("ai agent panic", "panic", rec, "session", sess.ID)
-			}
-		}()
-
-		emit(Event{Type: "start", SessionID: sess.ID})
-
-		iter := r.runner.Run(ctx, msgs)
-		var (
-			full  strings.Builder
-			usage Usage
-		)
-		for {
-			ev, ok := iter.Next()
-			if !ok {
-				break
-			}
-			if ev.Err != nil {
-				emit(Event{Type: "error", Content: errText(ev.Err)})
-				r.sessions.Append(sess, "assistant", full.String())
+		defer engCancel()
+		for ev := range ch {
+			// 双路 select:消费方消失后本 goroutine 必然收敛,
+			// 不会因 chan 无消费者而永久阻塞(否则信号量永不释放,AI 功能自锁)。
+			select {
+			case out <- ev:
+			case <-ctx.Done():
 				return
 			}
-			if ev.Output == nil || ev.Output.MessageOutput == nil {
-				continue
-			}
-			mo := ev.Output.MessageOutput
-			if mo.Role == schema.Tool {
-				continue // 工具结果已由装饰器上报
-			}
-			if mo.IsStreaming && mo.MessageStream != nil {
-				for {
-					chunk, err := mo.MessageStream.Recv()
-					if errors.Is(err, io.EOF) {
-						break
-					}
-					if err != nil {
-						mo.MessageStream.Close()
-						emit(Event{Type: "error", Content: errText(err)})
-						r.sessions.Append(sess, "assistant", full.String())
-						return
-					}
-					if chunk == nil {
-						continue
-					}
-					if len(chunk.ToolCalls) > 0 {
-						continue // 工具决策由装饰器上报
-					}
-					if chunk.Content != "" {
-						full.WriteString(chunk.Content)
-						emit(Event{Type: "delta", Content: chunk.Content})
-					}
-					accumulateUsage(&usage, chunk)
-				}
-			} else if mo.Message != nil {
-				if mo.Message.Content != "" {
-					full.WriteString(mo.Message.Content)
-					emit(Event{Type: "delta", Content: mo.Message.Content})
-				}
-				accumulateUsage(&usage, mo.Message)
-			}
 		}
-		r.sessions.Append(sess, "assistant", full.String())
-		emit(Event{Type: "done", Usage: &usage})
 	})
 	return out, cancel, nil
 }
 
 // ExecuteConfirmed 确认后直达执行:校验令牌 → 标记放行 → 直调工具 →
 // 结果写入会话(不经过模型)。返回工具输出的 JSON 文本。
+//
+// 这是**内置后端**的能力(工具在本进程内)。外部后端的工具在 agent 侧执行,
+// 确认语义是 ACP 的 permission 链路,走 RespondPermission。
 func (r *Runner) ExecuteConfirmed(ctx context.Context, sess *Session, toolName, token string) (string, error) {
-	tl := r.reg.ByName(toolName)
-	if tl == nil {
-		return "", fmt.Errorf("未知工具 %q", toolName)
+	c, ok := r.eng.(engine.Confirmer)
+	if !ok {
+		return "", errors.New("当前 AI 后端不支持确认直达执行(外部 coding agent 走授权回传链路)")
 	}
-	args, err := sess.ConsumePending(toolName, token)
-	if err != nil {
-		return "", err
-	}
-	sess.MarkConsumed(toolName, args)
-
-	out, err := tl.InvokableRun(tools.WithScope(ctx, sess), args)
-	if err != nil {
-		out = failJSON(err)
-	}
-	r.sessions.Append(sess, "assistant", fmt.Sprintf("(已执行 %s)%s", toolName, out))
-	return out, nil
+	return c.ExecuteConfirmed(ctx, sess, toolName, token)
 }
 
-func historyMessages(msgs []Message) []*schema.Message {
-	out := make([]*schema.Message, 0, len(msgs))
-	for _, m := range msgs {
-		role := schema.User
-		if m.Role == "assistant" {
-			role = schema.Assistant
-		}
-		out = append(out, &schema.Message{Role: role, Content: m.Content})
+// RespondPermission 把用户选定的授权项回传给外部后端(ACP permission)。
+// 内置后端不支持 —— 它没有 permission 请求。
+func (r *Runner) RespondPermission(ctx context.Context, sessionID, requestID, optionID string) error {
+	p, ok := r.eng.(engine.PermissionResponder)
+	if !ok {
+		return errors.New("当前 AI 后端不支持授权回传")
 	}
-	return out
-}
-
-func accumulateUsage(u *Usage, msg *schema.Message) {
-	if msg == nil || msg.ResponseMeta == nil || msg.ResponseMeta.Usage == nil {
-		return
-	}
-	u.InputTokens += msg.ResponseMeta.Usage.PromptTokens
-	u.OutputTokens += msg.ResponseMeta.Usage.CompletionTokens
-}
-
-func errText(err error) string {
-	if errors.Is(err, context.Canceled) {
-		return "已取消"
-	}
-	return fmt.Sprintf("模型调用失败: %v", err)
-}
-
-// failJSON 把确认执行失败编码为 JSON 对象。
-func failJSON(err error) string {
-	b, _ := json.Marshal(map[string]any{"status": "failed", "error": err.Error()})
-	return string(b)
+	return p.RespondPermission(ctx, sessionID, requestID, optionID)
 }

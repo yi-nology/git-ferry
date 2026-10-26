@@ -8,6 +8,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 
+	"github.com/yi-nology/git-ferry/internal/agent/engine/delegate"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
@@ -25,6 +26,8 @@ type Registry struct {
 	danger map[string]bool
 	mem    MemStore
 	policy *Policy
+	// delegator 外部 coding agent 委派执行器(可选;未装配时工具如实报「未配置」)。
+	delegator delegate.Runner
 }
 
 func NewRegistry(svc SyncService) *Registry {
@@ -99,6 +102,8 @@ func (r *Registry) registerAll() {
 	r.add(must(utils.InferTool("diagnose_run", "诊断一次失败执行:错误分类→原因→建议动作", r.diagnoseRunIn)))
 	// 记忆会进**每次会话的 system prompt** ⇒ 持久化提示注入的通道。
 	// 写/删记忆按危险工具处理:需用户确认,且只读角色一律拒绝。
+	r.addDanger(must(utils.InferTool("ai_code_delegate",
+		"把一段编码任务委派给外部 coding agent 执行(危险操作,需用户确认:外部 agent 在服务端主机上运行)", r.delegateIn)))
 	r.addDanger(must(utils.InferTool("remember",
 		"把用户偏好/故障模式/事实写入长期记忆(危险操作,需用户确认:记忆会进每次会话的提示)", r.rememberIn)))
 	r.add(must(utils.InferTool("recall_memory", "按关键字检索已记住的偏好与经验", r.recallIn)))

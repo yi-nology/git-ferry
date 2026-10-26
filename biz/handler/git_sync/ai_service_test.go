@@ -100,9 +100,9 @@ func newTextRunner(t *testing.T, content string) *agent.Runner {
 	t.Helper()
 	fm := toolstest.NewFakeModel()
 	fm.Append(toolstest.FakeStep{Content: content})
-	r, err := agent.NewRunnerWithModel(&agent.Config{MaxConcurrentChats: 2}, fm, tools.NewRegistry(toolstest.NewMock()))
+	eng, err := agent.NewEinoEngineWithModel(&agent.Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
 	require.NoError(t, err)
-	return r
+	return agent.NewRunner(eng, 2)
 }
 
 func TestAIChat_SSEFlow(t *testing.T) {
@@ -157,8 +157,9 @@ func TestAIChat_ConfirmFlow(t *testing.T) {
 	fm.Append(toolstest.FakeStep{ToolName: "run_task", ToolArgs: `{"task_key":"t1"}`})
 	fm.Append(toolstest.FakeStep{Content: "等待确认"})
 	mock := toolstest.NewMock()
-	r, err := agent.NewRunnerWithModel(&agent.Config{MaxConcurrentChats: 2}, fm, tools.NewRegistry(mock))
+	eng, err := agent.NewEinoEngineWithModel(&agent.Config{}, fm, tools.NewRegistry(mock))
 	require.NoError(t, err)
+	r := agent.NewRunner(eng, 2)
 	base := startAITestServer(t, r)
 
 	// 第一轮:模型调 run_task → tool_confirm

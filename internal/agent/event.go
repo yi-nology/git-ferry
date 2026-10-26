@@ -1,22 +1,15 @@
 package agent
 
-// Event SSE 层与 agent 的中立事件(decorator/Runner 产出,handler 消费)。
-type Event struct {
-	Type      string `json:"type"` // start|delta|tool_start|tool_end|tool_confirm|done|error
-	Content   string `json:"content,omitempty"`
-	Tool      string `json:"tool,omitempty"`
-	Args      string `json:"args,omitempty"`
-	Result    string `json:"result,omitempty"`
-	Token     string `json:"token,omitempty"`
-	SessionID string `json:"session_id,omitempty"`
-	Usage     *Usage `json:"usage,omitempty"`
-}
+import "github.com/yi-nology/git-ferry/internal/agent/engine"
+
+// Event SSE 层与 agent 的中立事件。
+//
+// **别名而非新定义**:事件的事实源在 engine 包(后端无关),
+// 这里保留别名让既有引用(`biz/handler` 的 SSE 适配等)一行不改。
+type Event = engine.Event
 
 // Usage token 用量统计(done 事件携带)。
-type Usage struct {
-	InputTokens  int `json:"input_tokens"`
-	OutputTokens int `json:"output_tokens"`
-}
+type Usage = engine.Usage
 
 // resultCap SSE tool_end 里工具结果的最大长度。
 const resultCap = 600

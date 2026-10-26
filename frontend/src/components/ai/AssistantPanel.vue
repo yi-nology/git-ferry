@@ -24,7 +24,8 @@
           <div class="ai-header-text">
             <div class="ai-title">AI 运维助手</div>
             <div class="ai-sub">
-              <span v-if="model" class="model-chip">{{ model }}</span>
+              <span v-if="backendLabel" class="model-chip">{{ backendLabel }}</span>
+              <span v-else-if="model" class="model-chip">{{ model }}</span>
               <span v-else class="model-chip muted">只读查询 · 危险操作需确认</span>
             </div>
           </div>
@@ -108,6 +109,29 @@
             </a-button>
           </div>
         </div>
+
+        <!-- 外部 agent 授权卡 -->
+        <div v-if="pendingPermission" class="confirm-card">
+          <div class="confirm-head">
+            <SafetyOutlined class="confirm-icon" />
+            <span>外部 agent 请求授权</span>
+            <code v-if="pendingPermission.tool" class="confirm-tool">
+              {{ pendingPermission.tool }}
+            </code>
+          </div>
+          <div class="confirm-actions">
+            <a-button size="small" @click="answerPermission('')">拒绝</a-button>
+            <a-button
+              v-for="opt in permissionOptions"
+              :key="opt.option_id"
+              danger
+              size="small"
+              @click="answerPermission(opt.option_id)"
+            >
+              {{ opt.name || opt.option_id }}
+            </a-button>
+          </div>
+        </div>
       </div>
 
       <!-- 输入区 -->
@@ -154,6 +178,7 @@ import {
   DeleteOutlined,
   CloseOutlined,
   WarningOutlined,
+  SafetyOutlined,
 } from '@ant-design/icons-vue'
 import { useAIChat } from '@/composables/useAIChat'
 
@@ -161,12 +186,15 @@ const {
   open,
   enabled,
   model,
+  backendLabel,
   messages,
   streaming,
   pendingConfirm,
+  pendingPermission,
   send,
   confirm,
   deny,
+  answerPermission,
   cancelStream,
   reset,
   toggle,
@@ -181,6 +209,11 @@ const suggestions = [
   '最近执行记录怎么样？',
   '系统健康评分',
 ]
+
+/** 只列允许类选项;拒绝固定一个按钮(ACP 的 cancelled outcome)。 */
+const permissionOptions = computed(() =>
+  (pendingPermission.value?.options ?? []).filter((o) => !o.kind || o.kind.startsWith('allow')),
+)
 
 const prettyArgs = computed(() => {
   if (!pendingConfirm.value?.args) return ''

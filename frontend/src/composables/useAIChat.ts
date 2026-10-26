@@ -1,16 +1,27 @@
 import { computed, ref } from 'vue'
-import { chatStream, getAIStatus } from '@/api/ai'
-import type { AIEvent, AIStatus, ChatMessage, PendingConfirm } from '@/types/ai'
+import { chatStream, getAIStatus, respondPermission } from '@/api/ai'
+import type {
+  AIEvent,
+  AIStatus,
+  ChatMessage,
+  PendingConfirm,
+  PendingPermission,
+} from '@/types/ai'
 
 // 模块级单例:全局共享同一会话状态(App 只挂一个 AssistantPanel)。
 const open = ref(false)
 const enabled = ref<boolean | null>(null) // null = 未探测
 const model = ref('')
+const backend = ref('')
+const backendLabel = ref('')
+const ready = ref(true)
+const readyMsg = ref('')
 const sessionId = ref('')
 const messages = ref<ChatMessage[]>([])
 const streaming = ref(false)
 const error = ref('')
 const pendingConfirm = ref<PendingConfirm | null>(null)
+const pendingPermission = ref<PendingPermission | null>(null)
 
 let abort: AbortController | null = null
 
@@ -54,6 +65,14 @@ function handleEvent(ev: AIEvent) {
     case 'tool_confirm':
       pendingConfirm.value = { tool: ev.tool ?? '', token: ev.token ?? '', args: ev.args }
       break
+    case 'permission':
+      // 外部 agent 请求授权(ACP session/request_permission)。
+      pendingPermission.value = {
+        requestId: ev.permission_id ?? '',
+        tool: ev.tool ?? '',
+        options: ev.options ?? [],
+      }
+      break
     case 'error':
       error.value = ev.content ?? '未知错误'
       messages.value.push({ role: 'error', content: error.value })
@@ -72,6 +91,10 @@ export function useAIChat() {
       const st: AIStatus = await getAIStatus()
       enabled.value = st.enabled
       model.value = st.model ?? ''
+      backend.value = st.backend ?? ''
+      backendLabel.value = st.backend_label ?? ''
+      ready.value = st.ready !== false
+      readyMsg.value = st.ready_msg ?? ''
     } catch {
       enabled.value = false
     }
@@ -117,6 +140,28 @@ export function useAIChat() {
     messages.value.push({ role: 'assistant', content: '已取消,该操作未执行。' })
   }
 
+  /**
+   * 回传外部 agent 的授权决定。
+   *
+   * optionID 为空 = 拒绝。回传**不影响**正在进行的 SSE 流 ——
+   * 输出仍在原来那条流里继续。
+   */
+  async function answerPermission(optionId: string) {
+    if (!pendingPermission.value) return
+    const { requestId } = pendingPermission.value
+    pendingPermission.value = null
+    try {
+      await respondPermission({
+        request_id: requestId,
+        option_id: optionId,
+        session_id: sessionId.value || undefined,
+      })
+    } catch (e) {
+      error.value = (e as Error).message
+      messages.value.push({ role: 'error', content: `授权回传失败:${(e as Error).message}` })
+    }
+  }
+
   function cancelStream() {
     abort?.abort()
   }
@@ -126,6 +171,7 @@ export function useAIChat() {
     sessionId.value = ''
     messages.value = []
     pendingConfirm.value = null
+    pendingPermission.value = null
     error.value = ''
   }
 
@@ -138,16 +184,22 @@ export function useAIChat() {
     open,
     enabled,
     model,
+    backend,
+    backendLabel,
+    ready,
+    readyMsg,
     sessionId,
     messages,
     streaming,
     error,
     pendingConfirm,
+    pendingPermission,
     toolActivity,
     loadStatus,
     send,
     confirm,
     deny,
+    answerPermission,
     cancelStream,
     reset,
     toggle,

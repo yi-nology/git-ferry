@@ -3,7 +3,6 @@ package git_sync
 import (
 	"context"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
 
@@ -39,25 +38,26 @@ func ResolveAuthMiddleware() app.HandlerFunc {
 // DefaultAPIKeyAuthMiddleware 校验 X-API-Key（常量时间比较）。
 // API Key 由壳层注入（handler.SetAPIKey），不经过 git-ferry-core。
 // 服务端 API Key 为空时拒绝全部请求。
-// 角色:环境变量 GIT_SYNC_API_KEY_ROLE 指定(默认 admin,兼容旧行为)。
+// 角色:主 key 用环境变量 GIT_SYNC_API_KEY_ROLE 指定(默认 admin,兼容旧行为);
+// 附加的带角色 key 走 handler.SetScopedAPIKey 注册(外部 agent 用只读 key)。
 func DefaultAPIKeyAuthMiddleware() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		serverKey := handler.GetAPIKey()
-		if serverKey == "" {
+		if handler.GetAPIKey() == "" && handler.ScopedAPIKeyCount() == 0 {
 			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: API key not configured"})
 			c.Abort()
 			return
 		}
-		apiKey := c.GetHeader("X-API-Key")
-		if subtle.ConstantTimeCompare([]byte(apiKey), []byte(serverKey)) != 1 {
+		apiKey := string(c.GetHeader("X-API-Key"))
+		role, ok := handler.ResolveAPIKeyRole(apiKey)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			c.Abort()
 			return
 		}
 		// 写入不可伪造的审计身份:共享 API Key 场景下客户端 X-User 可信度为零,
 		// 若不在此覆盖,任何持 key 的调用方都能冒充任意操作人。
-		handler.SetAuthUser(c, "api-key:"+keyFingerprint(serverKey))
-		role := handler.ParseRole(handler.GetAPIKeyRole())
+		// 指纹取**实际使用的 key** ⇒ 不同 key 在审计里可区分(外部 agent 的只读 key 单独可辨)。
+		handler.SetAuthUser(c, "api-key:"+keyFingerprint(apiKey))
 		handler.SetAuthRole(c, role)
 		// 角色**跟着 ctx 往后走**:工具层要判角色,
 		// 而进程内直调 core service 的入口(MCP / AI 助手)不过路由守卫。

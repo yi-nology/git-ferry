@@ -20,9 +20,9 @@ func newTestRunner(t *testing.T, m *toolstest.Mock, steps ...toolstest.FakeStep)
 	for _, s := range steps {
 		fm.Append(s)
 	}
-	r, err := NewRunnerWithModel(&Config{MaxConcurrentChats: 2}, fm, tools.NewRegistry(m))
+	eng, err := NewEinoEngineWithModel(&Config{}, fm, tools.NewRegistry(m))
 	require.NoError(t, err)
-	return r
+	return NewRunner(eng, 2)
 }
 
 // drainEvents 收完事件流,返回累计文本与事件列表。
@@ -93,8 +93,9 @@ func TestRunner_CancelStopsAndReleasesSemaphore(t *testing.T) {
 	hold := make(chan struct{})
 	fm.Hold = hold
 	fm.Append(toolstest.FakeStep{Content: "long"})
-	r, err := NewRunnerWithModel(&Config{MaxConcurrentChats: 1}, fm, tools.NewRegistry(toolstest.NewMock()))
+	eng, err := NewEinoEngineWithModel(&Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
 	require.NoError(t, err)
+	r := NewRunner(eng, 1)
 	st := NewSessionStore(time.Minute, 20)
 
 	ch, cancel, err := r.Run(context.Background(), st.Create(), "a")
@@ -154,8 +155,9 @@ func TestRunner_Busy(t *testing.T) {
 	hold := make(chan struct{})
 	fm.Hold = hold
 	fm.Append(toolstest.FakeStep{Content: "long"})
-	r, err := NewRunnerWithModel(&Config{MaxConcurrentChats: 1}, fm, tools.NewRegistry(toolstest.NewMock()))
+	eng, err := NewEinoEngineWithModel(&Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
 	require.NoError(t, err)
+	r := NewRunner(eng, 1)
 	st := NewSessionStore(time.Minute, 20)
 
 	ch1, cancel1, err := r.Run(context.Background(), st.Create(), "a")

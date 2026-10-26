@@ -55,15 +55,16 @@ func (f *fakeScope) LastConfirm() (string, string, string) {
 
 func TestRegistry_AllToolsRegistered(t *testing.T) {
 	reg := NewRegistry(toolstest.NewMock())
-	// 41 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose + ops_todo
+	// 42 个工具:只读查询 + 概览/治理/记忆 + 危险(含 run_dr_drill) + plan/diagnose + ops_todo
 	// + 元数据快照 + 历史同步十件套(通道列表/计划/解法/执行记录/链校验/预检/裁决列表/写裁决/一次同步/凭据轮换)
-	assert.Len(t, reg.Names(), 41)
+	// + 委派外部 coding agent(ai_code_delegate,危险)
+	assert.Len(t, reg.Names(), 42)
 	for _, name := range []string{
 		"list_repos", "get_repo", "list_branches", "list_tasks", "get_task",
 		"list_sync_history", "get_run_detail", "list_platforms", "list_webhook_rules",
 		"get_system_overview", "get_ops_todo", "run_task", "test_repo_connection", "test_platform_connection",
 		"get_rpo_report", "get_backup_integrity", "get_drift_report", "get_audit_chain", "run_dr_drill",
-		"get_metadata_snapshots",
+		"get_metadata_snapshots", "ai_code_delegate",
 		"list_histsync_channels", "plan_histsync_channel", "resolve_histsync_channel",
 		"list_histsync_runs", "verify_histsync_channel_audit",
 		"list_histsync_overrides", "set_histsync_override", "preview_histsync_channel",

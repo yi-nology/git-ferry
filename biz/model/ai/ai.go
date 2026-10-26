@@ -17,6 +17,10 @@ type AIConfigRequest struct {
 	TimeoutSeconds     int32   `thrift:"timeoutSeconds,6" form:"timeout_seconds" json:"timeout_seconds" query:"timeout_seconds"`
 	MaxConcurrentChats int32   `thrift:"maxConcurrentChats,7" form:"max_concurrent_chats" json:"max_concurrent_chats" query:"max_concurrent_chats"`
 	ApiKey             *string `thrift:"apiKey,8,optional" form:"api_key" json:"api_key,omitempty" query:"api_key"`
+	// backend 执行后端:internal|acpx|stdio
+	Backend *string `thrift:"backend,9,optional" form:"backend" json:"backend,omitempty" query:"backend"`
+	// external 外部 coding agent 配置(backend=acpx|stdio 时生效)
+	External *AIExternalConfig `thrift:"external,10,optional" form:"external" json:"external,omitempty" query:"external"`
 }
 
 func NewAIConfigRequest() *AIConfigRequest {
@@ -63,19 +67,47 @@ func (p *AIConfigRequest) GetApiKey() (v string) {
 	return *p.ApiKey
 }
 
+var AIConfigRequest_Backend_DEFAULT string
+
+func (p *AIConfigRequest) GetBackend() (v string) {
+	if !p.IsSetBackend() {
+		return AIConfigRequest_Backend_DEFAULT
+	}
+	return *p.Backend
+}
+
+var AIConfigRequest_External_DEFAULT *AIExternalConfig
+
+func (p *AIConfigRequest) GetExternal() (v *AIExternalConfig) {
+	if !p.IsSetExternal() {
+		return AIConfigRequest_External_DEFAULT
+	}
+	return p.External
+}
+
 var fieldIDToName_AIConfigRequest = map[int16]string{
-	1: "enabled",
-	2: "baseUrl",
-	3: "model",
-	4: "temperature",
-	5: "maxTokens",
-	6: "timeoutSeconds",
-	7: "maxConcurrentChats",
-	8: "apiKey",
+	1:  "enabled",
+	2:  "baseUrl",
+	3:  "model",
+	4:  "temperature",
+	5:  "maxTokens",
+	6:  "timeoutSeconds",
+	7:  "maxConcurrentChats",
+	8:  "apiKey",
+	9:  "backend",
+	10: "external",
 }
 
 func (p *AIConfigRequest) IsSetApiKey() bool {
 	return p.ApiKey != nil
+}
+
+func (p *AIConfigRequest) IsSetBackend() bool {
+	return p.Backend != nil
+}
+
+func (p *AIConfigRequest) IsSetExternal() bool {
+	return p.External != nil
 }
 
 func (p *AIConfigRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -156,6 +188,22 @@ func (p *AIConfigRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -278,6 +326,25 @@ func (p *AIConfigRequest) ReadField8(iprot thrift.TProtocol) error {
 	p.ApiKey = _field
 	return nil
 }
+func (p *AIConfigRequest) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Backend = _field
+	return nil
+}
+func (p *AIConfigRequest) ReadField10(iprot thrift.TProtocol) error {
+	_field := NewAIExternalConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.External = _field
+	return nil
+}
 
 func (p *AIConfigRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -315,6 +382,14 @@ func (p *AIConfigRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -473,6 +548,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 
+func (p *AIConfigRequest) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBackend() {
+		if err = oprot.WriteFieldBegin("backend", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Backend); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *AIConfigRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExternal() {
+		if err = oprot.WriteFieldBegin("external", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.External.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *AIConfigRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -481,10 +594,1311 @@ func (p *AIConfigRequest) String() string {
 
 }
 
+// AIExternalConfig 外部 coding agent 配置。
+type AIExternalConfig struct {
+	// agent acpx 内置 agent 名(mcode/codex/claude/gemini/opencode…)
+	Agent string `thrift:"agent,1" form:"agent" json:"agent" query:"agent"`
+	// command 自定义命令(原生 ACP 用,如 "mcode acp")
+	Command string `thrift:"command,2" form:"command" json:"command" query:"command"`
+	// args 追加参数
+	Args []string `thrift:"args,3,default,list<string>" form:"args" json:"args" query:"args"`
+	// cwd 工作目录(沙箱边界)
+	Cwd string `thrift:"cwd,4" form:"cwd" json:"cwd" query:"cwd"`
+	// timeoutSeconds 单轮超时
+	TimeoutSeconds int32 `thrift:"timeoutSeconds,5" form:"timeout_seconds" json:"timeout_seconds" query:"timeout_seconds"`
+	// permission 授权档:ask|approve_reads|approve_all|deny
+	Permission string `thrift:"permission,6" form:"permission" json:"permission" query:"permission"`
+	// mcpEnabled 是否把 git-ferry 自己的 /mcp 挂给外部 agent
+	McpEnabled bool `thrift:"mcpEnabled,7" form:"mcp_enabled" json:"mcp_enabled" query:"mcp_enabled"`
+	// mcpUrl git-ferry 自己的 MCP 端点地址
+	McpUrl string `thrift:"mcpUrl,8" form:"mcp_url" json:"mcp_url" query:"mcp_url"`
+	// mcpApiKeyEnv MCP 专用 key 的环境变量名(该 key 固定为只读角色;密钥不进配置)
+	McpApiKeyEnv string `thrift:"mcpApiKeyEnv,9" form:"mcp_api_key_env" json:"mcp_api_key_env" query:"mcp_api_key_env"`
+	// mcpServers 额外挂给外部 agent 的 MCP 服务器(可多个)
+	McpServers []*AIExternalMCPServer `thrift:"mcpServers,11,default,list<AIExternalMCPServer>" form:"mcp_servers" json:"mcp_servers" query:"mcp_servers"`
+}
+
+func NewAIExternalConfig() *AIExternalConfig {
+	return &AIExternalConfig{}
+}
+
+func (p *AIExternalConfig) InitDefault() {
+}
+
+func (p *AIExternalConfig) GetAgent() (v string) {
+	return p.Agent
+}
+
+func (p *AIExternalConfig) GetCommand() (v string) {
+	return p.Command
+}
+
+func (p *AIExternalConfig) GetArgs() (v []string) {
+	return p.Args
+}
+
+func (p *AIExternalConfig) GetCwd() (v string) {
+	return p.Cwd
+}
+
+func (p *AIExternalConfig) GetTimeoutSeconds() (v int32) {
+	return p.TimeoutSeconds
+}
+
+func (p *AIExternalConfig) GetPermission() (v string) {
+	return p.Permission
+}
+
+func (p *AIExternalConfig) GetMcpEnabled() (v bool) {
+	return p.McpEnabled
+}
+
+func (p *AIExternalConfig) GetMcpUrl() (v string) {
+	return p.McpUrl
+}
+
+func (p *AIExternalConfig) GetMcpApiKeyEnv() (v string) {
+	return p.McpApiKeyEnv
+}
+
+func (p *AIExternalConfig) GetMcpServers() (v []*AIExternalMCPServer) {
+	return p.McpServers
+}
+
+var fieldIDToName_AIExternalConfig = map[int16]string{
+	1:  "agent",
+	2:  "command",
+	3:  "args",
+	4:  "cwd",
+	5:  "timeoutSeconds",
+	6:  "permission",
+	7:  "mcpEnabled",
+	8:  "mcpUrl",
+	9:  "mcpApiKeyEnv",
+	11: "mcpServers",
+}
+
+func (p *AIExternalConfig) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AIExternalConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AIExternalConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Agent = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Command = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Args = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Cwd = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TimeoutSeconds = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Permission = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.McpEnabled = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.McpUrl = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.McpApiKeyEnv = _field
+	return nil
+}
+func (p *AIExternalConfig) ReadField11(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AIExternalMCPServer, 0, size)
+	values := make([]AIExternalMCPServer, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.McpServers = _field
+	return nil
+}
+
+func (p *AIExternalConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AIExternalConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("agent", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Agent); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("command", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Command); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("args", thrift.LIST, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.Args)); err != nil {
+		return err
+	}
+	for _, v := range p.Args {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("cwd", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Cwd); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("timeoutSeconds", thrift.I32, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.TimeoutSeconds); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("permission", thrift.STRING, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Permission); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpEnabled", thrift.BOOL, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.McpEnabled); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpUrl", thrift.STRING, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.McpUrl); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpApiKeyEnv", thrift.STRING, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.McpApiKeyEnv); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) writeField11(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("mcpServers", thrift.LIST, 11); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.McpServers)); err != nil {
+		return err
+	}
+	for _, v := range p.McpServers {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *AIExternalConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AIExternalConfig(%+v)", *p)
+
+}
+
+// AIExternalMCPServer 额外挂给外部 agent 的一个 MCP 服务器。
+type AIExternalMCPServer struct {
+	Name string `thrift:"name,1" form:"name" json:"name" query:"name"`
+	Type string `thrift:"type,2" form:"type" json:"type" query:"type"`
+	URL  string `thrift:"url,3" form:"url" json:"url" query:"url"`
+	// apiKeyEnv 认证头的**环境变量名**(密钥不进配置;变量里放完整头值)
+	ApiKeyEnv string `thrift:"apiKeyEnv,4" form:"api_key_env" json:"api_key_env" query:"api_key_env"`
+	// apiKeyHeader 认证头名(留空=Authorization)
+	ApiKeyHeader string      `thrift:"apiKeyHeader,5" form:"api_key_header" json:"api_key_header" query:"api_key_header"`
+	Command      string      `thrift:"command,6" form:"command" json:"command" query:"command"`
+	Args         []string    `thrift:"args,7,default,list<string>" form:"args" json:"args" query:"args"`
+	Env          []*AIEnvVar `thrift:"env,8,default,list<AIEnvVar>" form:"env" json:"env" query:"env"`
+}
+
+func NewAIExternalMCPServer() *AIExternalMCPServer {
+	return &AIExternalMCPServer{}
+}
+
+func (p *AIExternalMCPServer) InitDefault() {
+}
+
+func (p *AIExternalMCPServer) GetName() (v string) {
+	return p.Name
+}
+
+func (p *AIExternalMCPServer) GetType() (v string) {
+	return p.Type
+}
+
+func (p *AIExternalMCPServer) GetURL() (v string) {
+	return p.URL
+}
+
+func (p *AIExternalMCPServer) GetApiKeyEnv() (v string) {
+	return p.ApiKeyEnv
+}
+
+func (p *AIExternalMCPServer) GetApiKeyHeader() (v string) {
+	return p.ApiKeyHeader
+}
+
+func (p *AIExternalMCPServer) GetCommand() (v string) {
+	return p.Command
+}
+
+func (p *AIExternalMCPServer) GetArgs() (v []string) {
+	return p.Args
+}
+
+func (p *AIExternalMCPServer) GetEnv() (v []*AIEnvVar) {
+	return p.Env
+}
+
+var fieldIDToName_AIExternalMCPServer = map[int16]string{
+	1: "name",
+	2: "type",
+	3: "url",
+	4: "apiKeyEnv",
+	5: "apiKeyHeader",
+	6: "command",
+	7: "args",
+	8: "env",
+}
+
+func (p *AIExternalMCPServer) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AIExternalMCPServer[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Type = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.URL = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ApiKeyEnv = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ApiKeyHeader = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Command = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField7(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Args = _field
+	return nil
+}
+func (p *AIExternalMCPServer) ReadField8(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AIEnvVar, 0, size)
+	values := make([]AIEnvVar, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Env = _field
+	return nil
+}
+
+func (p *AIExternalMCPServer) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AIExternalMCPServer"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Name); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("type", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Type); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("url", thrift.STRING, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.URL); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("apiKeyEnv", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.ApiKeyEnv); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("apiKeyHeader", thrift.STRING, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.ApiKeyHeader); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField6(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("command", thrift.STRING, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Command); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField7(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("args", thrift.LIST, 7); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.Args)); err != nil {
+		return err
+	}
+	for _, v := range p.Args {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("env", thrift.LIST, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Env)); err != nil {
+		return err
+	}
+	for _, v := range p.Env {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *AIExternalMCPServer) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AIExternalMCPServer(%+v)", *p)
+
+}
+
+// AIEnvVar 环境变量。
+type AIEnvVar struct {
+	Name  string `thrift:"name,1" form:"name" json:"name" query:"name"`
+	Value string `thrift:"value,2" form:"value" json:"value" query:"value"`
+}
+
+func NewAIEnvVar() *AIEnvVar {
+	return &AIEnvVar{}
+}
+
+func (p *AIEnvVar) InitDefault() {
+}
+
+func (p *AIEnvVar) GetName() (v string) {
+	return p.Name
+}
+
+func (p *AIEnvVar) GetValue() (v string) {
+	return p.Value
+}
+
+var fieldIDToName_AIEnvVar = map[int16]string{
+	1: "name",
+	2: "value",
+}
+
+func (p *AIEnvVar) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AIEnvVar[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AIEnvVar) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *AIEnvVar) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Value = _field
+	return nil
+}
+
+func (p *AIEnvVar) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AIEnvVar"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AIEnvVar) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Name); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *AIEnvVar) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Value); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AIEnvVar) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AIEnvVar(%+v)", *p)
+
+}
+
 type AITestRequest struct {
 	BaseUrl string  `thrift:"baseUrl,1" form:"base_url" json:"base_url" query:"base_url"`
 	Model   *string `thrift:"model,2,optional" form:"model" json:"model,omitempty" query:"model"`
 	ApiKey  *string `thrift:"apiKey,3,optional" form:"api_key" json:"api_key,omitempty" query:"api_key"`
+	// backend 按哪个后端探测(留空=internal)
+	Backend *string `thrift:"backend,4,optional" form:"backend" json:"backend,omitempty" query:"backend"`
+	// external 外部 agent 配置(backend=acpx|stdio 时探测)
+	External *AIExternalConfig `thrift:"external,5,optional" form:"external" json:"external,omitempty" query:"external"`
 }
 
 func NewAITestRequest() *AITestRequest {
@@ -516,10 +1930,30 @@ func (p *AITestRequest) GetApiKey() (v string) {
 	return *p.ApiKey
 }
 
+var AITestRequest_Backend_DEFAULT string
+
+func (p *AITestRequest) GetBackend() (v string) {
+	if !p.IsSetBackend() {
+		return AITestRequest_Backend_DEFAULT
+	}
+	return *p.Backend
+}
+
+var AITestRequest_External_DEFAULT *AIExternalConfig
+
+func (p *AITestRequest) GetExternal() (v *AIExternalConfig) {
+	if !p.IsSetExternal() {
+		return AITestRequest_External_DEFAULT
+	}
+	return p.External
+}
+
 var fieldIDToName_AITestRequest = map[int16]string{
 	1: "baseUrl",
 	2: "model",
 	3: "apiKey",
+	4: "backend",
+	5: "external",
 }
 
 func (p *AITestRequest) IsSetModel() bool {
@@ -528,6 +1962,14 @@ func (p *AITestRequest) IsSetModel() bool {
 
 func (p *AITestRequest) IsSetApiKey() bool {
 	return p.ApiKey != nil
+}
+
+func (p *AITestRequest) IsSetBackend() bool {
+	return p.Backend != nil
+}
+
+func (p *AITestRequest) IsSetExternal() bool {
+	return p.External != nil
 }
 
 func (p *AITestRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -568,6 +2010,22 @@ func (p *AITestRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -635,6 +2093,25 @@ func (p *AITestRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.ApiKey = _field
 	return nil
 }
+func (p *AITestRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Backend = _field
+	return nil
+}
+func (p *AITestRequest) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewAIExternalConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.External = _field
+	return nil
+}
 
 func (p *AITestRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -652,6 +2129,14 @@ func (p *AITestRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -725,6 +2210,44 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *AITestRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBackend() {
+		if err = oprot.WriteFieldBegin("backend", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Backend); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *AITestRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExternal() {
+		if err = oprot.WriteFieldBegin("external", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.External.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
 func (p *AITestRequest) String() string {
@@ -921,10 +2444,258 @@ func (p *AIConfirmCall) String() string {
 
 }
 
+// AIPermissionCall 外部 agent 的授权回传(ACP session/request_permission)。
+//
+// 与 AIConfirmCall 是**两套不同的确认语义**:前者是 git-ferry 自己的
+// 待确认令牌(危险工具),这里是 agent 侧的 request id → option id。
+type AIPermissionCall struct {
+	RequestId string  `thrift:"requestId,1" form:"request_id" json:"request_id" query:"request_id"`
+	OptionId  string  `thrift:"optionId,2" form:"option_id" json:"option_id" query:"option_id"`
+	SessionId *string `thrift:"sessionId,3,optional" form:"session_id" json:"session_id,omitempty" query:"session_id"`
+}
+
+func NewAIPermissionCall() *AIPermissionCall {
+	return &AIPermissionCall{}
+}
+
+func (p *AIPermissionCall) InitDefault() {
+}
+
+func (p *AIPermissionCall) GetRequestId() (v string) {
+	return p.RequestId
+}
+
+func (p *AIPermissionCall) GetOptionId() (v string) {
+	return p.OptionId
+}
+
+var AIPermissionCall_SessionId_DEFAULT string
+
+func (p *AIPermissionCall) GetSessionId() (v string) {
+	if !p.IsSetSessionId() {
+		return AIPermissionCall_SessionId_DEFAULT
+	}
+	return *p.SessionId
+}
+
+var fieldIDToName_AIPermissionCall = map[int16]string{
+	1: "requestId",
+	2: "optionId",
+	3: "sessionId",
+}
+
+func (p *AIPermissionCall) IsSetSessionId() bool {
+	return p.SessionId != nil
+}
+
+func (p *AIPermissionCall) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AIPermissionCall[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AIPermissionCall) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RequestId = _field
+	return nil
+}
+func (p *AIPermissionCall) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.OptionId = _field
+	return nil
+}
+func (p *AIPermissionCall) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SessionId = _field
+	return nil
+}
+
+func (p *AIPermissionCall) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AIPermissionCall"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AIPermissionCall) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("requestId", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.RequestId); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *AIPermissionCall) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("optionId", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.OptionId); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AIPermissionCall) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSessionId() {
+		if err = oprot.WriteFieldBegin("sessionId", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SessionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *AIPermissionCall) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AIPermissionCall(%+v)", *p)
+
+}
+
 type AIChatRequest struct {
-	SessionId         *string        `thrift:"sessionId,1,optional" form:"session_id" json:"session_id,omitempty" query:"session_id"`
-	Message           string         `thrift:"message,2" form:"message" json:"message" query:"message"`
-	ConfirmedToolCall *AIConfirmCall `thrift:"confirmedToolCall,3,optional" form:"confirmed_tool_call" json:"confirmed_tool_call,omitempty" query:"confirmed_tool_call"`
+	SessionId         *string           `thrift:"sessionId,1,optional" form:"session_id" json:"session_id,omitempty" query:"session_id"`
+	Message           string            `thrift:"message,2" form:"message" json:"message" query:"message"`
+	ConfirmedToolCall *AIConfirmCall    `thrift:"confirmedToolCall,3,optional" form:"confirmed_tool_call" json:"confirmed_tool_call,omitempty" query:"confirmed_tool_call"`
+	PermissionCall    *AIPermissionCall `thrift:"permissionCall,4,optional" form:"permission_call" json:"permission_call,omitempty" query:"permission_call"`
 }
 
 func NewAIChatRequest() *AIChatRequest {
@@ -956,10 +2727,20 @@ func (p *AIChatRequest) GetConfirmedToolCall() (v *AIConfirmCall) {
 	return p.ConfirmedToolCall
 }
 
+var AIChatRequest_PermissionCall_DEFAULT *AIPermissionCall
+
+func (p *AIChatRequest) GetPermissionCall() (v *AIPermissionCall) {
+	if !p.IsSetPermissionCall() {
+		return AIChatRequest_PermissionCall_DEFAULT
+	}
+	return p.PermissionCall
+}
+
 var fieldIDToName_AIChatRequest = map[int16]string{
 	1: "sessionId",
 	2: "message",
 	3: "confirmedToolCall",
+	4: "permissionCall",
 }
 
 func (p *AIChatRequest) IsSetSessionId() bool {
@@ -968,6 +2749,10 @@ func (p *AIChatRequest) IsSetSessionId() bool {
 
 func (p *AIChatRequest) IsSetConfirmedToolCall() bool {
 	return p.ConfirmedToolCall != nil
+}
+
+func (p *AIChatRequest) IsSetPermissionCall() bool {
+	return p.PermissionCall != nil
 }
 
 func (p *AIChatRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -1008,6 +2793,14 @@ func (p *AIChatRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1072,6 +2865,14 @@ func (p *AIChatRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.ConfirmedToolCall = _field
 	return nil
 }
+func (p *AIChatRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewAIPermissionCall()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.PermissionCall = _field
+	return nil
+}
 
 func (p *AIChatRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1089,6 +2890,10 @@ func (p *AIChatRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -1162,6 +2967,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *AIChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPermissionCall() {
+		if err = oprot.WriteFieldBegin("permissionCall", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.PermissionCall.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
 func (p *AIChatRequest) String() string {

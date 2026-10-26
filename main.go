@@ -97,14 +97,19 @@ func main() {
 			return nil, err
 		}
 		cfg.MemoryManifest = agent.MemoryManifest(memStore, 10)
-		r, err := agent.NewRunner(cfg, apiKey, syncSvc)
+		// 执行后端:内置 eino 助手 / 外部 coding agent(acpx / 原生 ACP)。
+		// 后端是**可插拔**的,门面(Runner)不变。
+		eng, err := buildAIEngine(cfg, apiKey, syncSvc, syncSvc, shellCfg)
 		if err != nil {
 			return nil, err
 		}
+		// 委派执行器:即便主后端是内置助手,也允许把编码任务派给外部 agent。
+		attachDelegator(cfg, eng)
+		r := agent.NewRunner(eng, cfg.MaxConcurrentChats)
 		r.SetMemory(agent.NewMemBridge(memStore), agent.MemoryManifest(memStore, 10))
 		r.SetPolicy(tools.NewPolicy())
 		agent.SetPersistDir(memPath[:max(0, len(memPath)-len("/ai-memory.json"))] + "/ai-tool-output")
-		slog.Info("ai assistant ready", "model", cfg.Model, "base_url", cfg.BaseURL, "memory", memPath)
+		logAIBackend(cfg, eng)
 		return r, nil
 	}
 

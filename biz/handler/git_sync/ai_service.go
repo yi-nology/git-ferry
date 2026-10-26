@@ -49,7 +49,17 @@ func AIStatus(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, consts.StatusNotImplemented, "ai_disabled")
 		return
 	}
-	response.Success(c, map[string]any{"enabled": true, "model": r.ModelName()})
+	// 后端信息:界面要能看出「现在跟谁说话」(内置助手 / 外部 coding agent),
+	// 以及外部后端**装没装**(静态就位性,快;真正的握手在「测试连接」里做)。
+	ready, readyMsg := r.Ready()
+	response.Success(c, map[string]any{
+		"enabled":       true,
+		"model":         r.ModelName(),
+		"backend":       r.BackendID(),
+		"backend_label": r.BackendLabel(),
+		"ready":         ready,
+		"ready_msg":     readyMsg,
+	})
 }
 
 // AIChat POST /api/v1/ai/chat —— SSE 流式响应。
@@ -68,9 +78,24 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	// 校验前置:先建会话后校验会让空消息请求留下垃圾会话
-	if req.ConfirmedToolCall == nil && strings.TrimSpace(req.Message) == "" {
+	// 校验前置:先建会话后校验会让空消息请求留下垃圾会话。
+	// 确认与授权两条回传路径都不带业务消息(消息仅要求非空占位)。
+	if req.ConfirmedToolCall == nil && req.PermissionCall == nil && strings.TrimSpace(req.Message) == "" {
 		response.BadRequest(c, "message 不能为空")
+		return
+	}
+
+	// 授权回传路径(外部 agent 的 session/request_permission):
+	// **不需要会话存在** —— 待授权状态在 agent 进程侧,不在 git-ferry 会话上。
+	// 会话过期时也不该让用户点的授权白点。
+	if req.PermissionCall != nil {
+		err := r.RespondPermission(ctx, ptrx.Deref(req.SessionId, ""),
+			req.PermissionCall.RequestId, req.PermissionCall.OptionId)
+		if err != nil {
+			response.BadRequest(c, err.Error())
+			return
+		}
+		response.Success(c, map[string]any{"ok": true})
 		return
 	}
 

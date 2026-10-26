@@ -9,6 +9,9 @@
           "message": {
             "type": "string"
           },
+          "permission_call": {
+            "$ref": "#/components/schemas/AIPermissionCall"
+          },
           "session_id": {
             "type": "string"
           }
@@ -20,11 +23,17 @@
           "api_key": {
             "type": "string"
           },
+          "backend": {
+            "type": "string"
+          },
           "base_url": {
             "type": "string"
           },
           "enabled": {
             "type": "boolean"
+          },
+          "external": {
+            "$ref": "#/components/schemas/AIExternalConfig"
           },
           "max_concurrent_chats": {
             "format": "int32",
@@ -59,13 +68,121 @@
         },
         "type": "object"
       },
+      "AIEnvVar": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AIExternalConfig": {
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "mcp_api_key_env": {
+            "type": "string"
+          },
+          "mcp_enabled": {
+            "type": "boolean"
+          },
+          "mcp_servers": {
+            "items": {
+              "$ref": "#/components/schemas/AIExternalMCPServer"
+            },
+            "type": "array"
+          },
+          "mcp_url": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "AIExternalMCPServer": {
+        "properties": {
+          "api_key_env": {
+            "type": "string"
+          },
+          "api_key_header": {
+            "type": "string"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "type": "string"
+          },
+          "env": {
+            "items": {
+              "$ref": "#/components/schemas/AIEnvVar"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AIPermissionCall": {
+        "properties": {
+          "option_id": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "AITestRequest": {
         "properties": {
           "api_key": {
             "type": "string"
           },
+          "backend": {
+            "type": "string"
+          },
           "base_url": {
             "type": "string"
+          },
+          "external": {
+            "$ref": "#/components/schemas/AIExternalConfig"
           },
           "model": {
             "type": "string"

@@ -15,7 +15,9 @@ import (
 
 // Settings 前端可改的 AI 配置(持久化到 data/ai-settings.json)。
 type Settings struct {
-	Enabled            bool    `json:"enabled"`
+	Enabled bool `json:"enabled"`
+	// Backend 执行后端:internal|acpx|stdio。
+	Backend            string  `json:"backend"`
 	BaseURL            string  `json:"base_url"`
 	Model              string  `json:"model"`
 	Temperature        float64 `json:"temperature"`
@@ -26,11 +28,35 @@ type Settings struct {
 	//nolint:gosec // G117:字段名 APIKey 命中密钥模式,此处确为密钥存储,不回传明文
 	APIKey    string    `json:"api_key,omitempty"`
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+
+	// External 外部 coding agent 配置(backend=acpx|stdio 时生效)。
+	External ExternalSettings `json:"external"`
+}
+
+// ExternalSettings 外部 coding agent 的界面可改配置。
+//
+// **不含密钥**:挂给 agent 的 MCP 专用 key 走环境变量(ExternalConfig.MCPAPIKeyEnv),
+// 界面上只填「环境变量名」。
+type ExternalSettings struct {
+	Agent          string   `json:"agent"`
+	Command        string   `json:"command"`
+	Args           []string `json:"args"`
+	Cwd            string   `json:"cwd"`
+	TimeoutSeconds int      `json:"timeout_seconds"`
+	Permission     string   `json:"permission"`
+	MCPEnabled     bool     `json:"mcp_enabled"`
+	MCPURL         string   `json:"mcp_url"`
+	MCPAPIKeyEnv   string   `json:"mcp_api_key_env"`
+	// MCPServers 额外挂给外部 agent 的 MCP 服务器(可多个)。
+	//
+	// 与 MCPServerConfig 同结构(共用一套类型,免得两套平行定义漂移)。
+	MCPServers []MCPServerConfig `json:"mcp_servers"`
 }
 
 // SettingsView 读接口视图(不泄密钥)。
 type SettingsView struct {
 	Enabled            bool    `json:"enabled"`
+	Backend            string  `json:"backend"`
 	BaseURL            string  `json:"base_url"`
 	Model              string  `json:"model"`
 	Temperature        float64 `json:"temperature"`
@@ -40,6 +66,9 @@ type SettingsView struct {
 	HasAPIKey          bool    `json:"has_api_key"`
 	APIKeyMasked       string  `json:"api_key_masked"`
 	UpdatedAt          string  `json:"updated_at,omitempty"`
+
+	// External 外部 coding agent 配置视图。
+	External ExternalSettings `json:"external"`
 }
 
 // SettingsStore 文件型设置库(并发安全)。
@@ -76,22 +105,47 @@ func (s *SettingsStore) Get() Settings {
 func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 	in.BaseURL = strings.TrimSpace(in.BaseURL)
 	in.Model = strings.TrimSpace(in.Model)
+	in.External.Agent = strings.TrimSpace(in.External.Agent)
+	in.External.Command = strings.TrimSpace(in.External.Command)
+	in.External.Cwd = strings.TrimSpace(in.External.Cwd)
+	in.External.MCPURL = strings.TrimSpace(in.External.MCPURL)
+	in.External.MCPAPIKeyEnv = strings.TrimSpace(in.External.MCPAPIKeyEnv)
+	if in.Backend == "" {
+		in.Backend = BackendInternal
+	}
 	if in.Enabled {
-		if in.BaseURL == "" {
-			return nil, fmt.Errorf("base_url 不能为空")
-		}
-		if in.Model == "" {
-			return nil, fmt.Errorf("model 不能为空")
-		}
-		// 密钥可沿用已存值:允许只改模型/地址不重传 key
-		s.mu.RLock()
-		prevKey := s.cur.APIKey
-		s.mu.RUnlock()
-		if in.APIKey == "" {
-			in.APIKey = prevKey
-		}
-		if in.APIKey == "" {
-			return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
+		// **按后端分支校验**:选了哪个后端,就按那个后端的要求校验。
+		switch in.Backend {
+		case BackendInternal:
+			if in.BaseURL == "" {
+				return nil, fmt.Errorf("base_url 不能为空")
+			}
+			if in.Model == "" {
+				return nil, fmt.Errorf("model 不能为空")
+			}
+			// 模型密钥只对**内置后端**有意义:外部后端根本不走
+			// OpenAI 兼容端点,拿不到这个 key。放在分支外会让
+			// 「用外部 coding agent」根本存不下去。
+			// 密钥可沿用已存值:允许只改模型/地址不重传 key
+			s.mu.RLock()
+			prevKey := s.cur.APIKey
+			s.mu.RUnlock()
+			if in.APIKey == "" {
+				in.APIKey = prevKey
+			}
+			if in.APIKey == "" {
+				return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
+			}
+		case BackendACPX:
+			if in.External.Agent == "" && in.External.Command == "" {
+				return nil, fmt.Errorf("外部 agent 名为空(填 agent 如 mcode,或填自定义 command)")
+			}
+		case BackendStdio:
+			if in.External.Command == "" {
+				return nil, fmt.Errorf("外部 agent 命令为空(如 \"mcode acp\")")
+			}
+		default:
+			return nil, fmt.Errorf("未知后端: %s(可选 internal|acpx|stdio)", in.Backend)
 		}
 	}
 	in.applyDefaults()
@@ -130,6 +184,7 @@ func (s *SettingsStore) persist(st *Settings) error {
 func View(st *Settings) SettingsView {
 	v := SettingsView{
 		Enabled:            st.Enabled,
+		Backend:            st.Backend,
 		BaseURL:            st.BaseURL,
 		Model:              st.Model,
 		Temperature:        st.Temperature,
@@ -138,6 +193,7 @@ func View(st *Settings) SettingsView {
 		MaxConcurrentChats: st.MaxConcurrentChats,
 		HasAPIKey:          st.APIKey != "",
 		APIKeyMasked:       MaskKey(st.APIKey),
+		External:           st.External,
 	}
 	if !st.UpdatedAt.IsZero() {
 		v.UpdatedAt = st.UpdatedAt.Format(time.RFC3339)
@@ -160,12 +216,25 @@ func MaskKey(key string) string {
 func (st *Settings) ToConfig() *Config {
 	cfg := &Config{
 		Enabled:            st.Enabled,
+		Backend:            st.Backend,
 		BaseURL:            st.BaseURL,
 		Model:              st.Model,
 		Temperature:        st.Temperature,
 		MaxTokens:          st.MaxTokens,
 		TimeoutSeconds:     st.TimeoutSeconds,
 		MaxConcurrentChats: st.MaxConcurrentChats,
+		External: ExternalConfig{
+			Agent:          st.External.Agent,
+			Command:        st.External.Command,
+			Args:           st.External.Args,
+			Cwd:            st.External.Cwd,
+			TimeoutSeconds: st.External.TimeoutSeconds,
+			Permission:     st.External.Permission,
+			MCPEnabled:     st.External.MCPEnabled,
+			MCPURL:         st.External.MCPURL,
+			MCPAPIKeyEnv:   st.External.MCPAPIKeyEnv,
+			MCPServers:     st.External.MCPServers,
+		},
 	}
 	cfg.applyDefaults()
 	return cfg
@@ -174,6 +243,36 @@ func (st *Settings) ToConfig() *Config {
 // MergeSettings yaml 默认值 + 设置文件覆盖(设置文件为准,空则回退 yaml)。
 func MergeSettings(yamlCfg *Config, st *Settings) Settings {
 	out := *st
+	if out.Backend == "" {
+		out.Backend = yamlCfg.Backend
+	}
+	if out.External.Agent == "" {
+		out.External.Agent = yamlCfg.External.Agent
+	}
+	if out.External.Command == "" {
+		out.External.Command = yamlCfg.External.Command
+	}
+	if len(out.External.Args) == 0 {
+		out.External.Args = yamlCfg.External.Args
+	}
+	if out.External.Cwd == "" {
+		out.External.Cwd = yamlCfg.External.Cwd
+	}
+	if out.External.TimeoutSeconds == 0 {
+		out.External.TimeoutSeconds = yamlCfg.External.TimeoutSeconds
+	}
+	if out.External.Permission == "" {
+		out.External.Permission = yamlCfg.External.Permission
+	}
+	if out.External.MCPURL == "" {
+		out.External.MCPURL = yamlCfg.External.MCPURL
+	}
+	if out.External.MCPAPIKeyEnv == "" {
+		out.External.MCPAPIKeyEnv = yamlCfg.External.MCPAPIKeyEnv
+	}
+	if len(out.External.MCPServers) == 0 {
+		out.External.MCPServers = yamlCfg.External.MCPServers
+	}
 	if out.BaseURL == "" {
 		out.BaseURL = yamlCfg.BaseURL
 	}

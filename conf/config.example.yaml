@@ -74,17 +74,61 @@ log:
   level: info
   format: json
 
-# AI 助手(eino):默认关闭。启用需同时:
-#   1. 打开下方 ai 段;2. 设置环境变量 GIT_SYNC_AI_API_KEY
-# base_url 可指向任意 OpenAI 兼容端点;生产内网可指向 vLLM/Ollama,如:
+# AI 助手:默认关闭。**执行后端可插拔** —— 内置 eino 助手,或外部成熟
+# AI coding 工具(MiniMax Code / Claude Code / Codex / Gemini CLI…),
+# 后者通过 ACP(Agent Client Protocol)驱动,工具在 agent 侧执行。
+#
+# —— 形态一:内置助手(OpenAI 兼容端点)——
+#   启用需同时:1. 打开下方 ai 段;2. 设置环境变量 GIT_SYNC_AI_API_KEY
+#   base_url 可指向任意 OpenAI 兼容端点;生产内网可指向 vLLM/Ollama,如:
 #   ai:
 #     enabled: true
+#     backend: internal        # 可选,默认 internal
 #     base_url: "http://127.0.0.1:11434/v1"
 #     model: "qwen2.5:14b"
 #     temperature: 0.3        # 可选,默认 0.3
 #     max_tokens: 2048        # 可选,默认 2048
 #     timeout_seconds: 60     # 可选,默认 60
 #     max_concurrent_chats: 4 # 可选,默认 4
+#
+# —— 形态二:外部 coding agent(acpx CLI 驱动)——
+#   需要本机装好 acpx(npm i -g acpx)与对应 agent(如 mcode / claude / codex)。
+#   ai:
+#     enabled: true
+#     backend: acpx
+#     external:
+#       agent: mcode           # acpx 内置 agent 名
+#       cwd: var/ai-workspace # 沙箱边界:agent 只能访问它下面的文件
+#       permission: ask       # ask|approve_reads|approve_all|deny
+#       timeout_seconds: 600
+#
+# —— 形态三:外部 coding agent(原生 ACP,自己当 client)——
+#   能拿到 session/request_permission(弹授权卡),也能挂本服务的 MCP。
+#   ai:
+#     enabled: true
+#     backend: stdio
+#     external:
+#       command: "mcode acp"  # ACP agent 的可执行命令
+#       cwd: var/ai-workspace
+#       permission: ask
+#       mcp_enabled: true     # 把本服务的 /mcp 挂给外部 agent
+#       mcp_api_key_env: GITFERRY_AI_MCP_API_KEY
+#                              # 专用 key 的**环境变量名**(密钥不进配置);
+#                              # 该 key 固定为只读角色 —— MCP 路径上危险工具不弹确认
+#       # 额外挂给外部 agent 的 MCP 服务器(可多个;认证密钥同样只填环境变量名)
+#       mcp_servers:
+#         - name: docs
+#           type: http
+#           url: "https://docs.example.com/mcp"
+#           api_key_env: DOCS_MCP_KEY   # 变量里放完整头值,如 "Bearer xxxxx"
+#           api_key_header: Authorization # 留空=Authorization
+#         - name: local
+#           type: stdio
+#           command: "/usr/bin/mcp-server"
+#           args: ["--stdio"]
+#
+# 安全提示:外部 agent 是跑在本机上的子进程,拥有该用户的文件与网络权限。
+# 工作目录(cwd)就是代码层能给到的沙箱边界,更强的隔离要靠部署侧容器。
 
 # 运行观察与失败补偿(壳层):轮询执行历史,派发通知/指标,失败自动重跑
 runwatch:
