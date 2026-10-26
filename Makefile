@@ -12,7 +12,7 @@ build:
 	@go build -ldflags "-X $(VERSION_PKG).Version=$(VERSION)" -o $(BUILD_DIR)/$(APP_NAME) .
 	@echo ">> built $(BUILD_DIR)/$(APP_NAME) (version $(VERSION))"
 
-# CLI（人 + Agent 入口），见 skills/ 与 docs/superpowers/plans/2026-09-30-agent-native-cli-skills.md
+# CLI（人 + Agent 入口），见 skills/ 与 internal/cli/commands/
 build-cli:
 	@mkdir -p $(BUILD_DIR)
 	@go build -ldflags "-X main.Version=$(VERSION)" -o $(BUILD_DIR)/$(CLI_NAME) ./cmd/gitferry

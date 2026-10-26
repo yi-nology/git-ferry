@@ -22,7 +22,7 @@ make build-cli    # CLI gitferry
 1. Fork 并建分支：`git checkout -b feature/my-change`
 2. 改代码；保持 `make test` / `make lint` / `make vet` 通过
 3. 涉及 API 时跑 `make apidoc` 更新 `docs/openapi.json`
-4. 涉及 CLI / Skills 时同步 `skills/` 与 `docs/superpowers/plans/2026-09-30-agent-native-cli-skills.md` 中的命令表
+4. When touching CLI / Skills, keep `internal/cli/commands/` (command table), `skills/` (knowledge base) and `internal/agent/tools/` (tool registry) in sync
 5. 提交 PR，填写模板
 
 ## 代码结构速览
@@ -59,7 +59,8 @@ cd frontend && npm ci && npm run build && npx vue-tsc -b
 
 - 架构：`ARCHITECTURE.md`
 - API：`docs/openapi.json`（`make apidoc` 生成）
-- CLI / Skills 设计：`docs/superpowers/plans/2026-09-30-agent-native-cli-skills.md`
+- CLI command table: `internal/cli/commands/` (`domains.go` per domain + `histsync.go`); Skills: `skills/`
+- AI / MCP tool registry: `internal/agent/tools/repo.go` (the registration site is the source of truth)
 - 双语 README：改 `README.md` 时同步 `README.zh-CN.md`
 
 ## 行为准则

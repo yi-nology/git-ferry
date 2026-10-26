@@ -2,7 +2,7 @@
 
 > 2026-10-23 · 状态:基线已固化,可作为回归门禁
 > 产出方式:`git-ferry-core/mirror/history` 的实现跑实仓,非人工统计
-> 关联:`2026-10-22-open-source-dual-repo-sync-design.md`(设计稿 v2 的事实依据)
+> 关联:`history-sync-design.md`(设计稿 v2 的事实依据)
 
 ---
 

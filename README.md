@@ -8,43 +8,43 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-ferry)](https://go.dev/)
 [![License](https://img.shields.io/github/license/yi-nology/git-ferry)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases)
-[![npm version](https://img.shields.io/npm/v/gitferry-cli.svg)](https://www.npmjs.com/package/gitferry-cli)
 
 **[中文文档](./README.zh-CN.md)**
 
-[Why GitFerry](#why-gitferry) · [Capabilities](#capabilities) · [Install CLI](#install-the-cli-humans) · [Quick Start](#quick-start-humans) · [AI Agent Quick Start](#quick-start-ai-agent) · [Web Console](#web-console) · [Ops & DR](#ops--disaster-recovery) · [Agent Access](#agent-access-cli--mcp--skills) · [Configuration](#configuration)
+[Why GitFerry](#why-gitferry) · [Capabilities](#capabilities) · [Install CLI](#install-the-cli-humans) · [Quick Start](#quick-start-humans) · [AI Agent Quick Start](#quick-start-ai-agent) · [Web Console](#web-console) · [Ops & DR](#ops--disaster-recovery) · [History Sync](#history-sync-dual-repo-content-publishing) · [Agent Access](#agent-access-cli--mcp--skills) · [Configuration](#configuration)
 
 ---
 
 ## Why GitFerry
 
-Code hosting is fragmented: GitHub on the public internet, GitLab/Gitee on the intranet, backups scattered across scripts. The moment you need **cross-platform sync**, **open-source publishing**, and **cold backup / DR**, you end up gluing three tools together.
+Code hosting is fragmented: GitHub on the public internet, GitLab/Gitee on the intranet, backups scattered across scripts. The moment you need **cross-platform sync**, **open-source publishing**, **cold backup / DR**, or **shipping intranet changes back out**, you end up gluing several tools together.
 
-GitFerry folds those three jobs into one self-hosted hub:
+GitFerry folds those jobs into one self-hosted hub:
 
 | Scenario | Pain | GitFerry |
 |----------|------|----------|
 | Cross-platform sync | Scripts + cron + manual reconciliation | Task-based sync: cron / webhook / manual, with auto-compensation |
 | Open-source publish | Module path rewrite, dual-repo identity clashes | Mirror hub: identity-rewrite snapshots + pre-check / build gate / divergence confirm |
 | Repo backup | Git objects only; metadata lost | Cold backup (bundle/zip) + issues/PR/releases snapshots that are **restorable** |
+| Dual-repo round-trip | Two trees diverge; changes can't travel back | History sync: plan → conflict adjudication → transplant → push, fully audited |
 | Ops & audit | Black box, no health signal | Health score / RPO / drift / audit hash chain / DR drills |
 | Automation | Web UI only | CLI + MCP + Agent Skills — humans *and* agents |
 
-Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup), [ghorg](https://github.com/gabrie30/ghorg), [gitea-mirror](https://github.com/RayLabsHQ/gitea-mirror), and [github-backup-rust](https://tomtom215.github.io/github-backup-rust/), then adding three differentiators: **restorable metadata**, **Agent-Native access**, and **module identity rewrite**.
+Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup), [ghorg](https://github.com/gabrie30/ghorg), [gitea-mirror](https://github.com/RayLabsHQ/gitea-mirror), and [github-backup-rust](https://tomtom215.github.io/github-backup-rust/), then adding four differentiators: **restorable metadata**, **Agent-Native access**, **module identity rewrite**, and **dual-repo content round-trip**.
 
 ## Capabilities
 
 ### Sync
 
-- Platforms: GitHub / GitLab / Gitee / GitLink / Gitea / self-hosted
+- Platforms: GitHub / GitLab / Gitee / Gitea / Forgejo / GitCode / Tencent CODING / self-hosted
 - Triggers: cron, real-time webhook, manual / batch
 - Scope: branch globs, **include allow-list**, **ignore `refs/pull/*` and other PR refs**, tags, wiki, submodules, partial clone
-- Safety: `force_push_policy` (allow / block / backup_on_demand), prune
+- Safety: `force_push_policy` (allow / block / backup_on_demand), prune, force-push approval flow
 - Resilience: `runwatch` auto-retry; exponential backoff on 403/429 rate limits
 
 ### Mirror & backup
 
-- **Mirror hub**: open-source publishing (dual/multi-repo module identity rewrite snapshots)
+- **Mirror hub**: open-source publishing (dual/multi-repo module identity rewrite snapshots), with version matrix and publish gates
 - **Cold backup**: git bundle or **zip**, `backup_keep` rotation, optional AES-256-GCM
 - **Multi-destination**: S3 / WebDAV / Azure / local fan-out
 - **Metadata snapshot**: issues (with comments) / PRs / labels / milestones / releases / gists / release assets
@@ -52,28 +52,37 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 - **Integrity**: Merkle root manifest + verify; DR drill (restore + fsck + refs compare)
 - **Git Smart HTTP**: `git clone` cold backups over LAN without pushing to another forge first
 
+### History sync (dual-repo content publishing)
+
+Publish the content delta between two git trees — typically intranet → public — while leaving the target repo's existing commits (and their hashes) untouched.
+
+- **Channel-based config**: source/target dirs, module path rewrite, host rewrite, scrub rules, and push targets (credentials encrypted at rest) all live in a channel
+- **Plan → adjudicate → transplant → push**: mechanical conflicts resolve automatically; humans/AI only adjudicate `hold` files
+- **Gates**: a pre-push preview exposes the full impact (commits to be created, force-push need, blockers)
+- **Audit**: every run is recorded with a hash chain — verifiable and rollback-able
+- See [History Sync](#history-sync-dual-repo-content-publishing)
+
 ### Organization & ecosystem
 
 - **Org mapping**: `preserve` / `single` / `flat` / `mixed` bulk mapping to a target namespace
 - **Starred import**, **public org anonymous mirror** (GitHub)
-- **force-push approval flow**: pending requests under `block` policy, one-shot Admin approve
 - **post-exec hook**: callback script after every sync (notify / alert / custom pipeline)
 
 ### Ops & governance
 
 - Five-dimension health score (reliability / freshness / schedule / safety / completeness)
-- Inventory (orphan repos), RPO/RTO, drift detection, unified todo queue
+- Inventory (orphan repos), RPO/RTO, drift detection, unified todo queue, trends
 - RBAC (admin/operator/readonly), OIDC JWT, audit export + hash chain, legal_hold
 - Prometheus metrics, ntfy/gotify/webhook notifications, success/fail heartbeats
 
 ### Interfaces
 
 - Vue 3 web console (GitHub Enterprise / Linear-style calm ops UI)
-- RESTful API + OpenAPI (`/swagger`)
+- RESTful API + OpenAPI (`/swagger/`)
 - `gitferry` CLI (Envelope output, confirmation gate for dangerous ops)
 - **MCP Server** (Streamable HTTP, same tool registry as the AI assistant)
 - Agent Skills (Claude Code / MiMo / Cursor)
-- AI ops assistant (eino, off by default)
+- AI ops assistant (built-in eino or an external AI coding tool, off by default)
 
 ---
 
@@ -94,7 +103,7 @@ Borrowing mature patterns from [gickup](https://github.com/cooperspencer/gickup)
 
 ```bash
 # Pick a platform asset on https://github.com/yi-nology/git-ferry/releases/latest
-VER=1.21.0   # replace with the latest version
+VER=1.37.0   # replace with the latest version
 curl -fsSL -o gitferry.tgz \
   "https://github.com/yi-nology/git-ferry/releases/download/v${VER}/gitferry_${VER}_darwin_arm64.tar.gz"
 tar -xzf gitferry.tgz && sudo mv gitferry /usr/local/bin/
@@ -209,6 +218,7 @@ Vue 3 + Ant Design Vue. Visual anchor: **GitHub Enterprise / Linear-style calm o
 | Repos / Mirror hub | Repo cards, unified config, publish & backup channels |
 | Webhook rules / Events | Trigger rules and inbound event stream |
 | Ops center | Health score, inventory, templates, deploy keys, cold backup & metadata restore |
+| Operation logs | Audit log query and export |
 | AI assistant | Floating ball / top bar; configure model under System |
 | CLI / Agent | System → CLI / Agent: install `gitferry`, Skills, command cheatsheet |
 | Platforms | Git host credentials and connection tests |
@@ -233,11 +243,13 @@ More screenshots: [`docs/screenshots/`](docs/screenshots/). Frontend dev: [`fron
 | Health score | `GET /ops/health-score` (gold/silver/bronze/basic + 5 dimensions) |
 | Inventory | `GET /ops/inventory` (orphan repos) |
 | Unified todo | `GET /ops/todo` + dashboard card |
+| Sync trends | `GET /ops/trends` (success rate / duration) |
 | Policy templates | `GET/POST /ops/templates` + preview/apply (dry-run, inheritance) |
-| Audit | CSV export, hash chain `GET /ops/audit-chain/verify` |
+| Audit | CSV export `GET /ops/audit-report`, hash chain `GET /ops/audit-chain/verify` |
 | Secret injection | `GIT_SYNC_TOKEN_<NAME>` / `GIT_SYNC_TOKEN_CMD_<NAME>` |
 | Deploy keys | `POST /ops/deploy-key` (Ed25519) |
 | Cold backup | `git_bundle`; `sync.backup_format: bundle\|zip` + `backup_keep` |
+| Bundle list / verify / restore | `GET /ops/bundles` · `/bundles/verify` · `POST /ops/bundles/restore` |
 | Metadata snapshot | `POST /ops/metadata-backup` (issues/PR/releases/gists/assets, `since` incremental) |
 | **Metadata restore** | `POST /ops/metadata-restore` (**dry-run default**, selective `kinds`) |
 | DR drill | `POST /ops/dr-drill` (restore + fsck + refs); RPO `GET /ops/rpo` |
@@ -290,6 +302,79 @@ git clone http://gitferry:8890/git/github/octocat/hello.git
 
 ---
 
+## History Sync (dual-repo content publishing)
+
+Ship the content delta between two git trees — typically intranet → public — while leaving the target repo's existing commits (and their hashes) untouched. New content is appended as new commits.
+
+Typical cases: a fix landed on the intranet repo but never reached the public one, or the public repo was rewritten for open-source (module path change, domain masking) and the intranet-side work now needs to travel back.
+
+### Standard flow
+
+```
+channel-create → target-create (local mirror first) → plan → resolve
+               → human/AI adjudicates hold files → apply → push
+```
+
+```bash
+# ① Create a channel (source/target dirs + identity rewrite rules)
+gitferry histsync +channel-create --name review-service \
+  --source-dir /path/to/internal --target-dir /path/to/public \
+  --module-from git.enjoye.top/enjoydream --module-to github.com/yi-nology \
+  --host-from git.enjoye.top --host-to github.com
+
+# ② Add push targets (the first is the local bare mirror; the rest publish)
+gitferry histsync +target-create --channel-id 1 --name backup \
+  --url /path/to/review-service.git --cred-type none
+gitferry histsync +target-create --channel-id 1 --name github \
+  --url https://github.com/yi-nology/review-service.git \
+  --cred-type token --credential-file /path/to/token
+
+# ③ Generate the plan (read-only, writes nothing)
+gitferry histsync +plan --channel-id 1 --format json
+
+# ④ Compute auto-resolutions + fetch the conflict dossier (read-only)
+gitferry histsync +resolve --channel-id 1 --format json
+
+# ⑤ Adjudicate hold files (keep_target / take_source / merged)
+gitferry histsync +override-set --channel-id 1 --path AGENTS.md \
+  --verdict keep_target --reason "mutually exclusive: describes which tree this is"
+
+# ⑥ Preview the impact (does not push)
+gitferry histsync +preview --channel-id 1
+
+# ⑦ Transplant into the target tree (local, no push)
+gitferry histsync +apply --channel-id 1
+
+# ⑧ Push (stops on blockers; --force-push when the remote needs it)
+gitferry histsync +push --channel-id 1
+```
+
+### Disposition classes
+
+| Class | Meaning | Decided by |
+|-------|---------|-------------|
+| `same` | Identical after identity rewrite + normalization | automatic |
+| `port` | Source side is a superset — overwrite with source content | automatic |
+| `port_with_scrub` | Needs scrub before transplanting | automatic |
+| `preserve` | Protected — never overwritten during transplant | automatic |
+| `exclude` | Matches an exclusion rule | automatic |
+| `hold` | Both sides have unique content | **human / AI adjudication** |
+
+Three verdicts exist: `keep_target` (keep the target side), `take_source` (take the source side), and `merged` (write a hand-composed result). Verdicts are written back to the channel and take effect on the next `resolve`.
+
+### Gates & traceability
+
+- **Pre-push preview**: `+preview` lays out the impact — which commits will be created, whether a force push is needed, and what is blocking
+- **Credentials stay out of shell history**: use `--credential-file`, not `--credential`
+- **Audit chain**: every run is recorded (`+runs` / `+run-detail`); the channel's hash chain is verifiable (`+channel-audit`)
+- **Rollback**: `+rollback --run-id <ID> --ref <ref>` returns the target tree to a given ref
+
+### Automation surface
+
+History sync is also exposed through the MCP / AI assistant tool registry (`plan_histsync_channel`, `resolve_histsync_channel`, `preview_histsync_channel`, `sync_histsync_channel`, `set_histsync_override`, …), so agents can drive it directly. See [`skills/gitferry-histsync/`](skills/gitferry-histsync/).
+
+---
+
 ## Agent Access (CLI · MCP · Skills)
 
 Three surfaces share one tool semantic — both humans and agents can operate GitFerry.
@@ -303,7 +388,7 @@ export GITFERRY_TOKEN=your-api-key        # maps to X-API-Key
 gitferry auth status
 gitferry task +list --format json
 gitferry ops +health --with-drift --format json
-gitferry ops +metadata-restore --key gh/o/r --dry-run --format json
+gitferry ops +metadata-restore --key gh/o/r --format json
 gitferry api GET /api/v1/system/status --format json
 gitferry schema list && gitferry schema show ops
 ```
@@ -311,8 +396,9 @@ gitferry schema list && gitferry schema show ops
 - Unified Envelope: `{ok, data, error, meta}`; `--format json|table|yaml`
 - Dangerous shortcuts (`task +run`, `ops +drill`, `ops +metadata-restore --execute`) return 409 unless `--yes`
 - `--all` paginate, `--dry-run` preview, `--csv` export
+- Command groups: `repo` / `task` / `history` / `histsync` / `ops` / `platform` / `webhook`, plus `auth` / `config` / `schema` / `api`
 
-Install: see [Quick Start](#install-the-cli-humans) (one npm command).
+Install: see [Quick Start](#install-the-cli-humans).
 
 ### 2. MCP Server (Claude Code / Cursor)
 
@@ -341,18 +427,19 @@ make install-skills
 | `gitferry-shared` | Auth, Envelope, safety rules, troubleshooting |
 | `gitferry-repo` / `gitferry-task` / `gitferry-history` | Repos, tasks, run history |
 | `gitferry-ops` / `gitferry-workflow` | Ops checks, failure triage, DR, metadata restore |
+| `gitferry-histsync` | History sync: plan, conflict adjudication, transplant, push, audit chain |
 
-Design notes: [`docs/superpowers/plans/`](docs/superpowers/plans/).
+See [`skills/README.md`](skills/README.md) for the full list and install notes.
 
 ---
 
-## AI Assistant (eino)
+## AI Assistant
 
-Built on [CloudWeGo eino](https://github.com/cloudwego/eino). **Disabled by default** (returns 501 until enabled).
+Built on [CloudWeGo eino](https://github.com/cloudwego/eino) for the built-in backend, and driven over ACP for external AI coding tools. **Disabled by default** (returns 501 until enabled).
 
 Enable under **System → AI Assistant**: pick a preset (OpenAI / DashScope / DeepSeek / Ollama / vLLM / custom) or set **API Base URL**, choose **model** (or fetch list), set **API Key**, **Save** (hot reload to `data/ai-settings.json`, no restart).
 
-**30 tools**: queries, health, inventory, RPO, integrity, drift, audit, failure diagnosis, memory (`plan_mode` / `remember` / `recall`), `deep_analyze`, DR drills. Read-only queries run directly; `run_task`, connection tests, and other dangerous ops require a UI confirmation card + one-shot token.
+**42 tools**: queries, health, inventory, RPO, integrity, drift, audit, failure diagnosis, memory (`plan_mode` / `remember` / `recall`), `deep_analyze`, DR drills, history sync, delegate-to-external-agent. Read-only queries run directly; `run_task`, connection tests, and other dangerous ops require a UI confirmation card + one-shot token.
 
 **Safety:** read-only by default; git credentials and model keys never enter prompts/logs; tool results are injected as data only (prompt-injection hardening).
 
@@ -363,7 +450,36 @@ Enable under **System → AI Assistant**: pick a preset (OpenAI / DashScope / De
 | GET | `/api/v1/ai/config` | config (key masked) |
 | POST | `/api/v1/ai/config` | save + hot reload |
 | POST | `/api/v1/ai/config/test` | probe OpenAI-compatible endpoint |
-| GET | `/api/v1/ai/models` | list models from endpoint |
+| POST | `/api/v1/ai/models` | list models from endpoint (**POST** — the key travels in the body, never in the URL) |
+
+### Swap in an external AI coding tool (ACP)
+
+The assistant does **not** have to depend on a built-in model: `ai.backend` can point at a
+mature external AI coding tool (MiniMax Code / Claude Code / Codex / Gemini CLI / OpenCode…),
+driven over [ACP](https://agentclientprotocol.com) (Agent Client Protocol — JSON-RPC over stdio).
+
+| Backend | Shape | Use when |
+|---------|-------|----------|
+| `internal` | built-in eino assistant, in-process OpenAI-compatible endpoint | you already run an in-cluster model / vLLM |
+| `acpx` | external agent via the [acpx](https://github.com/openclaw/acpx) CLI | one command surface for 20+ agents, no protocol code to write |
+| `stdio` | external agent, native ACP, we act as the client | you need the **permission card** and **our own `/mcp`** mounted |
+
+What matters:
+
+- **No domain tools to rewrite**: the external agent connects back to this service's `/mcp`
+  over MCP, so all 42 tools (sync / mirror / ops / history sync) are available as-is.
+- **Permission mode**: `ask` (ask every time, default) / `approve_reads` / `approve_all` / `deny`.
+- **Switching backend or changing the permission mode is a governance action — admin only**
+  (ordinary model parameters do not need admin).
+- **Security**: the external agent is a **subprocess on this host**; its working directory
+  (`cwd`) is the sandbox boundary the code layer can enforce. The dedicated key used for the
+  mounted MCP is pinned to a **read-only role** (the MCP path does not prompt before dangerous tools).
+- **Delegation**: the built-in assistant can hand a coding task to an external agent via
+  the `ai_code_delegate` tool.
+
+界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
+
+See [`docs/design/acp-external-agent-design.md`](docs/design/acp-external-agent-design.md).
 
 ---
 
@@ -438,7 +554,7 @@ This is the **public shell** in a three-repo architecture; it depends on the eng
 |------------|-------------|------|
 | [git-ferry-core](https://github.com/yi-nology/git-ferry-core) | `github.com/yi-nology/git-ferry-core` | Sync engine library (no HTTP) |
 | **git-ferry** (this repo) | `github.com/yi-nology/git-ferry` | Public shell: hz API + Vue + CLI |
-| [git-ferry-intranet](https://github.com/yi-nology/git-ferry-intranet) | `github.com/yi-nology/git-ferry-intranet` | Intranet shell (gateway/SSO auth) |
+| git-ferry-intranet | `github.com/yi-nology/git-ferry-intranet` | Intranet shell (gateway/SSO auth) — private repo |
 
 Single-repo build works (`git clone` + `go build`). Local core workspace:
 
@@ -454,7 +570,7 @@ flowchart TB
     W[Web Console]
     C[gitferry CLI]
     M[MCP / Agent Skills]
-    AI[AI Assistant eino]
+    AI[AI Assistant]
   end
   subgraph Shell git-ferry
     H[hz REST API]
@@ -465,6 +581,7 @@ flowchart TB
   subgraph Engine git-ferry-core
     EX[executor sync/cold backup]
     SVC[service task/platform/gov]
+    MIR[mirror publish/history sync]
   end
   W --> H
   C --> H
@@ -475,6 +592,7 @@ flowchart TB
   MCP --> SVC
   GW --> EX
   SVC --> EX
+  SVC --> MIR
   EX --> P1[GitHub/GitLab/Gitee...]
   EX --> P2[S3/WebDAV/Azure]
 ```
@@ -492,7 +610,6 @@ cd frontend && npm ci && npm run build
 
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Competitor-gap roadmap: [docs/superpowers/plans/2026-10-01-competitor-gap-roadmap.md](docs/superpowers/plans/2026-10-01-competitor-gap-roadmap.md)
 - Research evidence: [designs/research/git-backup-mirror-findings.md](designs/research/git-backup-mirror-findings.md)
 
 Service-less CI mirror path: [`examples/ci/github-actions-mirror.yml`](examples/ci/github-actions-mirror.yml).
@@ -516,6 +633,6 @@ MIT — see [LICENSE](LICENSE).
 <!-- STATS_START -->
 | Metric | Value |
 |--------|-------|
-| Test Files | 19 |
-| Total Tests | 104 |
+| Test Files | 62 |
+| Total Tests | 330 |
 <!-- STATS_END -->

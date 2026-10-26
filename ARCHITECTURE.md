@@ -1,63 +1,79 @@
-# Git Sync Service 架构设计文档
+# GitFerry 架构设计文档
+
+> 本文件描述**当前**架构：分层边界、模块职责、数据模型、接口面。
+> 历史设计过程与实施记录不在此维护 —— 那些是一次性的过程文档，不是现行架构。
 
 ## 1. 项目概述
 
 ### 1.1 服务命名
-**git-ferry** - 独立的 Git 仓库同步微服务
+
+**git-ferry** — 独立的 Git 仓库同步 / 镜像 / 备份中枢。中文名「摆渡」。
 
 ### 1.2 三仓架构
 
 | 仓库 | Import path | 角色 | 开源策略 |
 |------|-------------|------|----------|
 | `git-ferry-core` | `github.com/yi-nology/git-ferry-core` | 同步引擎（无 HTTP） | 公网开源 |
-| `git-ferry`（本仓） | `github.com/yi-nology/git-ferry` | 公网壳：hz API + Vue | 公网开源 |
-| `git-ferry-intranet` | `github.com/yi-nology/git-ferry-intranet` | 内网壳：网关身份头/SSO 钩子 | 可闭源 |
+| `git-ferry`（本仓） | `github.com/yi-nology/git-ferry` | 公网壳：hz API + Vue + CLI | 公网开源 |
+| `git-ferry-intranet` | `github.com/yi-nology/git-ferry-intranet` | 内网壳：网关身份头 / SSO 钩子 | 私有仓 |
 
-本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-ferry-core v0.8.1`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
+本地开发将三仓放在同一父目录；**服务以 module 版本依赖 core**（`require github.com/yi-nology/git-ferry-core v0.30.0`，无 `replace`）。联调未发布 core 时用本地 `go.work`，勿提交 replace。
 
 ```
 模式 A: 公网独立服务                 模式 B: 作为库              模式 C: 内网壳
 ┌────────────────────────┐      ┌──────────────────────┐   ┌────────────────────────┐
-│ git-ferry       │      │  git-manage-service  │   │ git-ferry-intranet      │
+│ git-ferry              │      │ 外部项目              │   │ git-ferry-intranet      │
 │  main / biz / frontend │      │  ┌────────────────┐  │   │  auth(proxy/SSO hook)  │
 │         │              │      │  │  自有 handler  │  │   │  main                  │
-│         ▼              │      │  └───────┬────────┘  │   │    │                   │
-│  git-ferry-core         │◄─────┤          ▼           │   │    ▼                   │
-│  model/service/…       │      │  git-ferry-core       │   │  biz/serve（复用路由）  │
-│         │              │      └──────────────────────┘   │    │                   │
-│         ▼              │                                 │    ▼                   │
-│  git-platform-sdk      │                                 │  git-ferry-core         │
-└────────────────────────┘                                 └────────────────────────┘
+│         ▼              │      │  └───────┬────────┘  │   │    ▼                   │
+│  git-ferry-core         │◄─────┤          ▼           │   │  httpapi(复用路由)      │
+│  model/service/…       │      │  git-ferry-core       │   │    ▼                   │
+│         ▼              │      └──────────────────────┘   │  git-ferry-core         │
+│  go-git-platform       │                                 └────────────────────────┘
+└────────────────────────┘
 ```
 
 内网差异只放在 `git-ferry-intranet/auth`（`SetAuthMiddlewareProvider`）与配置默认值，不复制业务逻辑。
 
-### 1.3 设计原则
+### 1.3 分层原则
+
+| 层 | 负责 | 不负责 |
+|---|---|---|
+| `go-git-platform` | 跨仓 HTTP / git 原语：分页、凭证、七平台 REST、gitbackend | 同步编排、业务规则 |
+| `git-ferry-core` | 同步编排、DAO/锁、冷备、**一切业务规则与业务数据** | HTTP、鉴权、通知通道、AI |
+| `git-ferry` 壳 | HTTP 绑定、DTO 转换、鉴权、AI/CLI、通知通道、只读 gitserve | 业务规则、DB、平台 REST |
+
+**判据一句话：「换一个壳（内网 / 其他前端）还要不要这段逻辑？」要 → core；不要 → 壳。**
+
+### 1.4 设计原则
 
 | 原则 | 说明 |
 |------|------|
-| **完全独立** | core 不依赖壳与 git-manage-service，自包含数据模型 |
-| **单一依赖** | core 只依赖 git-platform-sdk 做 Git 平台操作 |
+| **完全独立** | core 不依赖壳，自包含数据模型 |
+| **单一依赖** | core 只依赖 go-git-platform 做 Git 平台操作 |
 | **可复用库** | 独立仓 `git-ferry-core`，外部 `require github.com/yi-nology/git-ferry-core` |
 | **壳不渗入** | hz handler / response / converter / version 留在本仓 |
 | **hz 标准** | HTTP 层遵循 hz IDL 代码生成规范 |
+| **拒绝静默失败** | 参数不合法时让真实错误暴露，不做静默兜底（详见 §7） |
 
-### 1.4 核心功能
+### 1.5 核心功能
 
-1. **同步任务管理** - CRUD 操作、启停控制
-2. **同步执行** - 手动触发、定时任务、批量同步
-3. **Webhook 触发** - 事件驱动的同步触发
-4. **规则引擎** - 分支模式匹配、防抖控制
-5. **同步历史** - 运行记录、日志查看
-6. **镜像中心** - 开源发布 / 仓库备份通道
-7. **运维中心** - 健康评分、资产盘点、策略模板、失败补偿
-8. **AI 助手** - eino 对话式运维;模型/端点可界面配置
+1. **同步任务管理** — CRUD、启停、批量、预览
+2. **同步执行** — 手动触发、定时任务、Webhook 触发、失败自动补偿
+3. **Webhook 规则** — 分支模式匹配、防抖、平台侧注册
+4. **同步历史** — 运行记录、步骤链、失败诊断
+5. **镜像中心** — 开源发布 / 仓库备份通道，身份改写 + 版本矩阵 + 发布门禁
+6. **历史同步** — 双仓内容差异发布：计划 → 冲突裁决 → 移植 → 推送 + 审计链
+7. **运维中心** — 健康评分、资产盘点、策略模板、漂移检测、灾备演练、备份与元数据回灌
+8. **AI 助手** — 对话式运维，**执行后端可插拔**：内置 eino（OpenAI 兼容端点）
+   或外部 AI coding 工具（ACP 驱动，工具在 agent 侧经本服务 `/mcp` 执行）；
+   模型/端点/后端均可界面配置，热生效
 
-### 1.5 Web 控制台
+### 1.6 Web 控制台
 
 `frontend/` 为 Vue 3 + Ant Design Vue 控制台（GitFerry UI）。
 
-- **设计系统**：`styles/variables.scss` tokens + `styles/theme.ts` AntD 主题;
+- **设计系统**：`styles/variables.scss` tokens + `styles/theme.ts` AntD 主题；
   中性优先、语义色克制（GitHub/Linear 式运维台）。
 - **页面骨架**：`PageHeader` → `MetricStrip` → 筛选栏 → `content-card` 表格。
 - **侧栏 IA**：仪表盘 / 管理（同步、仓库、镜像）/ 自动化（Webhook）/ 运维 / 系统（AI、平台）。
@@ -70,134 +86,99 @@ my_project/
 ├── git-ferry-core/                   # 同步引擎库（独立仓）
 │   ├── go.mod                       # github.com/yi-nology/git-ferry-core
 │   ├── sync.go                      # 库入口 (package sync)
-│   ├── model/  service/  executor/  dao/  lock/
+│   ├── model/                       # GORM 模型 + AutoMigrate 注册
+│   ├── service/                     # 业务服务层
+│   ├── executor/                    # 同步/备份/DR 执行引擎
+│   ├── mirror/                      # 镜像通道 + history/ 双仓内容同步
+│   ├── dao/                         # GORM 数据访问层
+│   ├── health/  lock/  tpl/  pkg/   # 健康聚合 / 锁 / 模板 / 公共件
 │
-├── git-ferry/                # 本仓：公网壳
-│   ├── go.mod                       # require git-ferry-core v0.1.0（无 replace）
+├── git-ferry/                       # 本仓：公网壳
+│   ├── go.mod                       # require git-ferry-core v0.30.0（无 replace）
 │   ├── main.go
 │   ├── router.go / router_gen.go
 │   ├── biz/
-│   │   ├── handler/git_sync/
+│   │   ├── handler/git_sync/        # hz handler + 鉴权 + RBAC
 │   │   ├── model/                   # thrift 生成请求/响应
 │   │   ├── router/                  # 路由 + 可替换鉴权 Provider
 │   │   └── serve/                   # HTTP 启动（内网壳亦复用）
-│   ├── internal/                    # corebridge(引擎桥梁) / converter / response / version
+│   ├── internal/
+│   │   ├── corebridge/              # 引擎桥梁（壳唯一入口）
+│   │   ├── cli/                     # gitferry CLI（cobra）
+│   │   ├── agent/                   # AI 助手门面 + 工具注册表（后端可插拔）
+│   │   │   ├── engine/             # 执行后端契约 + ACP 外部 agent（acpx / stdio）
+│   │   │   └── engine_eino.go      # 内置 eino 后端
+│   │   ├── mcp/                     # MCP Streamable HTTP 端点
+│   │   ├── gitserve/                # Git Smart HTTP 只读
+│   │   ├── notify/  metrics/  runwatch/  converter/  version/
 │   ├── frontend/
-│   ├── idl/
+│   ├── idl/                         # thrift IDL
+│   ├── skills/                      # Agent Skills
 │   └── conf/config.yaml
 │
-└── git-ferry-intranet/               # 内网壳（独立仓）
-    ├── go.mod                       # require core + service；本地联调可用 replace
+└── git-ferry-intranet/              # 内网壳（独立仓）
+    ├── go.mod                       # require core
     ├── main.go
     ├── auth/                        # proxy 头 / API Key / SSO 钩子
+    ├── httpapi/                     # 最小 HTTP 层
     └── conf/config.yaml
 ```
 
-## 3. 核心库 API 设计
+### 2.1 桥接面
 
-### 3.1 对外暴露的接口
+全仓只有 `main.go` 调 `corebridge.NewService`，handler 一律经 `init.go` 的 `GetSyncService()`。**壳内不得手拼平台 SDK 配置** —— provider 必须走 `Service.ProviderForPlatform`（Manager 缓存 + App token + repo token 覆盖）。
+
+## 3. 核心库 API
+
+### 3.1 入口
 
 ```go
-// core/sync.go - 核心库入口（仓 git-ferry-core）
-
+// git-ferry-core/sync.go
 package sync
 
-// Service 同步服务核心
-type Service struct {
-    config      *Config
-    repoDAO     *RepoDAO
-    taskDAO     *SyncTaskDAO
-    runDAO      *SyncRunDAO
-    ruleDAO     *WebhookRuleDAO
-    eventDAO    *WebhookEventDAO
-    providerMgr *ProviderManager
-    gitBackend  gitbackend.GitBackend
-    lockSvc     lock.DistLock
-}
+type Config = model.Config
+type Option = service.Option
 
-// NewService 创建服务实例
-func NewService(cfg *Config) (*Service, error)
-
-// ===== 同步任务 API =====
-
-func (s *Service) ListTasks(repoKey string) ([]*SyncTask, error)
-func (s *Service) GetTask(key string) (*SyncTask, error)
-func (s *Service) CreateTask(req *CreateTaskRequest) (*SyncTask, error)
-func (s *Service) UpdateTask(req *UpdateTaskRequest) (*SyncTask, error)
-func (s *Service) DeleteTask(key string) error
-func (s *Service) RunTask(ctx context.Context, taskKey string) error
-func (s *Service) RunTaskWithTrigger(ctx context.Context, taskKey, trigger string) error
-func (s *Service) PreviewSync(req *PreviewSyncRequest) (*PreviewSyncResult, error)
-
-// ===== 同步历史 API =====
-
-func (s *Service) ListHistory(taskKey string, limit int) ([]*SyncRun, error)
-func (s *Service) DeleteHistory(id uint) error
-
-// ===== 仓库管理 API =====
-
-func (s *Service) ListRepos() ([]*Repo, error)
-func (s *Service) GetRepo(key string) (*Repo, error)
-func (s *Service) CreateRepo(req *CreateRepoRequest) (*Repo, error)
-func (s *Service) UpdateRepo(req *UpdateRepoRequest) (*Repo, error)
-func (s *Service) DeleteRepo(key string) error
-func (s *Service) TestConnection(ctx context.Context, repoKey string) (*TestConnectionResult, error)
-func (s *Service) ListBranches(ctx context.Context, repoKey string) ([]string, error)
-
-// ===== Webhook 规则 API =====
-
-func (s *Service) ListRules(repoKey string) ([]*WebhookRule, error)
-func (s *Service) GetRule(id uint) (*WebhookRule, error)
-func (s *Service) CreateRule(req *CreateRuleRequest) (*WebhookRule, error)
-func (s *Service) UpdateRule(req *UpdateRuleRequest) (*WebhookRule, error)
-func (s *Service) DeleteRule(id uint) error
-
-// ===== Webhook 事件 API =====
-
-func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, payload *WebhookPayload) error
-func (s *Service) ListEvents(repoKey string, limit int) ([]*WebhookEvent, error)
-func (s *Service) RetryEvent(ctx context.Context, eventID uint) error
-
-// ===== 生命周期 =====
-
-func (s *Service) Start() error
-func (s *Service) Stop()
+func NewService(cfg *Config, opts ...Option) (*Service, error)
 ```
 
-### 3.2 使用方式
+`Option` 用于装配跨领域能力（force-push 审批人、模板存储注入等），避免全局 setter。
 
-#### 模式 A: 独立部署
+### 3.2 服务域
 
-```go
-// main.go（壳）
-import synccore "github.com/yi-nology/git-ferry-core"
+| 域 | 典型方法 | 职责 |
+|----|---------|------|
+| 任务 | `ListTasks` / `GetTask` / `CreateTask` / `UpdateTask` / `DeleteTask` | 同步任务 CRUD |
+| 执行 | `RunTask` / `RunTaskWithTrigger` / `PreviewSync` | 触发与预览 |
+| 历史 | `ListHistory` / `GetRunDetail` / `RecentRuns` | 执行记录与步骤链 |
+| 仓库 | `ListRepos` / `GetRepo` / `CreateRepo` / `TestConnection` / `ListBranches` | 仓库元数据 |
+| 平台 | `ListPlatforms` / `TestPlatform` | 凭据与连通性 |
+| Webhook | `ListRules` / `ReceiveWebhook` / `ListEvents` / `RetryEvent` | 规则与事件 |
+| 备份 | `MetadataBackup` / `MetadataRestore` / `PushBackup` / `BuildBackupManifest` | 冷备与元数据 |
+| 灾备 | `RunDRDrill` / `VerifyDrillChain` / `RPOReport` | 演练与 RPO |
+| 镜像 | 镜像通道 CRUD / `Preview` / `Verify` / 版本矩阵 | 开源发布通道 |
+| 历史同步 | 通道 CRUD / `Plan` / `Resolve` / `Preview` / `Apply` / `Push` / `Rollback` | 双仓内容回合 |
+| 治理 | 审计哈希链、RBAC、force-push 审批、模板 | 合规与策略 |
 
-cfg, _ := synccore.LoadConfig("conf/config.yaml")
-svc, _ := synccore.NewService(cfg)
-```
+core 导出 `(*Service)` 方法约 135 个，**零 HTTP 渗入**（`net/http` 仅出站用途）。
 
-#### 模式 B: 作为库引用
+### 3.3 包布局（core）
 
-```go
-// 外部项目（如 git-manage-service）
-import synccore "github.com/yi-nology/git-ferry-core"
-
-cfg := &synccore.Config{
-    Database: synccore.DatabaseConfig{
-        Driver: "mysql",
-        DSN:    "user:pass@tcp(127.0.0.1:3306)/git_manage",
-    },
-    GitBackend: "gogit",
-}
-
-svc, _ := synccore.NewService(cfg)
-svc.Start()
-svc.RunTask(ctx, taskKey)
-```
+| 包 | 职责 |
+|---|---|
+| `service` | 业务服务层入口与各领域服务 |
+| `executor` | 同步/备份/DR 演练执行引擎、pipeline、bundle 与远端备份 |
+| `mirror` | 镜像通道门禁、身份改写、语义校验、跨实例互斥；`mirror/history` 为双仓内容同步 |
+| `dao` | GORM 数据访问层 |
+| `model` | GORM 模型与 `AutoMigrate` 注册 |
+| `health` | 健康检查聚合 |
+| `lock` | 进程内互斥与 redis 跨实例锁（抖动时降级为进程内互斥） |
+| `tpl` | 模板存储（文件实现，可由 `service.TemplateStore` 注入替换） |
+| `pkg` | 公共件：`proclog`（进程级日志/退出）、`strutil`、`deploykey` |
 
 ## 4. IDL 定义 (Thrift + hz 规范)
 
-### 4.1 同步任务接口
+IDL 位于 `idl/`，按域拆分：`git_sync.thrift`（聚合）、`sync_task.thrift`、`repo.thrift`、`platform.thrift`、`webhook.thrift`、`ops.thrift`、`mirror.thrift`、`ai.thrift`、`operation_log.thrift`、`system.thrift`、`base.thrift`。
 
 ```thrift
 // idl/sync_task.thrift
@@ -206,185 +187,52 @@ namespace go sync_task
 service SyncTaskService {
     sync_task.ListTasksResp ListTasks(1: sync_task.ListTasksReq req) (api.get="/api/v1/sync/tasks")
     sync_task.GetTaskResp GetTask(1: sync_task.GetTaskReq req) (api.get="/api/v1/sync/task")
-    sync_task.CreateTaskResp CreateTask(1: sync_task.CreateTaskReq req) (api.post="/api/v1/sync/task")
-    sync_task.UpdateTaskResp UpdateTask(1: sync_task.UpdateTaskReq req) (api.put="/api/v1/sync/task")
-    sync_task.DeleteTaskResp DeleteTask(1: sync_task.DeleteTaskReq req) (api.delete="/api/v1/sync/task")
+    sync_task.CreateTaskResp CreateTask(1: sync_task.CreateTaskReq req) (api.post="/api/v1/sync/task/create")
+    sync_task.UpdateTaskResp UpdateTask(1: sync_task.UpdateTaskReq req) (api.post="/api/v1/sync/task/update")
+    sync_task.DeleteTaskResp DeleteTask(1: sync_task.DeleteTaskReq req) (api.post="/api/v1/sync/task/delete")
     sync_task.RunTaskResp RunTask(1: sync_task.RunTaskReq req) (api.post="/api/v1/sync/task/run")
     sync_task.PreviewSyncResp PreviewSync(1: sync_task.PreviewSyncReq req) (api.post="/api/v1/sync/preview")
-    sync_task.ListHistoryResp ListHistory(1: sync_task.ListHistoryReq req) (api.get="/api/v1/sync/history")
 }
 ```
 
-### 4.2 仓库管理接口
-
-```thrift
-// idl/repo.thrift
-namespace go repo
-
-service RepoService {
-    repo.ListReposResp ListRepos(1: repo.ListReposReq req) (api.get="/api/v1/repos")
-    repo.GetRepoResp GetRepo(1: repo.GetRepoReq req) (api.get="/api/v1/repo")
-    repo.CreateRepoResp CreateRepo(1: repo.CreateRepoReq req) (api.post="/api/v1/repo")
-    repo.UpdateRepoResp UpdateRepo(1: repo.UpdateRepoReq req) (api.put="/api/v1/repo")
-    repo.DeleteRepoResp DeleteRepo(1: repo.DeleteRepoReq req) (api.delete="/api/v1/repo")
-    repo.TestConnectionResp TestConnection(1: repo.TestConnectionReq req) (api.post="/api/v1/repo/test")
-    repo.ListBranchesResp ListBranches(1: repo.ListBranchesReq req) (api.get="/api/v1/repo/branches")
-}
-```
-
-### 4.3 Webhook 接口
-
-```thrift
-// idl/webhook.thrift
-namespace go webhook
-
-service WebhookService {
-    webhook.ListRulesResp ListRules(1: webhook.ListRulesReq req) (api.get="/api/v1/webhook/rules")
-    webhook.GetRuleResp GetRule(1: webhook.GetRuleReq req) (api.get="/api/v1/webhook/rule")
-    webhook.CreateRuleResp CreateRule(1: webhook.CreateRuleReq req) (api.post="/api/v1/webhook/rule")
-    webhook.UpdateRuleResp UpdateRule(1: webhook.UpdateRuleReq req) (api.put="/api/v1/webhook/rule")
-    webhook.DeleteRuleResp DeleteRule(1: webhook.DeleteRuleReq req) (api.delete="/api/v1/webhook/rule")
-    webhook.ListEventsResp ListEvents(1: webhook.ListEventsReq req) (api.get="/api/v1/webhook/events")
-    webhook.RetryEventResp RetryEvent(1: webhook.RetryEventReq req) (api.post="/api/v1/webhook/event/retry")
-}
-```
-
-### 4.4 代码生成命令
+### 4.1 代码生成
 
 ```bash
-# 生成代码
-make generate
-
-# 或者手动执行
-cd idl && thriftgo --out ../biz --go --go-recurse 10 git_sync.thrift
+make generate     # hz update，生成 biz/model + router
+make apidoc       # 重新生成 docs/openapi.json + internal/pkg/swagger/openapi.json
 ```
+
+**契约一致性是硬门禁**：IDL → hz 生成 → OpenAPI 三者必须同步。改动 API 后跑 `make apidoc`，CI 会校验 OpenAPI 与路由表一致。
+
+### 4.2 契约纪律
+
+- **`optional` 必须被解析器正确处理**：thrift 的 `optional` 关键字若被当类型解析，所有可选字段会退化成 `"type":"string"` ⇒ 按契约生成的客户端会把布尔字段发成字符串。apidoc 生成器先剥 `optional` 再取类型，并有单测钉住。
+- **破坏性变更直接改**：字段改名 / 出参形态变更不必兼容旧形状。旧调用方一起改。
+- **OpenAPI 与路由表必须一致**：二者由不同来源生成，任一漂移都会让客户端拿到说谎的契约。
 
 ## 5. 数据模型
 
-### 5.1 repos 仓库表
+12 张表由 `model.InitDB` 的 `AutoMigrate` 自动创建（sqlite / mysql 通用）。
 
-```sql
-CREATE TABLE repos (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    `key` VARCHAR(255) UNIQUE NOT NULL COMMENT '仓库唯一标识',
-    name VARCHAR(255) NOT NULL COMMENT '显示名称',
-    platform VARCHAR(50) NOT NULL COMMENT 'github/gitlab/gitea/forgejo/tencent_code',
-    platform_owner VARCHAR(200) NOT NULL COMMENT '平台组织/用户',
-    platform_repo VARCHAR(200) NOT NULL COMMENT '平台仓库名',
-    clone_url VARCHAR(500) COMMENT '克隆地址',
-    ssh_url VARCHAR(500) COMMENT 'SSH 地址',
-    default_branch VARCHAR(100) DEFAULT 'main' COMMENT '默认分支',
-    webhook_secret VARCHAR(255) COMMENT 'Webhook 密钥',
-    webhook_id BIGINT COMMENT '平台 Webhook ID',
-    status VARCHAR(20) DEFAULT 'active' COMMENT 'active/inactive/error',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL,
-    INDEX idx_platform (platform, platform_owner, platform_repo)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
+| 表 | 模型 | 说明 |
+|---|---|---|
+| `platforms` | `Platform` | 平台凭据（token 加密落库） |
+| `repos` | `Repo` | 仓库元数据 |
+| `sync_tasks` | `SyncTask` | 同步任务 |
+| `sync_runs` | `SyncRun` | 执行记录 |
+| `sync_run_steps` | `SyncRunStep` | 执行步骤链 |
+| `webhook_rules` | `WebhookRule` | 触发规则 |
+| `webhook_rule_tasks` | `WebhookRuleTask` | 规则 ↔ 任务关联 |
+| `webhook_events` | `WebhookEvent` | 接收事件流 |
+| `operation_logs` | `OperationLog` | 操作审计 |
+| `mirror_channels` / `mirror_targets` / `mirror_runs` | `MirrorChannel` 等 | 镜像发布通道 |
+| `history_channels` / `history_targets` / `history_runs` / `history_overrides` | `HistoryChannel` 等 | 双仓内容同步 |
+| `templates` | `tpl.Template` | 策略模板 |
+| `force_push_approvals` | `ForcePushApproval` | 强推审批 |
 
-### 5.2 sync_tasks 同步任务表
-
-```sql
-CREATE TABLE sync_tasks (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    `key` VARCHAR(36) UNIQUE NOT NULL COMMENT '任务 UUID',
-    name VARCHAR(100) NOT NULL COMMENT '任务名称',
-    source_repo_key VARCHAR(255) NOT NULL COMMENT '源仓库 Key',
-    source_branch VARCHAR(255) NOT NULL COMMENT '源分支',
-    target_repo_key VARCHAR(255) NOT NULL COMMENT '目标仓库 Key',
-    target_branch VARCHAR(255) NOT NULL COMMENT '目标分支',
-    sync_mode VARCHAR(20) DEFAULT 'single' COMMENT 'single/all-branch',
-    cron VARCHAR(100) COMMENT 'Cron 表达式',
-    webhook_token VARCHAR(36) UNIQUE COMMENT 'Webhook 触发 Token',
-    enabled BOOLEAN DEFAULT TRUE COMMENT '是否启用',
-    git_tags BOOLEAN DEFAULT FALSE COMMENT '同步标签',
-    git_force BOOLEAN DEFAULT FALSE COMMENT '强制推送',
-    git_no_verify BOOLEAN DEFAULT FALSE COMMENT '跳过钩子',
-    push_options VARCHAR(500) COMMENT '额外推送选项',
-    last_run_at TIMESTAMP NULL COMMENT '最后运行时间',
-    last_status VARCHAR(20) COMMENT '最后状态',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL,
-    INDEX idx_source_repo (source_repo_key),
-    INDEX idx_target_repo (target_repo_key),
-    INDEX idx_webhook_token (webhook_token),
-    INDEX idx_enabled (enabled)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-### 5.3 sync_runs 同步运行记录表
-
-```sql
-CREATE TABLE sync_runs (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    task_key VARCHAR(36) NOT NULL COMMENT '任务 Key',
-    trigger_source VARCHAR(20) NOT NULL COMMENT 'manual/cron/webhook',
-    status VARCHAR(20) NOT NULL COMMENT 'running/success/failed/conflict',
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NULL,
-    commit_range VARCHAR(255) COMMENT '提交范围',
-    details TEXT COMMENT '执行日志',
-    error_message TEXT COMMENT '错误信息',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_task_key (task_key),
-    INDEX idx_status (status),
-    INDEX idx_start_time (start_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-### 5.4 webhook_rules 规则表
-
-```sql
-CREATE TABLE webhook_rules (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL COMMENT '规则名称',
-    repo_key VARCHAR(255) NOT NULL COMMENT '关联仓库',
-    event_type VARCHAR(100) DEFAULT 'push' COMMENT '事件类型 (glob)',
-    branch_pattern VARCHAR(255) COMMENT '分支模式 (glob, 逗号分隔)',
-    action VARCHAR(50) DEFAULT 'sync' COMMENT '动作: sync/notify',
-    sync_task_keys TEXT COMMENT '关联任务 Key (逗号分隔)',
-    min_interval INT DEFAULT 60 COMMENT '最小间隔(秒)',
-    enabled BOOLEAN DEFAULT TRUE,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_repo_key (repo_key),
-    INDEX idx_enabled (enabled)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-### 5.5 webhook_events 事件表
-
-```sql
-CREATE TABLE webhook_events (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    event_id VARCHAR(100) UNIQUE NOT NULL COMMENT '平台事件 ID',
-    repo_key VARCHAR(255) COMMENT '关联仓库',
-    event_type VARCHAR(50) NOT NULL COMMENT 'push/cr.opened/...',
-    source VARCHAR(20) NOT NULL COMMENT 'github/gitlab/gitea/...',
-    actor_name VARCHAR(200) COMMENT '操作人',
-    branch VARCHAR(255) COMMENT '分支',
-    commit_sha VARCHAR(40) COMMENT '提交 SHA',
-    payload JSON COMMENT '事件负载',
-    status VARCHAR(20) DEFAULT 'received' COMMENT 'received/processed/failed',
-    error_message TEXT,
-    processed_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_event_id (event_id),
-    INDEX idx_repo_key (repo_key),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-### 5.6 Go 模型定义
+### 5.1 关键模型
 
 ```go
-// sync/model/sync_task.go
-package model
-
 type SyncTask struct {
     ID            uint       `json:"id" gorm:"primaryKey"`
     Key           string     `json:"key" gorm:"uniqueIndex"`
@@ -395,12 +243,9 @@ type SyncTask struct {
     TargetBranch  string     `json:"targetBranch"`
     SyncMode      string     `json:"syncMode"`
     Cron          string     `json:"cron"`
-    WebhookToken  string     `json:"webhookToken"`
     Enabled       bool       `json:"enabled"`
     GitTags       bool       `json:"gitTags"`
     GitForce      bool       `json:"gitForce"`
-    GitNoVerify   bool       `json:"gitNoVerify"`
-    PushOptions   string     `json:"pushOptions"`
     LastRunAt     *time.Time `json:"lastRunAt"`
     LastStatus    string     `json:"lastStatus"`
     CreatedAt     time.Time  `json:"createdAt"`
@@ -408,157 +253,48 @@ type SyncTask struct {
 }
 
 type Repo struct {
-    ID            uint      `json:"id" gorm:"primaryKey"`
-    Key           string    `json:"key" gorm:"uniqueIndex"`
-    Name          string    `json:"name"`
-    Platform      string    `json:"platform"`
-    PlatformOwner string    `json:"platformOwner"`
-    PlatformRepo  string    `json:"platformRepo"`
-    CloneURL      string    `json:"cloneUrl"`
-    SSHURL        string    `json:"sshUrl"`
-    DefaultBranch string    `json:"defaultBranch"`
-    AccessToken   string    `json:"-"`
-    WebhookSecret string    `json:"-"`
-    WebhookID     int64     `json:"webhookId"`
-    Status        string    `json:"status"`
-    CreatedAt     time.Time `json:"createdAt"`
-    UpdatedAt     time.Time `json:"updatedAt"`
-}
-
-type WebhookRule struct {
-    ID            uint      `json:"id" gorm:"primaryKey"`
-    Name          string    `json:"name"`
-    RepoKey       string    `json:"repoKey"`
-    EventType     string    `json:"eventType"`
-    BranchPattern string    `json:"branchPattern"`
-    Action        string    `json:"action"`
-    SyncTaskKeys  string    `json:"syncTaskKeys"`
-    MinInterval   int       `json:"minInterval"`
-    Enabled       bool      `json:"enabled"`
-    CreatedAt     time.Time `json:"createdAt"`
-    UpdatedAt     time.Time `json:"updatedAt"`
-}
-
-type WebhookEvent struct {
-    ID           uint       `json:"id" gorm:"primaryKey"`
-    EventID      string     `json:"eventId" gorm:"uniqueIndex"`
-    RepoKey      string     `json:"repoKey"`
-    EventType    string     `json:"eventType"`
-    Source       string     `json:"source"`
-    ActorName    string     `json:"actorName"`
-    Branch       string     `json:"branch"`
-    CommitSHA    string     `json:"commitSha"`
-    Payload      []byte     `json:"payload"`
-    Status       string     `json:"status"`
-    ErrorMessage string     `json:"errorMessage"`
-    ProcessedAt  *time.Time `json:"processedAt"`
-    CreatedAt    time.Time  `json:"createdAt"`
-}
-
-type SyncRun struct {
-    ID            uint       `json:"id" gorm:"primaryKey"`
-    TaskKey       string     `json:"taskKey"`
-    TriggerSource string     `json:"triggerSource"`
-    Status        string     `json:"status"`
-    StartTime     time.Time  `json:"startTime"`
-    EndTime       *time.Time `json:"endTime"`
-    CommitRange   string     `json:"commitRange"`
-    Details       string     `json:"details"`
-    ErrorMessage  string     `json:"errorMessage"`
-    CreatedAt     time.Time  `json:"createdAt"`
+    ID            uint   `json:"id" gorm:"primaryKey"`
+    Key           string `json:"key" gorm:"uniqueIndex"`
+    Name          string `json:"name"`
+    Platform      string `json:"platform"`
+    PlatformOwner string `json:"platformOwner"`
+    PlatformRepo  string `json:"platformRepo"`
+    CloneURL      string `json:"cloneUrl"`
+    SSHURL        string `json:"sshUrl"`
+    DefaultBranch string `json:"defaultBranch"`
+    AccessToken   string `json:"-"`     // 加密存储，永不出库
+    WebhookSecret string `json:"-"`     // 加密存储，永不出库
+    Status        string `json:"status"`
 }
 ```
 
-## 6. 与 git-platform-sdk 集成
+### 5.2 表名与字段约定
 
-### 6.1 SDK 能力利用
+- 表名常量集中在 `model/constants.go`，模型用 `TableName()` 引用，**不在代码里散写字符串表名**。
+- 敏感字段（`access_token` / `webhook_secret`）带 `json:"-"`，序列化即丢弃。
+
+### 5.3 软删与唯一索引
+
+带 `gorm.DeletedAt` 的表配唯一索引时，**软删行仍占着业务键**，而默认作用域查不到软删行 ⇒ 「查不到 ⇒ 新建」会撞唯一索引。重建路径必须先 `Unscoped` 查软删行并复活（清 `deleted_at` + 重置状态），不能直接 INSERT。
+
+另有两个静默失败的坑：`Updates(map)` 跳过 nil 值（清 `deleted_at` 要用 `gorm.Expr("NULL")`）；复用同一 `tx` 做多条 UPDATE 会让 WHERE 累加（每条语句从 `db()` 重新起一条）。
+
+## 6. 与 go-git-platform 集成
 
 | SDK 包 | 用途 | 我们实现什么 |
 |--------|------|-------------|
-| `provider` | Webhook 解析、签名验证、仓库/分支 API | 规则匹配、任务触发 |
-| `gitbackend` | Git fetch/push 操作 | 同步执行引擎 |
-| `credential` | 凭证构建、加密 | 凭证管理 |
-| `branchfilter` | 分支名 glob 匹配 | 分支过滤 |
+| `provider` | 平台 REST、凭证、App token | 规则匹配、任务触发、平台管理 |
+| `gitbackend` | git fetch/push/clone | 同步执行引擎、镜像改写与移植 |
+| `credential` | 凭证构建与加密 | 凭据管理 |
 
-### 6.2 ProviderManager
+### 6.1 支持平台
 
-```go
-// sync/provider_manager.go
-package sync
+`github` / `gitlab` / `gitee` / `gitea` / `forgejo` / `gitcode` / `tencent_code`，以及自建实例（`api_url` 自配）。
 
-import (
-    "sync"
-    sdkprov "github.com/yi-nology/git-platform-sdk/provider"
-)
-
-type ProviderManager struct {
-    providers map[string]sdkprov.Provider
-    mu        sync.RWMutex
-}
-
-func (m *ProviderManager) GetProvider(repo *Repo) (sdkprov.Provider, error) {
-    key := fmt.Sprintf("%s:%s", repo.Platform, repo.Key)
-
-    m.mu.RLock()
-    if p, ok := m.providers[key]; ok {
-        m.mu.RUnlock()
-        return p, nil
-    }
-    m.mu.RUnlock()
-
-    p, err := sdkprov.NewProvider(sdkprov.Config{
-        Platform: sdkprov.Platform(repo.Platform),
-        BaseURL:  m.getBaseURL(repo),
-        Token:    repo.AccessToken,
-    })
-    if err != nil {
-        return nil, err
-    }
-
-    m.mu.Lock()
-    m.providers[key] = p
-    m.mu.Unlock()
-
-    return p, nil
-}
-```
-
-### 6.3 Webhook 接收
+### 6.2 分支过滤
 
 ```go
-// sync/webhook.go
-func (s *Service) ReceiveWebhook(ctx context.Context, repoKey string, payload *WebhookPayload) error {
-    repo, _ := s.repoDAO.FindByKey(repoKey)
-    provider, _ := s.providerMgr.GetProvider(repo)
-
-    // 使用 git-platform-sdk 解析事件
-    event, err := provider.ParseWebhookEvent(r, repo.WebhookSecret)
-    if err != nil {
-        return err
-    }
-
-    // 持久化事件
-    whEvent := &WebhookEvent{
-        EventID:   event.ID,
-        RepoKey:   repoKey,
-        EventType: event.Type,
-        Source:    string(event.Source),
-        Branch:    event.Branch,
-        CommitSHA: event.CommitSHA,
-    }
-    s.eventDAO.Create(whEvent)
-
-    // 匹配规则并触发同步
-    go s.applyRules(ctx, repoKey, event)
-    return nil
-}
-```
-
-### 6.4 分支过滤
-
-```go
-// sync/rule.go
-import branchfilter "github.com/yi-nology/git-platform-sdk/branchfilter"
+import branchfilter "github.com/yi-nology/go-git-platform/branchfilter"
 
 func matchBranch(pattern, branch string) bool {
     if pattern == "" {
@@ -569,159 +305,143 @@ func matchBranch(pattern, branch string) bool {
 }
 ```
 
-## 7. 依赖关系
+同步任务另支持 `include_branches` 白名单与 `exclude_ref_patterns`（默认忽略 `refs/pull/*` 等 PR refs）。
 
-### 7.1 直接依赖
+### 6.3 SDK 层的既有约束
 
-```
-git-ferry
-    │
-    ├── git-platform-sdk          # 唯一 Git 依赖
-    │   ├── provider/             # Webhook 解析、平台 API
-    │   ├── gitbackend/           # Git fetch/push
-    │   ├── credential/           # 凭证管理、加密
-    │   └── branchfilter/         # 分支过滤
-    │
-    ├── cloudwego/hertz           # HTTP 框架
-    ├── gorm                      # ORM
-    ├── redis/go-redis            # 分布式锁
-    └── robfig/cron               # 定时任务
-```
+- **跨 host 重定向不得带走平台令牌**（SDK v0.99.4+）：平台 302 到 CDN 时令牌会发给第三方主机。
+- **日志与错误构造必须脱敏**：URL query 里的凭据会随 `*url.Error` 的 `Error()` 进入日志；`Request.Path` 可自带 query。秘密类 query 参数替换成 `REDACTED`，路径整体掩掉，保留 host 以便排障。
 
-### 7.2 与 git-manage-service 关系
+## 7. 接口面
 
-| 维度 | git-manage-service | git-ferry |
-|------|-------------------|------------------|
-| 数据库 | 独立 | 独立 |
-| API | 独立 | 独立 |
-| Git 操作 | go-git 直接调用 | git-platform-sdk |
-| Webhook | 自行解析 | git-platform-sdk |
-| 凭证 | 自行管理 | git-platform-sdk |
-| 平台支持 | 有限 | 5 平台完整支持 |
+### 7.1 HTTP 路由分组
 
-### 7.3 迁移路径
+| 分组 | 前缀 | 说明 |
+|---|---|---|
+| 同步任务 | `/api/v1/sync/*` | 任务 CRUD、预览、执行历史 |
+| 仓库 | `/api/v1/repo(s)` | 仓库 CRUD、分支、连通性、批量 |
+| 平台 | `/api/v1/platform(s)` | 平台 CRUD、连通性、仓库清单同步 |
+| Webhook | `/api/v1/webhook/*` | 规则、事件、平台侧注册 |
+| 运维 | `/api/v1/ops/*` | 健康、盘点、待办、趋势、模板、备份、灾备、审计、审批、漂移、Org 映射 |
+| 镜像 | `/api/v1/mirror/*` | 镜像通道、目标、版本矩阵、校验 |
+| 历史同步 | `/api/v1/histsync/*` | 通道、目标、计划、裁决、预检、移植、推送、回滚、审计 |
+| AI | `/api/v1/ai/*` | 状态、对话、配置、模型列表 |
+| 日志 | `/api/v1/logs/operations` | 操作日志 |
+| 系统 | `/api/v1/system/status` | 系统状态 |
+| MCP | `/mcp` | Streamable HTTP |
+| Git Smart HTTP | `/git/*` | 只读冷备取件（`git_serve.enabled` 时开启） |
+| Webhook 入站 | `/api/webhook/receive/*repoKey` | 平台回调（`*` 捕获含斜杠的 `owner/repo`） |
 
-```
-阶段 1: 引入依赖
-    git-manage-service/go.mod
-    require github.com/yi-nology/git-ferry v0.1.0
+完整路由表以 `docs/openapi.json` 为准（`make apidoc` 生成）。
 
-阶段 2: 替换代码
-    import synccore "github.com/yi-nology/git-ferry/sync"
-    svc, _ := synccore.NewService(cfg)
+### 7.2 鉴权与 RBAC
 
-阶段 3: 删除旧代码
-    移除 git-manage-service 中的 sync 相关代码
-```
+| 机制 | 说明 |
+|---|---|
+| `X-API-Key` | 主鉴权头，角色由 `server.api_key_role` 决定 |
+| 角色 | `admin` / `operator` / `readonly` 三档 |
+| 写操作守卫 | `WriteGuard()`（需写角色）/ `AdminGuard()`（需 admin） |
+| OIDC JWT | `oidc_auth.go`，外部 IdP 换取会话 |
+| 审计 | 操作日志 + 哈希链（`/ops/audit-chain/verify`） |
 
-## 8. API 接口列表
+### 7.3 失败语义纪律
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| **同步任务** | | |
-| GET | /api/v1/sync/tasks | 任务列表 |
-| GET | /api/v1/sync/task?key=xxx | 任务详情 |
-| POST | /api/v1/sync/task | 创建任务 |
-| PUT | /api/v1/sync/task | 更新任务 |
-| DELETE | /api/v1/sync/task?key=xxx | 删除任务 |
-| POST | /api/v1/sync/task/run | 运行任务 |
-| POST | /api/v1/sync/preview | 预览同步 |
-| GET | /api/v1/sync/history | 同步历史 |
-| **仓库管理** | | |
-| GET | /api/v1/repos | 仓库列表 |
-| GET | /api/v1/repo?key=xxx | 仓库详情 |
-| POST | /api/v1/repo | 创建仓库 |
-| PUT | /api/v1/repo | 更新仓库 |
-| DELETE | /api/v1/repo?key=xxx | 删除仓库 |
-| POST | /api/v1/repo/test | 测试连接 |
-| GET | /api/v1/repo/branches?key=xxx | 分支列表 |
-| **Webhook** | | |
-| GET | /api/v1/webhook/rules | 规则列表 |
-| GET | /api/v1/webhook/rule?id=xxx | 规则详情 |
-| POST | /api/v1/webhook/rule | 创建规则 |
-| PUT | /api/v1/webhook/rule | 更新规则 |
-| DELETE | /api/v1/webhook/rule?id=xxx | 删除规则 |
-| POST | /api/webhook/receive/:repoKey | 接收 Webhook |
-| GET | /api/v1/webhook/events | 事件列表 |
-| POST | /api/v1/webhook/event/retry?id=xxx | 重试事件 |
-| **运维 / 灾备** | | |
-| GET | /api/v1/ops/health-score | 健康评分 |
-| GET | /api/v1/ops/overview | 系统概览 |
-| GET | /api/v1/ops/inventory | 资产盘点(孤儿仓库) |
-| GET | /api/v1/ops/rpo | RPO/RTO 报告 |
-| GET | /api/v1/ops/backup-manifest/verify | 冷备 Merkle 完整性校验 |
-| POST | /api/v1/ops/backup-manifest | 生成完整性清单 |
-| POST | /api/v1/ops/dr-drill | 灾备演练(单/批) |
-| GET | /api/v1/ops/dr-drill/history | 演练历史(哈希链) |
-| GET | /api/v1/ops/dr-drill/chain/verify | 演练链校验 |
-| POST | /api/v1/ops/metadata-backup | 元数据/Release 附件/Gists 快照 |
-| GET | /api/v1/ops/metadata-backups | 快照列表 |
-| POST | /api/v1/ops/gists-backup | Gists 备份 |
-| POST | /api/v1/ops/auto-discover | 平台自动发现 |
-| POST | /api/v1/ops/drift | 漂移检测 |
-| POST | /api/v1/ops/backup-cleanup | 过期冷备清理(admin) |
-| GET | /api/v1/ops/bundles | 冷备列表 |
-| GET | /api/v1/ops/bundles/verify | 校验 bundle |
-| POST | /api/v1/ops/bundles/restore | 恢复(admin) |
-| GET | /api/v1/ops/audit-chain/verify | 审计哈希链校验 |
-| GET | /api/v1/ops/rbac | 当前角色 |
+**hertz 会静默忽略未知 query 参数** ⇒ 契约漂移的表现是「命令存在、参数也传了，但永远不生效」。因此：
 
-## 9. 配置文件
+- handler 绑定失败即 400，**不得把绑定错误当成「没传过滤条件」**（那会让筛选静默退化成全量扫描）。
+- CLI 的请求形状必须与服务端契约逐字段对齐。
+- `PaginateAll` 必须真的拉全量并给出真实总数。
+
+### 7.4 CLI
+
+`internal/cli` 基于 cobra，命令组：`repo` / `task` / `history` / `histsync` / `ops` / `platform` / `webhook`，外加 `auth` / `config` / `schema` / `api` / `version`。
+
+- **输出统一 Envelope**：`{ok, data, error, meta}`；`--format json|table|yaml`。
+- **危险操作确认门**：`task +run`、`ops +drill`、`ops +metadata-restore --execute` 等缺 `--yes` 时返回 409。
+- **拒绝无用参数**：`histsync` 子命令若收到本命令不消费的 flag，直接报错退出（静默丢弃比报错危险得多 —— 让人以为操作生效了）。
+- **凭据不进命令历史**：写凭据用 `--credential-file`。
+- **退出码分级**：批量部分失败时退出码非 0。
+
+### 7.5 MCP 与 AI 工具注册表
+
+MCP 端点与 AI 助手**共用同一注册表**（`internal/agent/tools`），MCP 只是协议适配壳。
+
+- 42 个工具，其中 13 个标注为**危险**（需用户确认，且只读角色一律拒绝）。
+- 危险标注只写在注册处（`addDanger`），别处不另抄清单 —— 派生视图（系统提示词、权限守卫）从注册表取。
+- 危险工具必须有**角色闸门**：不能只靠「MCP 路径不注入 scope」这种偶然挡住写操作。
+- 写记忆类工具按危险处理：记忆会进每次会话的 system prompt，是持久化提示注入的通道。
+
+### 7.5.1 AI 执行后端可插拔
+
+「谁来跑这一轮对话」由**后端**决定（`internal/agent/engine` 的 `Engine` 契约）：
+
+| 后端 | 形态 | 工具在哪执行 |
+|------|------|-------------|
+| `internal` | 内置 eino 助手，进程内调 OpenAI 兼容端点 | 本进程（直调 core service） |
+| `acpx` | 外部 coding agent，经 acpx CLI 驱动 | agent 侧（acpx 负责 client 角色） |
+| `stdio` | 外部 coding agent，原生 ACP，自己当 client | agent 侧（可挂本服务 `/mcp`） |
+
+- 门面（`internal/agent.Runner`）只做**与后端无关**的三件事：并发闸门、会话记账、事件转发。
+- 事件契约（`engine.Event`）与后端无关，SSE 出参零变化；外部后端多出 `thinking` / `plan` / `permission` 三种事件。
+- 外部后端经 **ACP**（Agent Client Protocol，JSON-RPC over stdio）驱动；协议形状以实测为准，
+  夹具见 `internal/agent/engine/acp/testdata/`。
+- 外部 agent 是**跑在本机上的子进程**，工作目录即代码层能给到的沙箱边界。
+- 挂本服务 `/mcp` 给外部 agent 时，MCP 专用 key 固定**只读角色**（MCP 路径上危险工具不弹确认）。
+- 委派工具 `ai_code_delegate`（危险）让内置助手把一段编码任务派给外部 agent。
+- **AI 配置是治理面**：改配置要写角色；**换后端 / 改外部 agent 授权档仅 admin**，并写操作日志。
+- 详见 `docs/design/acp-external-agent-design.md`。
+
+### 7.6 Agent Skills
+
+`skills/` 提供可安装的知识库：`gitferry-shared`（认证/Envelope/安全规则）、`gitferry-repo` / `gitferry-task` / `gitferry-history`、`gitferry-ops` / `gitferry-workflow`、`gitferry-histsync`。
+
+约定：Skills 与服务端 AI 工具语义对齐，改一侧同步另一侧。
+
+## 8. 配置文件
 
 ```yaml
-# conf/config.yaml
+# conf/config.yaml（完整示例见 conf/config.example.yaml，Schema 见 conf/config.schema.json）
 
 server:
   host: 0.0.0.0
   port: 8890
-  mode: debug
+  api_key: ""              # X-API-Key；生产必填强随机值
+  api_key_role: admin      # admin | operator | readonly
 
 database:
-  driver: mysql
-  dsn: user:pass@tcp(127.0.0.1:3306)/git_sync?charset=utf8mb4&parseTime=True
-  max_idle_conns: 10
-  max_open_conns: 100
+  driver: sqlite           # sqlite | mysql
+  dsn: data/git_sync.db
 
 redis:
   addr: 127.0.0.1:6379
-  password: ""
-  db: 0
 
 git:
-  backend: gogit
-  temp_dir: /tmp/git-sync
+  backend: gogit           # gogit | native
 
 sync:
-  max_concurrent: 5
-  default_timeout: 300
-  retry_count: 3
-  backup_dir: data/bundles
+  max_concurrent: 2
+  backup_dir: var/backup
   backup_keep: 5
-  backup_encrypt_key: ""      # AES-256-GCM;空=不加密
+  backup_format: bundle    # bundle | zip
+  backup_encrypt_key: ""   # AES-256-GCM；空 = 不加密
   backup_retention_days: 90
   legal_hold: false
-  auto_discover_interval_minutes: 0
-  auto_discover_import: false
-  backup_destinations: []     # s3/webdav/azure/local 多目的地扇出
+  post_exec_script: ""     # 注入 GITFERRY_TASK/RESULT/RUN_ID/TRIGGER
+  backup_destinations: []  # s3/webdav/azure/local 多目的地扇出
 
-webhook:
-  rate_limit: 100
+runwatch:
+  interval_seconds: 30
+  history_limit: 10
+  retry:
+    max_auto_retries: 2
+    cooldown_minutes: 5
 
 log:
   level: info
   format: json
-
-# AI 助手(可选;亦可完全在 Web「系统 → AI 助手」配置)
-# ai:
-#   enabled: true
-#   base_url: "https://api.openai.com/v1"   # 任意 OpenAI 兼容端点
-#   model: "gpt-4o-mini"
-#   temperature: 0.3
-#   max_tokens: 2048
-#   timeout_seconds: 60
 ```
 
-### 9.1 AI 运行时设置
+### 8.1 AI 运行时设置
 
 界面保存的配置写入 **`data/ai-settings.json`**（权限 0600，含 API Key，不进 yaml）：
 
@@ -731,20 +451,15 @@ log:
 | `base_url` | OpenAI 兼容端点 |
 | `model` | 模型 ID |
 | `temperature` / `max_tokens` / `timeout_seconds` / `max_concurrent_chats` | 生成参数 |
-| `api_key` | 密钥明文仅存此文件;GET 接口只回 `has_api_key` / 脱敏值 |
+| `api_key` | 密钥明文仅存此文件；GET 接口只回 `has_api_key` / 脱敏值 |
 
-合并策略：yaml `ai` 段为默认值 → `ai-settings.json` 覆盖 → 环境变量 `GIT_SYNC_AI_API_KEY` 作密钥兜底。
-保存接口热重建 `agent.Runner`，无需重启进程。
+合并策略：yaml `ai` 段为默认值 → `ai-settings.json` 覆盖 → 环境变量 `GIT_SYNC_AI_API_KEY` 作密钥兜底。保存接口热重建 `agent.Runner`，无需重启进程。
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/ai/config` | 读配置（脱敏） |
-| POST | `/api/v1/ai/config` | 保存并热生效 |
-| POST | `/api/v1/ai/config/test` | 探测端点 / 模型是否可用 |
+**密钥不得进 URL query** —— `GET /api/v1/ai/models?api_key=…` 会让密钥进浏览器历史 / Referer / 反向代理 access log。故该端点为 **POST + body**。
 
-## 10. 部署配置
+## 9. 部署
 
-### 10.1 Dockerfile
+### 9.1 Dockerfile
 
 ```dockerfile
 FROM golang:1.27-alpine AS builder
@@ -763,59 +478,35 @@ EXPOSE 8890
 ENTRYPOINT ["./git-ferry", "-env", "prod"]
 ```
 
-### 10.2 Makefile
+### 9.2 Makefile 目标
 
-```makefile
-.PHONY: build run clean test gen
+| 目标 | 作用 |
+|---|---|
+| `build` / `build-cli` | 构建服务端 / CLI |
+| `run` / `restart` | 本地运行 |
+| `test` / `lint` / `fmt` / `vet` / `tidy` | 质量门禁 |
+| `generate` / `apidoc` | hz 代码生成 / OpenAPI 生成 |
+| `install-skills` / `pack-npm` / `build-npm` | Skills 与 npm 分发 |
+| `docker-build` | 服务端镜像 |
+| `goreleaser-snapshot` | 本地多平台产物快照 |
 
-APP_NAME := git-ferry
-BUILD_DIR := ./output
+### 9.3 分发
 
-build:
-	@go build -o $(BUILD_DIR)/$(APP_NAME) .
+- **Release 二进制**：`gitferry_<ver>_<os>_<arch>.tar.gz`（服务端 `git-ferry_<ver>_<os>_<arch>.tar.gz`）。
+- **npm 包**：`gitferry-cli`（随 CLI 发布，需 `NPM_TOKEN`；未配置时发布步骤静默跳过）。
+- **包管理器模板**：`examples/packaging/`（homebrew / scoop / nix）。
+- **无服务路径**：`examples/ci/github-actions-mirror.yml` —— 只需 CI 定时镜像时不必部署整套服务。
 
-run:
-	@go run main.go -env dev
+## 10. 已知约束
 
-gen:
-	@hz update -idl idl/sync_task.proto
-	@hz update -idl idl/repo.proto
-	@hz update -idl idl/webhook.proto
-
-test:
-	@go test ./...
-
-clean:
-	@rm -rf $(BUILD_DIR)
-
-docker-build:
-	@docker build -t $(APP_NAME):latest .
-
-docker-run:
-	@docker run -p 8890:8890 $(APP_NAME):latest
-```
-
-## 11. 实施步骤
-
-| 阶段 | 任务 | 预估工时 |
-|------|------|---------|
-| 1 | 项目初始化 + go.mod | 1h |
-| 2 | sync/ 核心库目录结构 | 1h |
-| 3 | 数据模型 (model/) | 2h |
-| 4 | DAO 层 | 2h |
-| 5 | ProviderManager | 1h |
-| 6 | RepoService | 2h |
-| 7 | SyncService + Executor | 4h |
-| 8 | WebhookService + RuleEngine | 3h |
-| 9 | CronService | 1h |
-| 10 | IDL 定义 + hz 生成 | 2h |
-| 11 | HTTP Handlers | 2h |
-| 12 | 测试 + 调试 | 3h |
-| **总计** | | **24h** |
+1. **core 不可依赖 hertz**：payload 构造器与请求抽取留在壳侧（框架相关），载荷结构本身是 core 的类型。
+2. **两壳保留少量刻意重复**：`readAPIKey`（配置归属不同：壳走全量 overlay，内网壳是 auth 侧迷你解析）与 webhook 接收的 hertz 抽取（core 不能依赖 hertz）。
+3. **redis 抖动降级**：`lock` 在 redis 不可用时降级为进程内互斥而非失败。
+4. **mirror 锁语义**：进程内阻塞互斥（保持串行语义）→ 再抢 redis 跨实例锁（被占即报忙碌，不排队）；TTL 覆盖整次克隆。不用等待式分布式锁，避免锁过期导致两实例同时克隆。
+5. **`go.work` 掩盖版本**：本地绿 ≠ CI 绿。收尾必须跑 `GOWORK=off go build ./...` 校验发布态。
+6. **gitbackend 子命令白名单**：`NativeGitBackend.RunRaw` 不含 `bundle` / `fsck` / `update-ref` / `lfs`，相关流程不要假设白名单外子命令可用。
 
 ---
 
-**文档版本**: 2.0
-**创建日期**: 2026-05-15
-**更新日期**: 2026-05-16
+**文档版本**: 3.0
 **维护者**: git-ferry team

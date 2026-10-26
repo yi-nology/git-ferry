@@ -1231,7 +1231,8 @@ minor ⇒ **版本号在说谎**：下游会按「兼容」假设来升级，升
 
 
 > 对标开源（gickup / ghorg / gitea-mirror / github-backup-rust）缺口批次。
-> 规划：`docs/superpowers/plans/2026-10-01-competitor-gap-roadmap.md`。
+> 规划：`docs/superpowers/plans/2026-10-01-competitor-gap-roadmap.md`
+> （该过程文档已随历史文档归档移除，此处保留出处）。
 
 ### Added
 

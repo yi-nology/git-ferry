@@ -2,7 +2,7 @@
 
 > 2026-10-23 · 状态:待评审(v2,按实测基线修订)
 > 形态:git-ferry 新增「历史同步」通道模式(git-ferry-core 扩展 + 壳层 API + CLI/MCP + Agent Skills)
-> 关联:`2026-10-22-open-source-dual-repo-sync-design.md`(v1 设计稿)、`2026-10-23-history-sync-baseline.md`(实测基线)
+> 关联:`history-sync-baseline.md`(实测基线)
 > 首个落地仓:`git.enjoye.top/enjoydream/code-review-service` → `github.com/yi-nology/code-review-service`
 
 ---
@@ -93,7 +93,7 @@ v1 写「两侧 subject 序列逐条对应,仅在开源目录卫生这类条目�
 
 ### 1.5 真实待办量(基线)
 
-实测基线(详见 `2026-10-23-history-sync-baseline.md`):
+实测基线(详见 `history-sync-baseline.md`):
 
 | 处置 | 数量 | 说明 |
 |---|---|---|
@@ -744,7 +744,7 @@ M3 实测后修正为两段式:
 **M1 已交付**:
 - `git-ferry-core/mirror/rewrite.go` —— 多规则身份改写原语(含三种边界语义 + 剥离语义)
 - `git-ferry-core/mirror/history/` —— 差异判定 + 计划生成 + Markdown 报告 + 实仓 live test
-- `git-ferry/docs/superpowers/specs/2026-10-23-history-sync-baseline.md` —— 实测基线(可复现 + 回归门禁)
+- `git-ferry/docs/design/history-sync-baseline.md` —— 实测基线(可复现 + 回归门禁)
 
 **M2 已交付**:
 - `mirror.TypeCheckGate` —— 门禁导出为共用实现(publish 模式改调同一份)
@@ -777,5 +777,5 @@ A4 **不通过且这是正确的** —— port 集合存在隐式依赖,已定�
 - `git-ferry-core/mirror/gitobj.go` —— 改写调用点(publish 模式)
 - `git-ferry-core/mirror/gate.go` —— 类型检查门禁
 - `git-ferry-core/service/mirror_service.go` —— 身份镜像模式编排
-- `docs/superpowers/specs/2026-10-23-history-sync-baseline.md` —— **实测基线(本需求的数字来源)**
-- `docs/superpowers/specs/2026-09-16-mirror-publishing-design.md` —— 镜像中心前端设计(本需求不改其页面结构)
+- `docs/design/history-sync-baseline.md` —— **实测基线(本需求的数字来源)**
+- `docs/openapi.json` —— 公开契约(镜像中心与历史同步端点)

@@ -1,6 +1,6 @@
 # GitFerry UI 说明
 
-> 历史静态设计稿（`index.html` / `history.html` / `create-task.html`）已由生产前端取代。
+> 历史静态设计稿已被生产前端取代，相关 HTML 稿已删除。
 > **现行 UI 与截图以 [`docs/screenshots/`](../docs/screenshots/) 与 [`frontend/`](../frontend/) 为准。**
 
 ## 现行界面
@@ -13,7 +13,8 @@
 | 执行记录 | `docs/screenshots/sync-records.png` | 历史、状态、详情抽屉 |
 | 仓库管理 | `docs/screenshots/repos.png` | 平台卡片、连接测试 |
 | AI 助手 | `docs/screenshots/ai-assistant.png` | 浮动球对话面板 |
-| AI 配置 | `docs/screenshots/ai-settings.png` | 模型 / Base URL / API Key |
+| AI 配置 | `docs/screenshots/ai-settings.png` | 执行后端（内置 / 外部 coding agent）+ 模型 / Base URL / API Key |
+| AI 配置·外部后端 | `docs/screenshots/ai-settings-external.png` | 外部 coding agent：agent / 命令 / 工作目录 / 授权档 / 挂载本服务 MCP |
 | Webhook 规则 | `docs/screenshots/webhook-rules.png` | 触发规则管理 |
 | 运维中心 | `docs/screenshots/ops.png` | 概览 / 健康 / 盘点 / 模板 |
 
@@ -30,7 +31,5 @@
 
 | 文件 | 状态 |
 |------|------|
-| `styles.css` | 历史设计稿共享样式，生产前端不引用 |
-| `index.html` / `history.html` / `create-task.html` | 早期任务列表/历史/向导草稿 |
-| `webhook-flow.html` | Webhook 流程示意 |
+| `webhook-flow.html` | Webhook 触发流程示意（静态稿） |
 | `research/` | 调研笔记 |

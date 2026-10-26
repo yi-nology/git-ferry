@@ -79,5 +79,5 @@
 
 相关：
 - `designs/research/git-backup-mirror-findings.md` — 执行面调研
-- `docs/superpowers/plans/2026-09-30-agent-native-cli-skills.md` — Agent-Native 改造
-- `docs/superpowers/plans/2026-09-30-acceptance-checklist.md` — 验收清单
+- `skills/` — Agent-Native 知识库（已落地）
+- `internal/cli/commands/` — CLI 命令表（已落地）
