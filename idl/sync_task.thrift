@@ -31,6 +31,10 @@ struct ListTasksReq {
     1: string repoKey (api.query="repo_key")
     2: i32 page (api.query="page")
     3: i32 pageSize (api.query="page_size")
+    // status 按最近一次执行状态过滤(success|failed|running|...)。
+    // 之前 CLI 的 --status 传的是这个位置,但契约里没有 ⇒ 服务端静默忽略,
+    // 用户以为筛过了、拿到的却是全量。
+    4: string status (api.query="status")
 }
 
 struct ListTasksResp {
@@ -160,6 +164,8 @@ struct SyncRunStepInfo {
 struct ListHistoryReq {
     1: string taskKey (api.query="task_key")
     2: i32 limit (api.query="limit")
+    // runId 精确查某一条执行记录;0=不按记录过滤。
+    3: i64 runId (api.query="run_id")
 }
 
 struct ListHistoryResp {

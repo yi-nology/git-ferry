@@ -1852,6 +1852,10 @@
             "format": "int32",
             "type": "integer"
           },
+          "run_id": {
+            "format": "int64",
+            "type": "integer"
+          },
           "task_key": {
             "type": "string"
           }
@@ -2067,6 +2071,9 @@
             "type": "integer"
           },
           "repo_key": {
+            "type": "string"
+          },
+          "status": {
             "type": "string"
           }
         },
@@ -7205,6 +7212,15 @@
               "format": "int32",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -7462,6 +7478,14 @@
             "schema": {
               "format": "int32",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],

@@ -63,6 +63,10 @@ const StatusSuccess = model.StatusSuccess
 // 触发来源常量(手动触发路径使用)
 const TriggerManual = model.TriggerManual
 
+// RebuildTrigger 全量重建触发器:core 会在拿到执行权后清空工作目录,
+// 强制从源重新克隆(见 git-ferry-core service/rebuild.go)。
+const RebuildTrigger = model.TriggerRebuild
+
 // 平台常量 / 工具（平台管理 handler 使用）
 const (
 	PlatformTypeGitHub   = model.PlatformTypeGitHub

@@ -2,6 +2,7 @@ package git_sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	"gorm.io/gorm"
 )
 
 func TaskList(ctx context.Context, c *app.RequestContext) {
@@ -22,7 +24,9 @@ func TaskList(ctx context.Context, c *app.RequestContext) {
 	}
 
 	offset, limit := converter.PageToOffset(req.Page, req.PageSize)
-	list, total, err := GetSyncService().ListTasks(ctx, req.RepoKey, offset, limit)
+	// status 是**真的过滤条件**:CLI 的 `task +list --status` 一直在发它,
+	// 而契约里原本没有这个字段 ⇒ hertz 静默忽略 ⇒ 用户拿到全量却以为筛过了。
+	list, total, err := GetSyncService().ListTasksFiltered(ctx, req.RepoKey, req.Status, offset, limit)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
@@ -73,7 +77,7 @@ func TaskCreate(ctx context.Context, c *app.RequestContext) {
 		TargetRepoKey: req.TargetRepoKey, TargetBranch: req.TargetBranch,
 		SyncMode: req.SyncMode, Cron: req.Cron, GitTags: req.GitTags,
 		GitForce: req.GitForce,
-		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
+		GitLFS:   req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		ForcePushPolicy:    ptrx.Deref(req.ForcePushPolicy, ""),
 		IncludeBranches:    ptrx.Deref(req.IncludeBranches, ""),
 		ExcludeRefPatterns: ptrx.Deref(req.ExcludeRefPatterns, ""),
@@ -105,7 +109,7 @@ func TaskUpdate(ctx context.Context, c *app.RequestContext) {
 		// cron:nil=不修改,空串=清空定时(IDL 里是 optional string)
 		TargetBranch: req.TargetBranch, SyncMode: req.SyncMode, Cron: req.Cron,
 		Enabled: req.Enabled, GitTags: req.GitTags, GitForce: req.GitForce,
-		GitLFS:   req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
+		GitLFS: req.GitLfs, SyncWiki: req.SyncWiki, GitBundle: req.GitBundle, Submodules: req.Submodules, GitPushPrune: req.GitPushPrune,
 		// 这三个字段:nil=不修改,**空串=清空**(IDL 里是 optional string)。
 		// 之前 Deref 成普通 string ⇒ 空串与"没传"不可区分 ⇒ 一旦设过就再也改不回去。
 		ForcePushPolicy:    req.ForcePushPolicy,
@@ -189,8 +193,28 @@ func TaskHistory(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	if req.TaskKey == "" {
-		response.BadRequest(c, "taskKey is required")
+	// run_id 给了就精确查那一条,task_key 可省(ID 全局唯一);
+	// 两者都不给才是无效请求。
+	if req.TaskKey == "" && req.RunID <= 0 {
+		response.BadRequest(c, "taskKey or runId is required")
+		return
+	}
+
+	// 精确查单条:之前 CLI 的 `history +detail --run-id` 只能靠"翻页找那条",
+	// 服务端没有按 run_id 过滤的能力 ⇒ 翻不到就静默返回空列表。
+	if req.RunID > 0 {
+		run, err := GetSyncService().GetSyncRunByID(ctx, req.TaskKey, uint(req.RunID))
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				response.NotFound(c, "sync run not found")
+				return
+			}
+			response.InternalError(c, err.Error())
+			return
+		}
+		response.Success(c, &sync_task.ListHistoryResp{
+			Runs: converter.ToSyncRunInfoListLight([]*corebridge.SyncRun{run}),
+		})
 		return
 	}
 

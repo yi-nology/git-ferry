@@ -1032,7 +1032,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
-
 func (p *SyncTaskInfo) writeField23(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("forcePushPolicy", thrift.STRING, 23); err != nil {
 		goto WriteFieldBeginError
@@ -1198,6 +1197,8 @@ type ListTasksReq struct {
 	RepoKey  string `thrift:"repoKey,1" json:"repo_key" query:"repo_key"`
 	Page     int32  `thrift:"page,2" json:"page" query:"page"`
 	PageSize int32  `thrift:"pageSize,3" json:"page_size" query:"page_size"`
+	// Status 按最近一次执行状态过滤(success|failed|running|...);空串=不过滤。
+	Status string `thrift:"status,4" json:"status" query:"status"`
 }
 
 func NewListTasksReq() *ListTasksReq {
@@ -1219,10 +1220,15 @@ func (p *ListTasksReq) GetPageSize() (v int32) {
 	return p.PageSize
 }
 
+func (p *ListTasksReq) GetStatus() (v string) {
+	return p.Status
+}
+
 var fieldIDToName_ListTasksReq = map[int16]string{
 	1: "repoKey",
 	2: "page",
 	3: "pageSize",
+	4: "status",
 }
 
 func (p *ListTasksReq) Read(iprot thrift.TProtocol) (err error) {
@@ -1263,6 +1269,14 @@ func (p *ListTasksReq) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1331,6 +1345,18 @@ func (p *ListTasksReq) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ListTasksReq) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Status = _field
+	return nil
+}
+
 func (p *ListTasksReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("ListTasksReq"); err != nil {
@@ -1347,6 +1373,10 @@ func (p *ListTasksReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -1416,6 +1446,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *ListTasksReq) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Status); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
 func (p *ListTasksReq) String() string {
@@ -1988,7 +2035,6 @@ func (p *CreateTaskReq) GetGitLfs() (v bool) {
 func (p *CreateTaskReq) GetGitPushPrune() (v bool) {
 	return p.GitPushPrune
 }
-
 
 var CreateTaskReq_ForcePushPolicy_DEFAULT string
 
@@ -2712,7 +2758,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
-
 func (p *CreateTaskReq) writeField18(oprot thrift.TProtocol) (err error) {
 	if p.IsSetForcePushPolicy() {
 		if err = oprot.WriteFieldBegin("forcePushPolicy", thrift.STRING, 18); err != nil {
@@ -3077,7 +3122,6 @@ func (p *UpdateTaskReq) GetGitPushPrune() (v bool) {
 	}
 	return *p.GitPushPrune
 }
-
 
 var UpdateTaskReq_ForcePushPolicy_DEFAULT string
 
@@ -3863,7 +3907,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
-
 
 func (p *UpdateTaskReq) writeField18(oprot thrift.TProtocol) (err error) {
 	if p.IsSetForcePushPolicy() {
@@ -6597,6 +6640,8 @@ func (p *SyncRunStepInfo) String() string {
 type ListHistoryReq struct {
 	TaskKey string `thrift:"taskKey,1" json:"task_key" query:"task_key"`
 	Limit   int32  `thrift:"limit,2" json:"limit" query:"limit"`
+	// RunID 精确查某一条执行记录;0=不按记录过滤。
+	RunID int64 `thrift:"runId,3" json:"run_id" query:"run_id"`
 }
 
 func NewListHistoryReq() *ListHistoryReq {
@@ -6614,9 +6659,14 @@ func (p *ListHistoryReq) GetLimit() (v int32) {
 	return p.Limit
 }
 
+func (p *ListHistoryReq) GetRunID() (v int64) {
+	return p.RunID
+}
+
 var fieldIDToName_ListHistoryReq = map[int16]string{
 	1: "taskKey",
 	2: "limit",
+	3: "runId",
 }
 
 func (p *ListHistoryReq) Read(iprot thrift.TProtocol) (err error) {
@@ -6649,6 +6699,14 @@ func (p *ListHistoryReq) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6706,6 +6764,18 @@ func (p *ListHistoryReq) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ListHistoryReq) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RunID = _field
+	return nil
+}
+
 func (p *ListHistoryReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("ListHistoryReq"); err != nil {
@@ -6718,6 +6788,10 @@ func (p *ListHistoryReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -6770,6 +6844,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ListHistoryReq) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("runId", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.RunID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
 func (p *ListHistoryReq) String() string {
