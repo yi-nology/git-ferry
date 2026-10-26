@@ -39,6 +39,10 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 	failures := []analyzeHit{}
 	recent := []map[string]any{}
 	weakDims := map[string]int{} // 维度 → 出现次数(score<60)
+	// queryFailures 记录**查询失败**(区别于"查到了但没失败"):
+	// 以前历史查询失败与"没有历史"走同一条 else 分支 ⇒ 报告写"从未执行",
+	// 真相是"查不到" ⇒ 事实被说反了。
+	queryFailures := []toolFailure{}
 	now := time.Now()
 
 	for _, t := range tasks {
@@ -54,12 +58,18 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 			"sync_wiki":         textutil.BoolFact(t.SyncWiki),
 		}
 		runs, _, herr := r.svc.ListHistory(ctx, t.Key, 0, 5)
+		historyErr := ""
 		if herr == nil && len(runs) > 0 {
 			// 快照映射用 core health 的**唯一实现** ⇒ 与 API 的健康评分同口径
 			for k, v := range health.CollectRunFacts(health.SnapshotsFromRuns(runs), now) {
 				facts[k] = v
 			}
 		} else {
+			// 查询失败 ≠ 从未执行(分数仍保守打分,但失败必须报出来)。
+			if herr != nil {
+				historyErr = herr.Error()
+				queryFailures = append(queryFailures, toolFailure{Source: "history", TaskKey: t.Key, Error: herr.Error()})
+			}
 			facts["has_history"] = "false"
 		}
 		dimRes := health.EvaluateDimensions(nil, facts)
@@ -69,11 +79,12 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 			}
 		}
 		recent = append(recent, map[string]any{
-			"task_key":   t.Key,
-			"health":     dimRes.Score,
-			"level":      dimRes.Level,
-			"weak_dims":  weakDimensionNames(dimRes.Dimensions),
-			"dim_action": dimRes.Actions,
+			"task_key":      t.Key,
+			"health":        dimRes.Score,
+			"level":         dimRes.Level,
+			"weak_dims":     weakDimensionNames(dimRes.Dimensions),
+			"dim_action":    dimRes.Actions,
+			"history_error": historyErr,
 		})
 		if herr == nil && len(runs) > 0 {
 			last := runs[0]
@@ -99,14 +110,16 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 	}
 
 	return marshalJSON(map[string]any{
-		"question":    in.Question,
-		"task_key":    in.TaskKey,
-		"failures":    failures,
-		"recent":      recent,
-		"weak_dims":   rankWeakDims(weakDims),
-		"conclusion":  summarizeAnalyze(in.Question, failures, weakDims),
-		"playbook":    analyzeRules(),
-		"next_action": nextActions(failures, weakDims),
+		"question": in.Question,
+		"task_key": in.TaskKey,
+		"failures": failures,
+		// query_failures:数据源查询失败(与 failures「查到的失败记录」是两回事)。
+		"query_failures": queryFailures,
+		"recent":         recent,
+		"weak_dims":      rankWeakDims(weakDims),
+		"conclusion":     summarizeAnalyze(in.Question, failures, weakDims),
+		"playbook":       analyzeRules(),
+		"next_action":    nextActions(failures, weakDims),
 	}), nil
 }
 

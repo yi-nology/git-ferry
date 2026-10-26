@@ -23,6 +23,8 @@ type Mock struct {
 
 	Runs     []*corebridge.SyncRun
 	RunTotal int64
+	// HistoryErr 注入历史查询失败。
+	HistoryErr error
 
 	Platforms []*corebridge.Platform
 	Rules     []*corebridge.WebhookRule
@@ -110,6 +112,9 @@ func (m *Mock) GetTask(_ context.Context, key string) (*corebridge.SyncTask, err
 }
 
 func (m *Mock) ListHistory(context.Context, string, int, int) ([]*corebridge.SyncRun, int64, error) {
+	if m.HistoryErr != nil {
+		return nil, 0, m.HistoryErr
+	}
 	return m.Runs, m.RunTotal, nil
 }
 

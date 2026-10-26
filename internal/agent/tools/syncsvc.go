@@ -102,6 +102,25 @@ func msgJSON(kv map[string]any) string {
 	return marshalJSON(kv)
 }
 
+// toolFailure 记录一路数据源/一次查询的失败(哪里、哪个任务、什么错)。
+//
+// 存在的意义:工具层以前把子查询的失败**直接丢掉** ⇒ 报告里那一段数据
+// 整段消失,而输出看起来跟"本来就没有"一模一样 ⇒ 报告与事实相反。
+// 有了它,失败必须出现在输出里。
+type toolFailure struct {
+	Source  string `json:"source"`
+	TaskKey string `json:"task_key,omitempty"`
+	Error   string `json:"error"`
+}
+
+// historyQueryError 表示"**查询失败**"而不是"没找到"。
+//
+// 区别很重要:两者对外的说法完全相反 ——
+// "查不到"⇒ 不能断言它不存在;"确实没有"⇒ 才是真的没有。
+type historyQueryError struct{ msg string }
+
+func (e *historyQueryError) Error() string { return e.msg }
+
 // parseToolPayload 解析子工具的 JSON 负载,并**识别错误信封**。
 //
 // 为什么必须有这个函数:子工具(getSyncHealth / getRepoInventory)失败时

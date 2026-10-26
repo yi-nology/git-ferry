@@ -44,9 +44,13 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 		Issues     []string `json:"issues,omitempty"`
 		Actions    []string `json:"actions,omitempty"`
 		Dimensions []dimRow `json:"dimensions,omitempty"`
+		// HistoryError 该任务的历史查询失败(非空 ⇒ 这个任务的健康分不可信:
+		// 它是按"没有历史"保守打分的,不是按真实情况)。
+		HistoryError string `json:"history_error,omitempty"`
 	}
 	now := time.Now()
 	items := []row{}
+	failures := []toolFailure{}
 	for _, t := range tasks {
 		facts := health.Facts{
 			"has_name":          textutil.BoolFact(t.Name != ""),
@@ -59,6 +63,7 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 			"sync_wiki":         textutil.BoolFact(t.SyncWiki),
 		}
 		runs, _, herr := r.svc.ListHistory(ctx, t.Key, 0, 10)
+		historyErr := ""
 		if herr == nil && len(runs) > 0 {
 			// 快照映射用 core health 的**唯一实现** ⇒ 与 API 的健康评分同口径
 			// (以前这里自己写一份,漏了 StepFails/RetryTotal/ErrorType 三条信号
@@ -67,6 +72,14 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 				facts[k] = v
 			}
 		} else {
+			// **查询失败 ≠ 从未执行**:以前两者走同一条 else 分支,
+			// 报告写"从未执行",真相是"查不到" ⇒ 事实被说反了。
+			// 分数仍按"没有历史"保守打分(fail-closed:宁可低不要高),
+			// 但必须把失败本身报出来。
+			if herr != nil {
+				historyErr = herr.Error()
+				failures = append(failures, toolFailure{Source: "history", TaskKey: t.Key, Error: herr.Error()})
+			}
 			facts["has_history"] = "false"
 		}
 		res := health.EvaluateDimensions(nil, facts)
@@ -81,10 +94,12 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 			Key: t.Key, Name: t.Name,
 			Score: res.Score, Level: res.Level,
 			Issues: res.Issues, Actions: res.Actions, Dimensions: dims,
+			HistoryError: historyErr,
 		})
 	}
 	return marshalJSON(map[string]any{
-		"items": items,
+		"items":    items,
+		"failures": failures,
 		"legend": map[string]any{
 			"dimensions": []string{"reliability", "freshness", "schedule", "safety", "completeness"},
 			"levels":     []string{"gold", "silver", "bronze", "basic"},
@@ -200,12 +215,29 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 			Score   int      `json:"score"`
 			Issues  []string `json:"issues"`
 			Actions []string `json:"actions"`
+			// HistoryError 该任务的历史查询失败 ⇒ 它的健康分是**保守打分**,
+			// 不是真实健康度。
+			HistoryError string `json:"history_error"`
 		} `json:"items"`
+		// Failures 健康维度内部的查询失败(逐任务)。
+		Failures []struct {
+			Source  string `json:"source"`
+			TaskKey string `json:"task_key"`
+			Error   string `json:"error"`
+		} `json:"failures"`
 	}
 	if err != nil {
 		failures = append(failures, todoSourceFailure{Source: "health", Error: err.Error()})
 	} else if perr := parseToolPayload(healthOut, &healthParsed); perr != nil {
 		failures = append(failures, todoSourceFailure{Source: "health", Error: perr.Error()})
+	} else {
+		// 健康维度内部的查询失败也要传上来,否则会被这里悄悄吃掉。
+		for _, f := range healthParsed.Failures {
+			failures = append(failures, todoSourceFailure{
+				Source: "health/" + f.Source,
+				Error:  f.Error + " (task " + f.TaskKey + ")",
+			})
+		}
 	}
 
 	todo := []map[string]any{}
@@ -220,6 +252,11 @@ func (r *Registry) getOpsTodo(ctx context.Context, in todoInput) (string, error)
 		reason := ""
 		if len(h.Issues) > 0 {
 			reason = h.Issues[0]
+		}
+		// 历史查不到时,这个"健康分偏低"是**保守打分**的结果,不是真实健康度
+		// ⇒ 说清楚,免得 AI 把它当成真故障去排查。
+		if h.HistoryError != "" {
+			reason = "健康分不可信(历史查询失败:" + h.HistoryError + ");可能虚低"
 		}
 		todo = append(todo, map[string]any{
 			"id": "health:" + h.Key, "kind": "health", "priority": pri,

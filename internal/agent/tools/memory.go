@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -118,6 +119,16 @@ func (r *Registry) diagnoseRunIn(ctx context.Context, in diagnoseInput) (string,
 	}
 	run, taskKey, err := findRunView(r.svc, ctx, in.RunID)
 	if err != nil {
+		// **查不到 ≠ 不存在**:历史查询失败时以前也报"未找到 run N"
+		// ⇒ 把"查不到"说成"没有" ⇒ 事实被说反了(运维会以为记录被删了)。
+		var hqe *historyQueryError
+		if errors.As(err, &hqe) {
+			return msgJSON(map[string]any{
+				"found":        false,
+				"query_failed": true,
+				"message":      hqe.Error(),
+			}), nil
+		}
 		return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到 run %d", in.RunID)}), nil
 	}
 	d := diagnoseRunView(run, taskKey)
@@ -125,17 +136,24 @@ func (r *Registry) diagnoseRunIn(ctx context.Context, in diagnoseInput) (string,
 }
 
 // findRunView 在最近历史中定位 run。
+//
+// **历史查询失败不能被当成"这个任务没有这条 run"**:以前是 `continue` 直接跳过
+// ⇒ 搜完全部任务找不到就报 "run N not found"
+// ⇒ 真相是"查不到",报告却说"没有" ⇒ 事实被说反了。
+// 现在会累计查询失败,搜完仍找不到时明确报"查不到,无法断言不存在"。
 func findRunView(svc SyncService, ctx context.Context, runID uint) (*runView, string, error) {
 	const pageSize = 50
 	offset := 0
+	var historyErrs []string
 	for page := 0; page < 10; page++ {
 		tasks, total, err := svc.ListTasks(ctx, "", offset, pageSize)
 		if err != nil {
 			return nil, "", err
 		}
 		for _, t := range tasks {
-			runs, _, err := svc.ListHistory(ctx, t.Key, 0, 50)
+			runs, _, err := svc.ListHistory(ctx, t.Key, 0, pageSize)
 			if err != nil {
+				historyErrs = append(historyErrs, fmt.Sprintf("%s: %v", t.Key, err))
 				continue
 			}
 			for _, rs := range runs {
@@ -153,6 +171,11 @@ func findRunView(svc SyncService, ctx context.Context, runID uint) (*runView, st
 		if len(tasks) == 0 || int64(offset) >= total {
 			break
 		}
+	}
+	if len(historyErrs) > 0 {
+		return nil, "", &historyQueryError{msg: fmt.Sprintf(
+			"run %d 未找到,但有 %d 个任务的历史查询失败,**无法断言它不存在**:%s",
+			runID, len(historyErrs), strings.Join(historyErrs, "; "))}
 	}
 	return nil, "", fmt.Errorf("run %d not found", runID)
 }
