@@ -29,6 +29,7 @@ sync:
   partial_clone: ""          # blob:none / tree:0 部分克隆,空=全量
   backup_encrypt_key: ""     # AES-256-GCM 冷备加密(base64 32B 或口令);空=不加密
   backup_retention_days: 90  # 冷备保留天数,0=不按天清理
+  history_retention_days: 0  # 执行历史(webhook事件/同步运行/运行步骤)保留天数,0=不按天清理
   legal_hold: false          # true=合规冻结,禁止自动清理
   auto_discover_interval_minutes: 0  # 平台自动发现周期(分钟),0=关闭
   auto_discover_import: false        # 发现新仓库是否自动导入

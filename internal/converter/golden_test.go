@@ -30,7 +30,7 @@ func goldenTask() *model.SyncTask {
 		SyncMode: "mirror", Cron: "0 * * * *", WebhookToken: "secret-token",
 		Enabled: true, GitTags: true, GitForce: true,
 		GitLFS: true, SyncWiki: true, GitBundle: true, Submodules: true,
-		GitPushPrune: true,
+		GitPushPrune:    true,
 		ForcePushPolicy: "allow", IncludeBranches: "main,release/*",
 		ExcludeRefPatterns: "refs/pull/*",
 		LastRunAt:          &tt, LastStatus: "success", CreatedAt: tt,

@@ -1516,8 +1516,8 @@ func (p *GetRepoResp) String() string {
 }
 
 type CreateRepoReq struct {
-	Name        string `thrift:"name,1" form:"name" json:"name" query:"name"`
-	RemoteUrl   string `thrift:"remoteUrl,2" form:"remote_url" json:"remote_url" query:"remote_url"`
+	Name      string `thrift:"name,1" form:"name" json:"name" query:"name"`
+	RemoteUrl string `thrift:"remoteUrl,2" form:"remote_url" json:"remote_url" query:"remote_url"`
 }
 
 func NewCreateRepoReq() *CreateRepoReq {
@@ -1693,7 +1693,6 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
-
 func (p *CreateRepoReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1849,8 +1848,8 @@ func (p *CreateRepoResp) String() string {
 }
 
 type UpdateRepoReq struct {
-	Key         string `thrift:"key,1" form:"key" json:"key" query:"key"`
-	Name        string `thrift:"name,2" form:"name" json:"name" query:"name"`
+	Key  string `thrift:"key,1" form:"key" json:"key" query:"key"`
+	Name string `thrift:"name,2" form:"name" json:"name" query:"name"`
 }
 
 func NewUpdateRepoReq() *UpdateRepoReq {
@@ -2025,7 +2024,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-
 
 func (p *UpdateRepoReq) String() string {
 	if p == nil {

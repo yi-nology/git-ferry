@@ -87,7 +87,6 @@ func TestToTaskInfo(t *testing.T) {
 		t.Error("Expected GitForce to be false")
 	}
 
-
 	if result.LastStatus != "success" {
 		t.Errorf("Expected LastStatus 'success', got '%s'", result.LastStatus)
 	}
