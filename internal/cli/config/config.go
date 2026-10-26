@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,19 @@ type Config struct {
 	BaseURL string `yaml:"base_url"`
 	APIKey  string `yaml:"api_key"`
 	Format  string `yaml:"format"`
+
+	// KeySource 密钥来源：env:GITFERRY_TOKEN / env:GITFERRY_API_KEY /
+	// file / keychain / none。**不落盘**（yaml:"-"）。
+	//
+	// 为什么要有它：密钥存在 macOS Keychain 时，配置文件里的 api_key 是空的
+	// ⇒ 「本机到底有没有密钥」这件事**从文件上看不出来**
+	// ⇒ 出问题时只能看到服务端的 401「unauthorized」，无从判断是
+	// "密钥不对"还是"这台机器上根本没拿到密钥"。
+	KeySource string `yaml:"-"`
+
+	// KeychainErr 从 Keychain 取密钥时的失败原因（条目不存在除外）。
+	// 只用于给出**准确**的提示，不改变行为。
+	KeychainErr string `yaml:"-"`
 }
 
 const (
@@ -81,13 +95,28 @@ func Effective() (*Config, error) {
 	if v := os.Getenv(envBaseURL); v != "" {
 		cfg.BaseURL = v
 	}
-	if v := os.Getenv(envToken); v != "" {
-		cfg.APIKey = v
-	} else if v := os.Getenv(envAPIKey); v != "" {
-		cfg.APIKey = v
-	} else if cfg.APIKey == "" {
-		if v := loadSecret("api_key"); v != "" {
+	switch {
+	case os.Getenv(envToken) != "":
+		cfg.APIKey = os.Getenv(envToken)
+		cfg.KeySource = "env:" + envToken
+	case os.Getenv(envAPIKey) != "":
+		cfg.APIKey = os.Getenv(envAPIKey)
+		cfg.KeySource = "env:" + envAPIKey
+	case cfg.APIKey != "":
+		cfg.KeySource = "file"
+	default:
+		// Keychain 里**可能**存着（配置文件里是空的）⇒ 取不到时要分清
+		// "条目不存在"与"读不到"，两者对用户的建议完全不同。
+		v, kerr := loadSecret("api_key")
+		switch {
+		case kerr == nil && v != "":
 			cfg.APIKey = v
+			cfg.KeySource = "keychain"
+		case kerr != nil && !errors.Is(kerr, errSecretNotFound):
+			cfg.KeySource = "none"
+			cfg.KeychainErr = kerr.Error()
+		default:
+			cfg.KeySource = "none"
 		}
 	}
 	if v := os.Getenv(envFormat); v != "" {

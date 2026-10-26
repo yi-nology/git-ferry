@@ -92,6 +92,13 @@ func authStatus(c *client.Client, cfg *config.Config) (map[string]any, *output.E
 		"base_url":    cfg.BaseURL,
 		"has_api_key": cfg.APIKey != "",
 		"config_path": mustConfigPath(),
+		// **密钥来源要报出来**:密钥存在 macOS Keychain 时配置文件里是空的
+		// ⇒ 只看"文件里有没有 api_key"根本判断不出本机到底能不能用。
+		// key_source=none + keychain_error 有值 ⇒ 配过但这个环境读不到。
+		"key_source": cfg.KeySource,
+	}
+	if cfg.KeychainErr != "" {
+		info["keychain_error"] = cfg.KeychainErr
 	}
 	env, err := c.Get("/api/v1/system/status", nil)
 	if err != nil {

@@ -100,7 +100,19 @@ func (c *Client) Do(method, path string, body interface{}, query url.Values) (*o
 		_, _ = fmt.Fprintf(io.Discard, "%s %s -> %d\n", method, path, resp.StatusCode)
 	}
 
-	return output.FromServer(resp.StatusCode, raw), nil
+	env := output.FromServer(resp.StatusCode, raw)
+	// **401 的真实原因要说准**:本机**根本没拿到**密钥时,通用提示
+	//「请设置 GITFERRY_TOKEN 或运行 gitferry auth login」会误导 ——
+	// 用户可能早就配过了(存在 macOS Keychain 里),只是这个环境读不到
+	// (非交互 shell / keychain 锁住 / 换了用户)⇒ 他会反复重新设置 token,
+	// 而真正的解法是"这个环境拿不到 Keychain 里的密钥"。
+	if !env.OK && resp.StatusCode == http.StatusUnauthorized &&
+		c.APIKey == "" && env.Error != nil {
+		env.Error.Suggestion = "本机没有可用的 API Key" +
+			"（可能已存在 macOS Keychain，但当前环境读不到）：" +
+			"请设置 GITFERRY_TOKEN 环境变量，或运行 gitferry auth login"
+	}
+	return env, nil
 }
 
 // Get / Post / Put / Delete 便捷方法。
