@@ -681,6 +681,8 @@ docs/design/acp-external-agent-design.md     新增  本文档
 | F7 | MCP 挂载**只支持一个源**(布尔开关 + URL) | 改为**列表**:`external.mcp_servers` 可挂多个第三方 MCP;最终清单 = 本服务 /mcp(若启用)+ 列表 |
 | F8 | **换后端热重建时旧后端不关** | 外部后端每会话一个**长驻 agent 子进程**,不关旧的就攒孤儿进程 ⇒ 补 `Runner.Close()`(同时停掉会话回收 goroutine),重建与进程退出路径都调 |
 | F9 | **yaml 的 `mcp_enabled: true` 永远不生效** | 布尔的「未设置 vs 显式 false」没法区分 ⇒ `MergeSettings` 漏合并它 ⇒ 设置文件没写过之前,yaml 的布尔值说了算 |
+| F10 | **acpx 通道的 `ask` 档名不副实** | acpx 非交互(它的 stdin/stdout 被我们占着)⇒ 弹不出授权卡,`nonInteractivePermissions` 默认 deny ⇒ 「问」实际等于「拒绝」⇒ 校验阶段直接拒绝该组合,并在**保存时**就拒(不存「起不来」的配置);参数映射改成显式给 `--approve-reads`,不吃默认值 |
+| F11 | **外部 agent 的会话 ID 没透出** | 外部 agent 与本服务可能**共用同一个会话库**(MiniMax Code 的 CLI 与桌面版)⇒ 新增 `agent_session` 事件带出 `agent_session_id`,用户才能在那个界面上找到这次会话 |
 
 ### 17.2 测试逼出来的三个真 bug
 
@@ -726,9 +728,30 @@ POST /api/v1/ai/chat  (backend=stdio, command="mcode acp", MCP 挂本服务 /mcp
 **因此「对接 desktop」的真实落点**是:桌面版作为**会话与人工接管的界面**,agent 运行时由 CLI 提供。
 要在桌面版继续这次会话,靠的是同一份会话库,不是另开一条协议。
 
-### 17.5 新增测试
+⇒ 落地时必须**把 agent 侧的会话 ID 透出来**(F11):否则用户只能去对方的会话列表里大海捞针,
+这个能力等于没有入口。事件流新增 `agent_session` 事件(带 `agent_session_id` + `agent_label`),
+前端在助手面板头部显示成 chip。
+
+### 17.5 一个容易被忽略的通道差异
+
+| 能力 | stdio(原生 ACP) | acpx |
+|------|-----------------|------|
+| 逐次弹授权卡 | ✅(`session/request_permission` → 界面授权卡) | ❌ 非交互 ⇒ 写操作按拒绝处理 |
+| 挂本服务 `/mcp` | ✅(`session/new` 的 mcpServers) | ⚠️ 取决于各 adapter 自己的 MCP 配置 |
+| 拿得到 agent 会话 ID | ✅(透出 `agent_session` 事件) | ❌(会话在 acpx 自己的存储里) |
+
+⇒ **要「逐次确认」或「挂本服务 MCP」就得用 stdio 后端**;acpx 适合「一个命令面对
+20+ 个 agent、免写协议」的轻量场景。这个差异在配置校验阶段就告诉操作者,不留到运行时才发现。
+
+### 17.6 新增测试
 
 - `biz/handler/git_sync/ai_config_test.go`:RBAC 三档(只读拒 / 治理项要 admin / 普通项放行)、
   归一化不误判。
 - `internal/agent/engine/acp/acp_test.go`:回收不打断在飞回合、静态就位性。
 - `internal/agent/engine/acp/probe.go`:stdio 真握手(起进程只发 initialize,不发 prompt)。
+- `internal/agent/engine/acp/stdio_test.go` + `testdata/fake_acp_agent.py`:
+  **假 ACP agent** 把协议走完(initialize → session/new → session/prompt → session/update),
+  让 stdio 客户端的测试只依赖协议本身(真实 agent 依赖模型与网络,测不了「协议层通没通」);
+  顺带钉住「agent 会话 ID 要透出」。
+- `internal/agent/engine/acp/acp_test.go`:acpx + ask 档被拒;其它档位可用。
+- `internal/agent/config_test.go`:布尔的 yaml 值要生效;acpx+ask 存不下去。
