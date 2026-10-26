@@ -2,6 +2,87 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.0.0] - 2026-10-26
+
+GitFerry **v2**：契约语义摆正。
+
+v1.36.0 ~ v1.38.0 三轮里的改动**包含破坏性契约变更**（查不到的 run 从
+「200 + 空列表」变成「404」、`auth status` 退出码从 0 变 1、`--csv` 导出从
+「CSV + JSON 信封」变成「纯 CSV」、MCP 工具的字段语义变更），却连发三个
+minor ⇒ **版本号在说谎**：下游会按「兼容」假设来升级，升级时踩坑。
+本版把这条线整体标为 **v2**，并给出逐条迁移指引；同时加一道机械门禁，
+让「破坏性变更发成 minor」以后**不可能再发生**。
+
+### 迁移指引
+
+**从 v1.35.x 升到 v2.0.0**。下面每一条都是**调用方可见**的变更。
+
+#### CLI
+
+| 命令 | v1 行为 | v2 行为 | 调用方要改什么 |
+|---|---|---|---|
+| `repo +create` | 发 `platform` / `clone_url` / `key`，服务端全部丢弃 ⇒ **永远 400** | 发 `name` + `remote_url`；平台走 query `platform_id` | 手拼请求体的脚本要改成新字段（CLI 已自动适配） |
+| `ops +drift --task` | 参数名与服务端不符 ⇒ 绑定失败被忽略 ⇒ **静默扫描全部任务** | 改发 `task_keys`；绑定失败即 **400** | 依赖「默认全量扫描」的调用要显式不传 `--task` |
+| `task +list --all` | 只读第一页，且 `meta.total_count` 是**假的** | 发 `page_size`、按服务端 meta 结束、返回**真实总数** | 别再按 `meta.total_count` 推算条数 |
+| `task +batch-run` | 部分失败时**退出码仍是 0** | 部分失败 ⇒ 退出码非 0 | 脚本必须检查退出码 |
+| `ops +audit-report --csv` | stdout = CSV **+ JSON 信封** ⇒ 导出文件是坏的 | stdout **只有 CSV** | 解析器不用再剥 JSON 尾巴 |
+| `auth status` | 服务端 401/5xx/连不上都报 `ok=true`、退出码 0 | 如实报 `ok=false` + 退出码 1 | 脚本必须检查退出码，不要只看 `ok` |
+| `task +list --status` | 服务端**没有**这个字段 ⇒ 静默返回全量 | **真的**按 `last_status` 过滤，`total` 是过滤后的条数 | 依赖旧行为（拿全量）的改成不带 `--status` |
+| `history +detail --run-id` | 服务端**没有** run_id 过滤 ⇒ 翻页找；找不到返回空列表 200 | **精确查**那一条；找不到 ⇒ **404**；`run_id` 可单独给（不再强制 `--task`） | 加 404 分支；去掉「找不到就是空列表」的假设 |
+
+#### HTTP API
+
+| 接口 | v1 行为 | v2 行为 |
+|---|---|---|
+| `GET /api/v1/sync/history?run_id=` | **忽略** `run_id`，返回该任务的全部历史 | 精确返回那一条；查不到 ⇒ **404**；给了 `run_id` 时不再强制 `task_key` |
+| `GET /api/v1/sync/tasks?status=` | **忽略** `status` | 真的按 `last_status` 过滤，`total` 是过滤后的条数 |
+| `POST /api/v1/ops/rebuild` | **受理前**先删工作目录（会抢正在跑的同步的目录） | 由 core 在**拿到执行权后**删（抢不到执行权就一步都不动）；响应 `message` 变更 |
+| `GET /api/v1/ops/drift` | 绑定错误被丢掉 ⇒ 静默退化成全量扫描 | 绑定失败即 **400** |
+
+#### MCP 工具
+
+| 工具 | v1 行为 | v2 行为 |
+|---|---|---|
+| `list_histsync_runs` | 硬编码 50 条、不可调，而 `total` 却是**真实总数**（两个数字对不上） | 新增 `page` / `limit`（默认 20、上限 100）；输出新增 `page` / `limit` / `returned` / `truncated` / `notice` |
+| `get_ops_todo` | 三路子查询失败被**静默吞掉**；`total` 是**截断后**的长度 | 新增 `partial` / `failures` / `warning` / `returned` / `truncated` / `notice` / `message`；`total` 改为**截断前**的真实条数 |
+| `get_sync_health` | 历史查询失败被说成「从未执行」 | 新增顶层 `failures` + 任务级 `history_error` |
+| `deep_analyze` | 同上 | 新增顶层 `query_failures` + 任务级 `history_error` |
+| `diagnose_run` | 「查不到」被说成「未找到」 | 新增 `query_failed` 标记，两者区分开 |
+
+#### core（影响壳层与下游集成）
+
+- **rebuild 语义下沉到 core**：清工作目录的时机从「受理前」变成「拿到该任务
+  的执行权之后」。依赖「rebuild 一调用目录就没了」的集成要改成读执行历史确认。
+
+### 破坏性变更
+
+1. `GET /api/v1/sync/history?run_id=` 查不到 ⇒ **404**（原先 200 + 空列表）。
+2. `GET /api/v1/sync/history` 不再强制 `task_key`（给了 `run_id` 时）。
+3. `GET /api/v1/sync/tasks?status=` 开始**真的过滤**（原先静默返回全量）。
+4. `GET /api/v1/ops/drift` 绑定失败 ⇒ **400**（原先静默全量扫描）。
+5. `POST /api/v1/ops/rebuild` 不再在受理前删工作目录；响应 `message` 变更。
+6. CLI `ops +audit-report --csv` 的 stdout **只剩 CSV**（原先 CSV + JSON 信封）。
+7. CLI `auth status` 失败时**退出码 1**、`ok=false`（原先恒 0 / 恒 true）。
+8. CLI `task +batch-run` 部分失败时**退出码非 0**（原先恒 0）。
+9. CLI `repo +create` 的请求体字段改为 `name` + `remote_url`，平台走 query
+   `platform_id`（原先的字段名被服务端丢弃 ⇒ 命令恒 400）。
+10. CLI `ops +drift --task` 改发 `task_keys`；绑定失败即 400（原先静默全量扫描）。
+11. CLI `task +list --all` 返回**真实总数**（原先 `meta.total_count` 是假的）。
+12. MCP `get_ops_todo` 的 `total` 语义变更（截断前 vs 截断后），并新增
+    `partial` / `failures` / `warning` 等字段。
+13. MCP `list_histsync_runs` 新增 `page` / `limit` 入参（原先硬编码 50 不可调）。
+14. MCP `get_sync_health` / `deep_analyze` / `diagnose_run` 的失败表达方式变更
+    （新增 `failures` / `query_failures` / `history_error` / `query_failed`）。
+
+### Added
+
+- **发版纪律门禁**（`internal/release`）：把「破坏性契约变更必须走 major」
+  变成**机械检查**，而不是靠人记 ——
+  - 破坏性变更必须显式标记（`### 破坏性变更`），标记了就必须是 major；
+  - major 版本必须给出迁移指引（`### 迁移指引`）；
+  - 公开契约（OpenAPI）删掉 path / 请求参数 ⇒ 必须 major。
+  这条门禁正是本版存在的原因：v1.36.0~v1.38.0 连发三个 minor 就是漏了它。
+
 ## [v1.38.0] - 2026-10-26
 
 ### Fixed
