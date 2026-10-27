@@ -308,5 +308,3 @@ func MergeSettings(yamlCfg *Config, st *Settings) Settings {
 	}
 	return out
 }
-
-
