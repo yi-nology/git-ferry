@@ -2,6 +2,66 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.3.0] - 2026-10-27
+
+用 [oekit](https://github.com/oekit) 家族规范深度重构一轮，并把**两条通道的能力拉齐**：
+外部 agent 现在在 acpx 通道上也能调回本服务的领域工具。
+
+### Added
+
+- **oekit 四条硬规则落地**（`llms.txt` 的「AI Agent 要点」，逐条有闸门）：
+  - **错误处理用 `pkg/errors`**：63 处 `fmt.Errorf("...: %w", err)` 改为
+    `errors.Wrap(err, msg)`（显式 nil-safe + 能挂 kv 上下文）；stdlib `errors`
+    导入全部换成 oekit 的（同名同型，`Is`/`As` 一个 import 即可）。
+  - **业务错误自带状态码**：新增 `response.NewBizError` + `response.Biz`，
+    RBAC 闸门与 AI 治理闸门改走它 ⇒「这个错误该落成 403 还是 400」由**产生错误
+    的地方**定，渲染处不猜；错误响应顺带统一成同一信封。
+  - **日志用 logx 的 kv 风格、SDK 包用 `Delegating`**：9 个包各声明
+    `var logger = logx.Delegating("组件名")`，30 处直连 `slog.*` 改走包级 logger；
+    `serve.SetupLogger` 把 logx 接到**与进程默认 slog 同一个 handler** ⇒
+    格式 / 级别 / trace_id 完全一致。包级 logger 必须用 `Delegating`：
+    `logx.Default()` 在 init 时求值，会永远绑在 init 那一刻的后端上 ⇒ 日志进黑洞。
+  - **禁裸 `go func`**：5 处裸 goroutine 改为 `concurrency/async`
+    （裸 goroutine 的 panic 没人接 ⇒ 直接带走整个进程；本仓 MCP 与 AI 助手同进程，
+    尤其致命）。
+- **机械闸门 `internal/convention/`**：把上面四条变成 **CI 跑的可执行检查**
+  （裸 goroutine / stdlib `errors` / `fmt.Errorf %w` / 直连 `slog` /
+  `logx.Default()` 包级捕获）。纪律变成闸门，而不是文档里的一句话。
+- **仓根 `AGENTS.md`**：面向 AI Agent 的规范 —— 四条硬规则的本仓口径、
+  本仓自己的硬规矩（拒绝静默失败 / 单一入口 / 公开契约只增不减 / 密钥不进 yaml /
+  子进程环境净化 / IDL→hz→OpenAPI 同步 / 提交用 `release-commit.sh`）、
+  依赖地板追最新（真实 tag，禁 `replace`）、提交前自检清单。
+
+### Fixed
+
+- **外部 agent 的 terminal 工作目录没被管**（安全）：`terminal/create` 的 cwd
+  此前是**直接用 agent 给的值**，而文档写的是「命令的工作目录固定在 root 内」
+  —— 实现根本没管 ⇒ agent 报一个根外的 cwd 就能把命令挪到沙箱外跑。
+  改法：`fs/*` 与 `terminal/*` **共用一份沙箱**（相对路径先过
+  `pkg/pathx.SanitizeRelStrict` 严格档 → 解析符号链接 → 判包含）；
+  根外直接拒，工作目录不存在也拒。
+- **acpx 通道没挂本服务的 `/mcp`**：acpx 一直支持 `--mcp-config`，
+  是装配层**没写这份配置** ⇒ 界面里 `mcp_enabled: true` 存着、日志不报错、
+  后端就是没挂 ⇒ 外部 agent 拿不到领域工具，只能**满环境自己找**
+  （实测连续 27 次 `bash`/`grep`，最后 300s 撞超时被杀，用户看到「助手卡住了」）。
+  改法：新增 acpx MCP 配置写入（形状以 acpx 0.21.0 源码实测为准：
+  `mcpServers` 是**数组**、`headers` 是**数组** `[{name,value}]`、`type` 必须显式写；
+  acpx 只能从文件读 ⇒ key 必然落盘一次 ⇒ 私有目录 0700 + 文件 0600 + 跑完即删），
+  会话创建 / 对话 / 一次性执行三条路径都挂上。
+  **实测：同一个 prompt 从 303s 撞超时被杀，变成 16s 直接调 `mcp__gitferry__list_repos`。**
+- **委派执行器也挂 MCP**：被派的 agent 在本机干活时可能需要回本服务取数据。
+  挂不上就**不装委派执行器**（工具如实报「未配置」），而不是让它在缺工具的情况下跑。
+
+### Changed
+
+- **手搓实现换 oekit 原语**：沙箱路径判定 → `pkg/pathx.SanitizeRelStrict`；
+  UUID → `kitx/uidgen`（零三方依赖）⇒ 少一个直接依赖。
+- **文档订正**：设计文档 §18.3/§18.4 里「acpx 不挂 /mcp」「要用领域工具必须 stdio」
+  的旧结论已订正 —— 那是**我们没写配置**，不是 acpx 做不到；补 §20 记录
+  症状 / 根因 / 配置形状的三个坑 / 修法 / 实测对比。
+  README（中英）与 `ARCHITECTURE.md` 的后端选型说明同步为
+  「两个后端都挂 `/mcp`，差别在逐次授权卡与 agent 侧会话 ID」。
+
 ## [v2.2.0] - 2026-10-27
 
 外部 AI coding 工具（ACP）能力的一轮补完：**多 agent 并存**、**委派改异步**、
