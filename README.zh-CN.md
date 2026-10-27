@@ -484,6 +484,12 @@ make install-skills
 - **委派**：内置助手也可以用 `ai_code_delegate` 把一段编码任务派给外部 agent。
   委派是**异步**的：确认后立刻返回任务 ID（外部 agent 可能跑几分钟，
   同步等会把对话连接挂到超时），结果稍后回到会话，界面轮询取回。
+  委派按 profile 自己的传输方式执行：`acpx` 走 `acpx <agent> exec`，
+  `stdio` 走一次性 ACP 会话（起进程 → initialize → session/new → session/prompt → 关进程）。
+- **后端怎么选**：**只有 `stdio` 会把本服务的 `/mcp` 挂给外部 agent** ——
+  也只有 `stdio` 能让外部 agent 把领域工具（同步 / 镜像 / 运维）调回本服务。
+  `acpx` 不挂：外部 agent 在那条通道上会自己满环境找工具。
+  `acpx` 还是非交互的（`ask` 授权档直接被拒），且拿不到 agent 侧的会话 ID。
 
 界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
 

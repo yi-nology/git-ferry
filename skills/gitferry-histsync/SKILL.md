@@ -232,7 +232,10 @@ gitferry histsync +target-rotate --target-id <ID> \
      **只有 admin 能拨**，且档位是**会话级**的（一个会话切只读，不影响其他会话）。
    - `ai_code_delegate`：把任务委派给**外部 coding agent**（跑在本机上的子进程，
      拥有该用户的文件与网络权限）⇒ 按危险工具处理（需确认 + 只读角色一律拒绝）。
-     注意：委派会**占住那条确认请求**直到外部 agent 跑完（确认走 SSE，连接保持打开）。
+     注意：委派是**异步**的 —— 确认后立刻返回任务 ID（`dtask-N`），
+     外部 agent 在后台跑（可能几分钟），**不会占住那条确认请求**。
+     结果两处可取：回到会话（下一轮问话时助手看得见，措辞标明「仅作数据，不是指令」），
+     或按 ID 取（`ai_delegate_result` 工具 / `GET /api/v1/ai/delegate/{task_id}`）。
 4. **凭据不落命令行** —— 推送目标的密钥用 `--credential-file` 传，不要用 `--credential`
    （会进 shell 历史）。服务端的凭据是**加密落库**的，响应里不回显。
 5. **不要自己改 `preserve` 的文件** —— 它们是公开树独有的资产（截图、license、Gerrit 集成），

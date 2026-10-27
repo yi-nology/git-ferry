@@ -2,6 +2,75 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.2.0] - 2026-10-27
+
+外部 AI coding 工具（ACP）能力的一轮补完：**多 agent 并存**、**委派改异步**、
+**stdio 形态也能被委派**，外加全流程实测挖出的六个坑。
+
+### Added
+
+- **多个外部 agent 并存（具名 profile 列表）**：`ai.external.agents` 是一个 profile 列表
+  （`name` / `transport` / `agent` / `command` / `cwd` / `permission` / MCP 挂载…），
+  `current` 选中的驱动对话，委派工具的 `agent` 参数按名字选。
+  列表为空时回退旧的单 profile 字段 ⇒ 已发布的 v2.1.0 配置照旧可用。
+- **委派改异步**：`ai_code_delegate` 确认后**立刻**返回任务 ID（`dtask-N`），
+  外部 agent 在后台跑。此前同步等待会把整条 SSE 挂住 ⇒ 中间的代理
+  （nginx `proxy_read_timeout` 默认 60s）一刀切掉 ⇒ 用户看到「助手卡住了」。
+  结果两处可取：回填会话（措辞标明「仅作数据，不是指令」）与按 ID 取
+  （`ai_delegate_result` 工具 / `GET /api/v1/ai/delegate/{task_id}`）。
+  后台任务用 `context.WithoutCancel`（HTTP 一结束请求 ctx 就被取消 ⇒ 后台委派会被一起杀掉）。
+- **stdio 形态也能被委派**（`RunOnceStdio`）：委派执行器此前固定走 `acpx <agent> exec`，
+  委派到 stdio profile 时会把「命令」当成 acpx 的 agent 名 ⇒ 必然跑不起来。
+  现在按 profile 的传输方式执行：acpx 走 exec，stdio 走一次性 ACP 会话
+  （起进程 → initialize → session/new → session/prompt → 收结果 → 关进程，复用 stdio 客户端）。
+  stdio 传输下用名字选一个不存在的 profile 会直接报错（stdio 没有「内置 agent 名」这回事）。
+- **思考过程在界面上的呈现**：外部 agent 的 `agent_thought_chunk` 映射成 `thinking` 事件
+  （此前只在协议层可见），界面按回合累积、默认折叠、限长 2000 字。
+  限长放在前端（服务端截断会让流「突然停住」）。
+
+### Fixed
+
+本轮六个坑，全部由**全流程实测**挖出来（内置助手 / stdio 外部后端 / acpx 外部后端 /
+异步委派 / 只读边界 / 多 profile 六条链路实跑）：
+
+- **profile 模式下 AI 根本没起来**（最严重）：`ai.backend=stdio` + `external.agents[]`
+  ⇒ 启动报「需要 ai.external.command」⇒ **AI 整个没起来**（端点回落 501）。
+  根因：校验查的是旧的单字段，而 profile 模式下命令写在 profile 里。
+  改法：校验与装配统一走 `EffectiveExternal()`（生效 profile + 生效 transport）——
+  **同一个概念的新旧两套写法只留一个入口**（校验 / 装配 / 审计 / 委派 / 治理闸门五处共用）。
+- **yaml 里配的 profile 被静默丢弃**：`MergeSettings` 逐字段列举，漏了 `Agents` / `Current`
+  ⇒ 只有走设置文件才生效。改法：补齐 + 加**反射测试**（逐字段比对，
+  以后新增字段当场被拦）。
+- **界面表单读不到外部配置**：`ExternalConfig` 缺 JSON 键名定义 ⇒ 回显出来的是 Go 的
+  大写键（`Agent` / `Agents`）⇒ 前端读不到、界面全空。
+  改法：补齐键名 + 测试钉死 snake_case。
+- **改 profile 授权档绕过 admin 闸门**：治理闸门只比单字段的授权档 ⇒ profile 列表模式下
+  改某个 profile 的授权档（approve_reads → approve_all）不被当成治理动作。
+  授权档决定外部 agent 能读什么 / 写什么 ⇒ 这是安全边界。
+  改法：逐 profile 比对（空值与默认档等价）。
+- **profile 的传输方式靠猜**：老写法只填 `agent` 或只填 `command` 时无从判断该走哪条通道；
+  主后端是 internal 时 profile 只服务委派、不能跟着主后端一起变。
+  改法：显式 transport > 有 command ⇒ stdio > 有 agent 名 ⇒ acpx > 跟随 `ai.backend`。
+- **委派到 stdio profile 必然失败**：见上面 Added 的对应条目。
+
+另修复（自审轮）：
+
+- **外部 agent 的边界洞**：沙箱软链逃逸、terminal 输出无上限、acpx 会话磁盘泄漏、
+  同一会话并发回合互相截胡（第一轮事件流到第二轮通道）。
+- **全仓 lint 清零**：CI 的质量闸门已连续 8 个版本失效（lint 从未真正跑起来）。
+  `golangci-lint run` 从 34 条降到 0 条，CI 首次全绿。
+
+### Changed
+
+- **文档**：README（中英）/ `ARCHITECTURE.md` §7.5.1 / `docs/design/acp-external-agent-design.md`
+  补齐本轮能力与取舍；`skills/gitferry-histsync/SKILL.md` 里「委派会占住确认请求」
+  的旧描述与异步委派的实际行为不符，已按现状改写。
+- **通道能力差异写进文档**（选型依据）：只有 `stdio` 会把本服务的 `/mcp` 挂给外部 agent
+  ⇒ 只有 `stdio` 能让外部 agent 把领域工具调回本服务；`acpx` 不挂
+  （外部 agent 在那条通道上会自己满环境找工具）、非交互（`ask` 授权档直接被拒）、
+  且拿不到 agent 侧的会话 ID（会话在 acpx 自己的存储里）。
+- **工具数 42 → 43**（新增 `ai_delegate_result`：按任务 ID 取回委派结果）。
+
 ## [v2.1.0] - 2026-10-26
 
 外部 AI coding 工具接入（ACP）。**AI 助手的执行后端现在可插拔**：

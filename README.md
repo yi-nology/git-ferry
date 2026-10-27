@@ -487,7 +487,14 @@ What matters:
   the `ai_code_delegate` tool. Delegation is **asynchronous**: confirming returns a task id
   immediately (the external agent may run for minutes — waiting synchronously would hang
   the chat connection until the proxy times it out), and the result flows back into the
-  session, where the UI polls for it.
+  session, where the UI polls for it. Delegation follows the profile's own transport:
+  `acpx` runs `acpx <agent> exec`, `stdio` opens a one-shot ACP session
+  (spawn → initialize → session/new → session/prompt → close).
+- **Which backend to pick**: only `stdio` mounts **our `/mcp`** into the external agent,
+  so only `stdio` lets it call our domain tools (sync / mirror / ops) back through us.
+  `acpx` does not mount it — an external agent there will go looking for tools on its own.
+  `acpx` is also non-interactive (`ask` permission is rejected) and cannot report the
+  agent-side session id.
 
 界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
 
