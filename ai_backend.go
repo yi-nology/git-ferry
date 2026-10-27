@@ -28,14 +28,16 @@ import (
 // 免得底层后端反过来依赖上层包。
 func buildAIEngine(cfg *agent.Config, apiKey string, svc tools.SyncService,
 	coreSvc *corebridge.Service, shellCfg *corebridge.ShellConfig) (engine.Engine, error) {
-	ext := cfg.External
+	// **装配对象是生效的那个 profile**,不是旧的单字段 ——
+	// profile 模式下命令/MCP 挂载都写在 profile 里,查单字段会装出一个空后端。
+	ext, transport := cfg.EffectiveExternal()
 	timeout := time.Duration(ext.TimeoutSeconds) * time.Second
 
 	var (
 		eng engine.Engine
 		err error
 	)
-	switch cfg.Backend {
+	switch transport {
 	case agent.BackendACPX:
 		eng, err = acp.NewAcpxEngine(&acp.Config{
 			Agent:      ext.Agent,
@@ -79,8 +81,11 @@ func buildAIEngine(cfg *agent.Config, apiKey string, svc tools.SyncService,
 type auditable interface{ SetAudit(f acp.AuditFunc) }
 
 // externalAuditFunc 把外部 agent 的动作记进操作日志。
-func externalAuditFunc(svc *corebridge.Service, ext *agent.ExternalConfig) acp.AuditFunc {
-	name := ext.Agent
+func externalAuditFunc(svc *corebridge.Service, ext *agent.ExternalAgentConfig) acp.AuditFunc {
+	name := ext.Name
+	if name == "" {
+		name = ext.Agent
+	}
 	if name == "" {
 		name = ext.Command
 	}
@@ -102,10 +107,11 @@ func externalAuditFunc(svc *corebridge.Service, ext *agent.ExternalConfig) acp.A
 
 // acpConfigFor 由 profile 生成 acp 后端配置。
 //
-// transport 留空 ⇒ 跟随 ai.backend。
-func acpConfigFor(p *agent.ExternalAgentConfig, permission string) acp.Config {
+// transport 由 ProfileTransportOf 解析(见 agent 包的说明:
+// profile 显式写的 > 有 command ⇒ stdio > 有 agent 名 ⇒ acpx > 跟随 ai.backend)。
+func acpConfigFor(p *agent.ExternalAgentConfig, permission, backend string) acp.Config {
 	return acp.Config{
-		Transport:  p.Transport,
+		Transport:  agent.ProfileTransportOf(backend, p),
 		Agent:      p.Agent,
 		Command:    p.Command,
 		Args:       p.Args,
@@ -232,7 +238,7 @@ func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 		return
 	}
 	base := cfg.ResolveProfile(ext.Current)
-	baseCfg := acpConfigFor(&base, delegatePermissionFor(base.Permission))
+	baseCfg := acpConfigFor(&base, delegatePermissionFor(base.Permission), cfg.Backend)
 	dr, err := acp.NewDelegateRunner(&baseCfg)
 	if err != nil {
 		slog.Warn("委派执行器未装配(外部 agent 不可用)", "error", err)
@@ -243,7 +249,7 @@ func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 		if !ok {
 			return acp.Config{}, false
 		}
-		return acpConfigFor(&p, delegatePermissionFor(p.Permission)), true
+		return acpConfigFor(&p, delegatePermissionFor(p.Permission), cfg.Backend), true
 	})
 	b, ok := eng.(engine.DelegatorBinder)
 	if !ok {
@@ -259,10 +265,13 @@ func logAIBackend(cfg *agent.Config, eng engine.Engine) {
 	if eng == nil {
 		return
 	}
+	ext, transport := cfg.EffectiveExternal()
 	slog.Info("ai backend ready",
 		"backend", eng.ID(),
 		"label", eng.Label(),
 		"agent", eng.ModelName(),
-		"mcp_enabled", cfg.External.MCPEnabled,
+		"transport", transport,
+		"profile", ext.Name,
+		"mcp_enabled", ext.MCPEnabled,
 	)
 }

@@ -117,6 +117,27 @@ func TestAIUpdateConfig_未填授权档不算变更(t *testing.T) {
 		"未填授权档(等价默认 ask)不该被当成变更而要求 admin")
 }
 
+// TestAIUpdateConfig_改profile授权档需要admin profile 列表模式下,改**某个
+// profile** 的授权档同样是治理动作 —— 只比单字段的话会被漏过去
+// (授权档决定外部 agent 能读什么/写什么 ⇒ 这是安全边界)。
+func TestAIUpdateConfig_改profile授权档需要admin(t *testing.T) {
+	store, err := agent.OpenSettings(filepath.Join(t.TempDir(), "ai-settings.json"))
+	require.NoError(t, err)
+	hAdmin := newAIConfigEnvWithStore(t, RoleAdmin, store)
+	w0 := postAIConfig(t, hAdmin,
+		`{"enabled":true,"backend":"stdio","external":{"agents":[{"name":"mcode",`+
+			`"transport":"stdio","command":"mcode acp","permission":"ask"}]}}`)
+	require.Equal(t, http.StatusOK, w0.Code)
+
+	// 换成 operator,只改 profile 的授权档 ⇒ 仍是治理动作 ⇒ 403
+	h := newAIConfigEnvWithStore(t, RoleOperator, store)
+	w1 := postAIConfig(t, h,
+		`{"enabled":true,"backend":"stdio","external":{"agents":[{"name":"mcode",`+
+			`"transport":"stdio","command":"mcode acp","permission":"approve_all"}]}}`)
+	assert.Equal(t, http.StatusForbidden, w1.Code)
+	assert.Contains(t, w1.Body.String(), "admin")
+}
+
 // TestAIGetConfig_回生效配置 设置文件只是**覆盖层**,
 // 真正生效的是「yaml 默认 + 设置文件覆盖」。
 // 只回设置文件的话,用 yaml 配置的部署在界面上看到的是**空表单**

@@ -390,9 +390,15 @@ MCP 端点与 AI 助手**共用同一注册表**（`internal/agent/tools`），M
 - 委派工具 `ai_code_delegate`（危险）让内置助手把一段编码任务派给外部 agent；
   委派是**异步**的（确认后立刻返回任务 ID，结果回填会话 + 轮询取回），
   避免外部 agent 的耗时把对话连接挂到代理超时。
+  委派按 profile 的**传输方式**执行：`acpx` 走 `acpx <agent> exec`，
+  `stdio` 走一次性 ACP 会话（起进程 → initialize → session/new → session/prompt → 关进程）。
 - `ai.external.agents` 是**具名 profile 列表**：可同时挂多个外部 agent
   （Claude Code + Codex…），对话用 `current` 选中的，委派时按名字选。
-- **AI 配置是治理面**：改配置要写角色；**换后端 / 改外部 agent 授权档仅 admin**，并写操作日志。
+- **profile 的判定只有一个入口**（`agent.Config.EffectiveExternal()` / `ResolveProfile()`）：
+  校验、装配、审计、委派、治理闸门五处都用同一套解析 ——
+  「新旧两套写法」（旧的单字段 vs profile 列表）的偏差必须靠单一入口根治，不能靠逐处记得改。
+- **AI 配置是治理面**：改配置要写角色；**换后端 / 改外部 agent 授权档仅 admin**
+  （授权档**逐 profile** 比对），并写操作日志。
 - 详见 `docs/design/acp-external-agent-design.md`。
 
 ### 7.6 Agent Skills

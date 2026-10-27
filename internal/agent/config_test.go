@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -210,4 +212,88 @@ func TestSettings_Save_profile用acpx加ask要拒(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err, "stdio 传输支持逐次确认")
+}
+
+// TestMergeSettings_不漏字段 用反射逐字段核对:yaml 的 External 里每个字段
+// 都必须在合并结果里体现(空值回退规则除外)。
+//
+// **为什么要有这个测试**:"逐字段列举"的合并必然还会再漏 ——
+// 这次新增具名 profile 列表(Agents/Current)时就漏了,
+// 表现为「yaml 里配了 profile,启动时却当没配」。
+// 反射比对能让下一次新增字段**当场**被拦住。
+func TestMergeSettings_不漏字段(t *testing.T) {
+	yamlCfg := &Config{
+		Backend: BackendACPX,
+		External: ExternalConfig{ //nolint:gosec // G101:字段名含 Key,此处是环境变量名,不是凭据
+			Agent:          "yaml-agent",
+			Command:        "yaml-cmd",
+			Args:           []string{"-x"},
+			Cwd:            "/yaml-ws",
+			TimeoutSeconds: 111,
+			Permission:     "approve_reads",
+			MCPEnabled:     true,
+			MCPURL:         "http://yaml/mcp",
+			MCPAPIKeyEnv:   "YAML_KEY_ENV",
+			MCPServers:     []MCPServerConfig{{Name: "yaml-srv"}},
+			Agents:         []ExternalAgentConfig{{Name: "yaml-profile"}},
+			Current:        "yaml-profile",
+		},
+	}
+	// 设置文件为空(首次未写)⇒ 合并结果应完整等于 yaml 的 External。
+	got := MergeSettings(yamlCfg, &Settings{})
+
+	rv := reflect.ValueOf(got.External)
+	ry := reflect.ValueOf(yamlCfg.External)
+	ty := rv.Type()
+	for i := 0; i < ty.NumField(); i++ {
+		name := ty.Field(i).Name
+		gv := rv.Field(i).Interface()
+		yv := ry.Field(i).Interface()
+		if gv == nil || reflect.ValueOf(gv).IsZero() {
+			continue
+		}
+		assert.Equal(t, yv, gv, "字段 %s 没从 yaml 合并过来(逐字段列举必漏,用反射兜住)", name)
+	}
+	assert.Equal(t, "yaml-profile", got.External.Current)
+	assert.Len(t, got.External.Agents, 1)
+}
+
+// TestSettings_JSON键名必须是snake_case 设置文件与 API 回显都走 JSON ⇒
+// 字段名必须与前端约定的一致(agent/agents/mcp_servers…)。
+//
+// **踩过的坑**:ExternalConfig 只有 yaml tag,被当成设置文件结构复用后,
+// JSON 回显的是 Go 字段名(`Agent`/`Agents`)⇒ 前端表单读不到 ⇒ 界面全空。
+// 这个测试把「键名」钉死。
+func TestSettings_JSON键名必须是snake_case(t *testing.T) {
+	st := Settings{
+		Enabled: true,
+		Backend: BackendACPX,
+		External: ExternalConfig{
+			Agent:        "mcode",
+			Cwd:          "/ws",
+			Permission:   "approve_reads",
+			MCPEnabled:   true,
+			MCPURL:       "http://x/mcp",
+			MCPAPIKeyEnv: "ENV_X",
+			MCPServers:   []MCPServerConfig{{Name: "s1"}},
+			Agents:       []ExternalAgentConfig{{Name: "p1", Transport: "stdio"}},
+			Current:      "p1",
+		},
+	}
+	b, err := json.Marshal(st) //nolint:gosec // G117:测的是 JSON 键名,结构体里没有真实凭据
+	require.NoError(t, err)
+	var m map[string]any
+	require.NoError(t, json.Unmarshal(b, &m))
+	ext, ok := m["external"].(map[string]any)
+	require.True(t, ok, "external 段应存在")
+	for _, key := range []string{"agent", "cwd", "permission", "mcp_enabled", "mcp_url",
+		"mcp_api_key_env", "mcp_servers", "agents", "current"} {
+		_, has := ext[key]
+		assert.True(t, has, "JSON 键 %q 缺失(前端按 snake_case 读)", key)
+	}
+	// 也不能冒出 Go 字段名
+	for _, bad := range []string{"Agent", "Cwd", "MCPEnabled", "Agents"} {
+		_, has := ext[bad]
+		assert.False(t, has, "JSON 里不该出现 Go 字段名 %q", bad)
+	}
 }

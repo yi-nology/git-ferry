@@ -193,12 +193,15 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	//
 	// 比较前**两边都要归一化**:存量后端可能是空串(等价 internal),
 	// 不归一就会把「没改后端」误判成「换了后端」,把普通保存也卡在 admin 闸门上。
+	//
+	// 授权档要**连 profile 一起比**:profile 列表模式下改某个 profile 的授权档
+	// 同样是治理动作,只比单字段会把它漏过去。
 	cur := effectiveAISettings(st)
 	curBackend := cur.Backend
 	if curBackend == "" {
 		curBackend = agent.BackendInternal
 	}
-	if backend != curBackend || agent.NormalizePermission(ext.Permission) != agent.NormalizePermission(cur.External.Permission) {
+	if backend != curBackend || !agent.SameExternalPermissions(&ext, &cur.External) {
 		if GetAuthRole(c) != RoleAdmin {
 			response.Error(c, consts.StatusForbidden,
 				"forbidden: 切换 AI 后端或修改外部 agent 授权档需要 admin 角色")

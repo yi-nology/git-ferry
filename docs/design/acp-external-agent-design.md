@@ -839,7 +839,12 @@ ai:
 - **列表为空** ⇒ 用旧的单 profile 字段(旧行为一个不变);
 - **列表非空** ⇒ 以列表为准:对话用 `current`(留空=第一个),
   委派工具的 `agent` 参数**按名字命中 profile**;没命中就当 acpx 内置 agent 名(旧行为);
-- profile 的 `transport` 留空 ⇒ 跟随 `ai.backend`。
+- profile 的 `transport` 留空 ⇒ 跟随 `ai.backend`(**主后端是 internal 时**例外:
+  profile 列表只服务委派,不能把主后端顶掉;委派侧的 transport 按
+  「有 command ⇒ stdio / 有 agent 名 ⇒ acpx」推断)。
+
+> 全部判定都走**唯一入口**(`EffectiveExternal()` / `ResolveProfile()`),
+> 见 §18.2:校验、装配、审计、委派、治理闸门五处用的是同一套解析。
 
 **顺带修掉两个真问题**:
 1. **两份平行结构**:`ExternalConfig`(yaml)与 `ExternalSettings`(设置文件)
@@ -852,6 +857,8 @@ ai:
    委派是**一次性执行**,弹不出授权卡 ⇒ `ask` 在这里没有对应物 ⇒
    映射成 `approve_reads`,并在回执里明说(不静默降级)。
    加了 `HasDelegator()` 探针:「装上了吗」从此是可断言的事实。
+   (补完:委派执行器**不再写死走 acpx** —— stdio profile 现在也能被委派,
+   见 §18.1 的 T4。)
 
 ### 17.6.4 思考过程在界面上的呈现
 
@@ -876,3 +883,60 @@ ai:
 - `internal/agent/config_test.go`:布尔的 yaml 值要生效;acpx+ask 存不下去。
 - `internal/agent/engine/acp/env_test.go`:环境净化(摘本服务密钥、不误伤 agent 自己的 provider key)。
 - `internal/agent/delegate_e2e_test.go`:委派链路端到端(模型发起 → 危险工具要确认 → 确认后真的派出去)。
+
+## 18. 全流程测试轮(2026-10-27)
+
+这一轮的目的不是加功能,是**把整条链路真跑一遍**。结果:14/14 通过,
+但过程里挖出 **6 个真 bug**,其中 3 个是「界面显示已保存、实际行为不符」那一类。
+
+### 18.1 挖出来的六个 bug
+
+| # | bug | 症状 | 根因 | 修法 |
+|---|-----|------|------|------|
+| T1 | **profile 模式下启动直接失败** | `ai.backend=stdio` + `external.agents[]` ⇒ 启动报「需要 ai.external.command」⇒ **AI 整个没起来**(端点回落 501) | 校验查的是**旧的单字段**,而 profile 模式下命令写在 profile 里 | 校验/装配统一走 `EffectiveExternal()`(生效 profile + 生效 transport) |
+| T2 | **yaml 里配的 profile 被静默丢弃** | 只有走设置文件才生效 | `MergeSettings` 逐字段列举,漏了 `Agents` / `Current` | 补齐 + **加反射测试**(逐字段比对,新增字段当场被拦住) |
+| T3 | **界面表单读不到外部配置** | 设置页的外部 agent 区域全空 | `ExternalConfig` 只有 yaml tag,被当设置文件结构复用后 JSON 键名是 Go 字段名(`Agent`/`Agents`) | 补齐 json tag + 测试钉死 snake_case 键名 |
+| T4 | **stdio profile 不能被委派** | 委派到 stdio profile 时把它当 acpx 的 agent 名 ⇒ 必然跑不起来 | 委派执行器**写死走 acpx exec** | 新增 `RunOnceStdio`:真起进程 → initialize → session/new → session/prompt → 收结果 → 关进程 |
+| T5 | **改 profile 授权档绕过 admin 闸门** | profile 的授权档从 approve_reads 改成 approve_all,operator 就能改 | 闸门只比**单字段**的授权档 | `SameExternalPermissions` 逐 profile 比(空值 ≡ 默认档) |
+| T6 | **profile 的 transport 推断靠猜** | 老写法只填 `agent` 或只填 `command` 时,不知道该走哪个通道 | transport 留空 ⇒ 跟随 `ai.backend`,但主后端是 internal 时 profile 只服务委派 | `ProfileTransportOf`:显式 transport > 有 command ⇒ stdio > 有 agent 名 ⇒ acpx > 跟随 ai.backend |
+
+### 18.2 「新旧两套写法」的偏差必须靠单一入口根治
+
+T1/T2/T3 是同一族病:**同一个概念有两套写法**(旧的单字段 / 新的 profile 列表),
+凡是「逐字段列举」的地方都会漏。修法不是「记得两处都改」,而是:
+
+- 解析:**唯一入口** `EffectiveExternal()` / `ResolveProfile()` / `resolveProfile()`;
+- 合并:**整体拷贝** + 反射测试兜底;
+- 序列化:**键名测试**钉死。
+
+> 教训与 §17.2 的 B2 同源:**「有没有变更」和「用哪个值」都必须走同一套解析**。
+> 这次连校验、装配、审计、委派、治理闸门五处判定都换成了同一个入口。
+
+### 18.3 两种传输方式的分工(实测)
+
+| | stdio(原生 ACP) | acpx |
+|---|---|---|
+| 对话接管 | ✅ 实测:MiniMax Code 接管对话,调 `mcp__gitferry__list_repos` 拿到 311 个仓库 | ✅ 实测:接管对话(约 116s) |
+| 挂 git-ferry 的 /mcp | ✅(外部 agent 经 MCP client 调回本服务) | ❌(**不挂**)—— 外部 agent 只能自己找工具 |
+| 透出 agent 会话 ID | ✅(`mvs_…` / MiniMax Code) | ❌(会话在 acpx 自己的存储里,设计如此) |
+| 逐次授权卡 | ✅(ask 档可用) | ❌(非交互 ⇒ ask 档直接被拒) |
+| 一次性委派 | ✅(本轮新增 `RunOnceStdio`) | ✅(`acpx <agent> exec`) |
+
+**stdio 才是完整能力**,acpx 是「能跑起来但边界更小」的通道。
+选型建议:要外部 agent 用回本服务的领域工具 ⇒ 必须 stdio。
+
+### 18.4 实测到的外部 agent 行为
+
+- **stdio 委派**:MiniMax Code 会先回一句英文铺垫再给中文结论(acpx 路径只给结论)——
+  两种传输的文本聚合口径不同,不影响正确性。
+- **acpx 对话**:外部 agent 找不到 MCP 工具时会**自己用 bash/grep 在文件系统里搜**
+  (本次实测连续 27 次工具调用)。这不是 bug,是「没挂 MCP」的必然结果 ——
+  但它说明 acpx 通道下外部 agent 的行为不可控,给它挂上 MCP 才有意义。
+
+### 18.5 本轮新增测试
+
+- `internal/agent/external_profile_test.go`:profile 模式不再误报、生效 profile 的取法、
+  internal 后端不被 profile 顶掉、transport 按字段形状推断、授权档逐 profile 比对。
+- `internal/agent/engine/acp/stdio_once_test.go`:stdio 一次性执行跑通(假 agent)、
+  ask 档要拒、stdio 委派按名字选 profile。
+- `biz/handler/git_sync/ai_config_test.go`:改 **profile** 的授权档同样要 admin。

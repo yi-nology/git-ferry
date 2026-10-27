@@ -126,43 +126,24 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 			if in.APIKey == "" {
 				return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
 			}
-		case BackendACPX:
-			// 校验**按模式分支**:配了 profile 列表就以列表为准
-			// (单 profile 字段这时只当委派的兜底,不参与对话后端)。
+		case BackendACPX, BackendStdio:
+			// **逐个 profile 校验**:具名列表里的每个 profile 都可能被选中;
+			// 旧的单 profile 写法只有一个,同样要查。
+			// 放过谁 ⇒ 存下一份「部分后端起不来」的配置,界面显示已保存、实际行为不符。
 			if len(in.External.Agents) == 0 {
-				if in.External.Agent == "" && in.External.Command == "" {
-					return nil, fmt.Errorf("外部 agent 名为空(填 agent 如 mcode,或填自定义 command)")
-				}
-				// acpx 是**非交互**的(它的 stdin/stdout 被我们的调用占着)⇒ 弹不出授权卡;
-				// 它的写操作按拒绝处理 ⇒ 这里的「问」名不副实。
-				// 校验放在**保存时**而不是只在启动时:否则会存下一份「后端起不来」的配置,
-				// 界面上显示已保存、实际 AI 是关的 —— 又是「配置与实际行为不符」。
-				if NormalizePermission(in.External.Permission) == "ask" {
-					return nil, fmt.Errorf(
-						"acpx 后端是非交互的,无法逐次弹授权卡(写操作会按拒绝处理):" +
-							"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio 后端")
+				p, _ := effectiveProfile(&in.External, in.Backend)
+				if err := ValidateExternalProfile(&p, in.Backend); err != nil {
+					return nil, err
 				}
 			}
-			// **profile 也要查**:某个 profile 用 acpx + ask 时同样起不来。
-			// 放过它 ⇒ 存下一份「部分后端起不来」的配置,界面显示已保存、实际行为不符。
 			for i := range in.External.Agents {
-				p := &in.External.Agents[i]
+				p := in.External.Agents[i]
 				if strings.TrimSpace(p.Name) == "" {
 					return nil, fmt.Errorf("profile 缺 name(名字是委派时选它的关键字)")
 				}
-				if !profileUsesACPX(p, in.Backend) {
-					continue
+				if err := ValidateExternalProfile(&p, in.Backend); err != nil {
+					return nil, err
 				}
-				if NormalizePermission(p.Permission) == "ask" {
-					return nil, fmt.Errorf(
-						"profile %q 用的是 acpx(非交互),无法逐次弹授权卡:"+
-							"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio",
-						p.Name)
-				}
-			}
-		case BackendStdio:
-			if in.External.Command == "" {
-				return nil, fmt.Errorf("外部 agent 命令为空(如 \"mcode acp\")")
 			}
 		default:
 			return nil, fmt.Errorf("未知后端: %s(可选 internal|acpx|stdio)", in.Backend)
@@ -284,6 +265,16 @@ func MergeSettings(yamlCfg *Config, st *Settings) Settings {
 	if len(out.External.MCPServers) == 0 {
 		out.External.MCPServers = yamlCfg.External.MCPServers
 	}
+	// **具名 profile 列表与当前选择**:漏合并过一次 ⇒ yaml 里配的 profile
+	// 被静默丢掉(只有走设置文件才生效)。
+	// ⇒ 这类"逐字段列举"的合并必然还会再漏,已加反射测试兜住
+	// (见 config_test.go 的 TestMergeSettings_不漏字段)。
+	if len(out.External.Agents) == 0 {
+		out.External.Agents = yamlCfg.External.Agents
+	}
+	if out.External.Current == "" {
+		out.External.Current = yamlCfg.External.Current
+	}
 	if out.BaseURL == "" {
 		out.BaseURL = yamlCfg.BaseURL
 	}
@@ -318,13 +309,4 @@ func MergeSettings(yamlCfg *Config, st *Settings) Settings {
 	return out
 }
 
-// profileUsesACPX 该 profile 最终走的是不是 acpx 传输。
-//
-// profile 没写 transport ⇒ 跟随 ai.backend。
-func profileUsesACPX(p *ExternalAgentConfig, backend string) bool {
-	t := p.Transport
-	if t == "" {
-		t = backend
-	}
-	return t == BackendACPX
-}
+
