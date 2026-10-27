@@ -134,7 +134,7 @@ func TestAttachDelegator_默认配置也要装得上(t *testing.T) {
 	}
 	eng, err := agent.NewEinoEngine(cfg, "key", toolstest.NewMock())
 	require.NoError(t, err)
-	attachDelegator(cfg, eng)
+	attachDelegator(cfg, eng, nil)
 
 	// **必须真的装上了** —— 装不上时 ai_code_delegate 会报「未配置」,
 	// 看起来像用户没配,实际是装配失败(例如授权档没映射对)。

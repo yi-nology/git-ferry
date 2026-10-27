@@ -38,14 +38,23 @@ func buildAIEngine(cfg *agent.Config, apiKey string, svc tools.SyncService,
 	)
 	switch transport {
 	case agent.BackendACPX:
-		eng, err = acp.NewAcpxEngine(&acp.Config{
+		c := acp.Config{
 			Agent:      ext.Agent,
 			Command:    ext.Command,
 			Args:       ext.Args,
 			Cwd:        ext.Cwd,
 			Timeout:    timeout,
 			Permission: ext.Permission,
-		})
+		}
+		// **acpx 也要挂 MCP**:acpx 能从文件读 MCP 配置(见 acp.writeMCPConfig),
+		// 不挂的话外部 agent 找不到本服务的领域工具 ⇒ 它会满环境自己找
+		// (实测:连续 27 次 bash/grep,最后撞超时被杀)。
+		servers, serr := mcpServersFor(ext.MCPEnabled, ext.MCPURL, ext.MCPAPIKeyEnv, ext.MCPServers, shellCfg)
+		if serr != nil {
+			return nil, serr
+		}
+		c.MCPServers = servers
+		eng, err = acp.NewAcpxEngine(&c)
 
 	case agent.BackendStdio:
 		c := acp.Config{
@@ -231,13 +240,23 @@ func delegatePermissionFor(p string) string {
 //
 // **支持多个 profile**:委派时按名字选(命中 profile 用它的全部参数;
 // 没命中就当 acpx 内置 agent 名用,保持旧行为)。
-func attachDelegator(cfg *agent.Config, eng engine.Engine) {
+//
+// **委派也挂 MCP**(与对话同等待遇):被派的 agent 在本机干活时可能需要
+// 回本服务取数据(列仓库 / 查同步状态 / 读审计链)。
+// 挂不上就不装委派执行器 —— 「配了却用不了」比「没配」更难排查。
+func attachDelegator(cfg *agent.Config, eng engine.Engine, shellCfg *corebridge.ShellConfig) {
 	ext := cfg.External
 	if len(ext.Agents) == 0 && ext.Agent == "" && ext.Command == "" {
 		return
 	}
 	base := cfg.ResolveProfile(ext.Current)
 	baseCfg := acpConfigFor(&base, delegatePermissionFor(base.Permission), cfg.Backend)
+	servers, err := mcpServersFor(base.MCPEnabled, base.MCPURL, base.MCPAPIKeyEnv, base.MCPServers, shellCfg)
+	if err != nil {
+		logger.Warn("委派执行器未装配(外部 agent 的 MCP 挂载失败)", "error", err)
+		return
+	}
+	baseCfg.MCPServers = servers
 	dr, err := acp.NewDelegateRunner(&baseCfg)
 	if err != nil {
 		logger.Warn("委派执行器未装配(外部 agent 不可用)", "error", err)
@@ -248,7 +267,15 @@ func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 		if !ok {
 			return acp.Config{}, false
 		}
-		return acpConfigFor(&p, delegatePermissionFor(p.Permission), cfg.Backend), true
+		c := acpConfigFor(&p, delegatePermissionFor(p.Permission), cfg.Backend)
+		s, serr := mcpServersFor(p.MCPEnabled, p.MCPURL, p.MCPAPIKeyEnv, p.MCPServers, shellCfg)
+		if serr != nil {
+			// 挂不上就**不委派**给这个 profile(而不是让它在缺工具的情况下跑)。
+			logger.Warn("委派到该 profile 失败(MCP 挂载失败)", "profile", p.Name, "error", serr)
+			return acp.Config{}, false
+		}
+		c.MCPServers = s
+		return c, true
 	})
 	b, ok := eng.(engine.DelegatorBinder)
 	if !ok {
@@ -256,7 +283,7 @@ func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 	}
 	b.SetDelegator(dr)
 	logger.Info("ai delegate ready", "agent", base.Agent, "command", base.Command,
-		"profiles", cfg.ExternalProfileNames())
+		"profiles", cfg.ExternalProfileNames(), "mcp_servers", len(servers))
 }
 
 // logAIBackend 记录后端装配结果(启动日志)。

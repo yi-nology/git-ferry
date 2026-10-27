@@ -462,12 +462,17 @@ driven over [ACP](https://agentclientprotocol.com) (Agent Client Protocol — JS
 |---------|-------|----------|
 | `internal` | built-in eino assistant, in-process OpenAI-compatible endpoint | you already run an in-cluster model / vLLM |
 | `acpx` | external agent via the [acpx](https://github.com/openclaw/acpx) CLI | one command surface for 20+ agents, no protocol code to write |
-| `stdio` | external agent, native ACP, we act as the client | you need the **permission card** and **our own `/mcp`** mounted |
+| `stdio` | external agent, native ACP, we act as the client | you need the **permission card** and the **agent-side session id** |
 
 What matters:
 
 - **No domain tools to rewrite**: the external agent connects back to this service's `/mcp`
   over MCP, so all 42 tools (sync / mirror / ops / history sync) are available as-is.
+- **Both backends mount this service's `/mcp`** for the external agent (`stdio` via the ACP
+  `session/new`, `acpx` via a temporary `--mcp-config` file) — so the domain tools are
+  reachable either way. The remaining differences: `stdio` can raise the **permission card**
+  and reports the **agent-side session id**; `acpx` is non-interactive (the `ask` permission
+  mode is rejected) and keeps sessions in its own store.
 - **Permission mode**: `ask` (ask every time, default) / `approve_reads` / `approve_all` / `deny`.
 - **Switching backend or changing the permission mode is a governance action — admin only**
   (ordinary model parameters do not need admin).
@@ -490,11 +495,10 @@ What matters:
   session, where the UI polls for it. Delegation follows the profile's own transport:
   `acpx` runs `acpx <agent> exec`, `stdio` opens a one-shot ACP session
   (spawn → initialize → session/new → session/prompt → close).
-- **Which backend to pick**: only `stdio` mounts **our `/mcp`** into the external agent,
-  so only `stdio` lets it call our domain tools (sync / mirror / ops) back through us.
-  `acpx` does not mount it — an external agent there will go looking for tools on its own.
-  `acpx` is also non-interactive (`ask` permission is rejected) and cannot report the
-  agent-side session id.
+- **Which backend to pick**: both mount **our `/mcp`** into the external agent, so either
+  one lets it call our domain tools (sync / mirror / ops) back through us. Pick `stdio` when
+  you need the **permission card** or the **agent-side session id**; `acpx` is
+  non-interactive (`ask` permission is rejected) and keeps sessions in its own store.
 
 界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
 

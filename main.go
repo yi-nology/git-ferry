@@ -115,7 +115,7 @@ func main() {
 			return nil, err
 		}
 		// 委派执行器:即便主后端是内置助手,也允许把编码任务派给外部 agent。
-		attachDelegator(cfg, eng)
+		attachDelegator(cfg, eng, shellCfg)
 		r := agent.NewRunner(eng, cfg.MaxConcurrentChats)
 		r.SetMemory(agent.NewMemBridge(memStore), agent.MemoryManifest(memStore, 10))
 		r.SetPolicy(tools.NewPolicy())

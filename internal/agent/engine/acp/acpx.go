@@ -281,7 +281,16 @@ func (e *AcpxEngine) forgetSession(name string) {
 
 // ensureSession 建 acpx 会话。
 func (e *AcpxEngine) ensureSession(ctx context.Context, name string) error {
+	// MCP 挂载也要在建会话时给:acpx 从配置里读 mcpServers,
+	// 会话记录里若没有它,后续 prompt 时那条链就接不上。
+	mcpArgs, cleanup, err := e.mcpArgs()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	args := e.baseArgs()
+	args = append(args, mcpArgs...)
 	args = append(args, e.agentToken()...)
 	args = append(args, "sessions", "new", "--name", name)
 	// 二进制与参数由管理员在配置里指定(不是外部请求输入)。
@@ -298,6 +307,21 @@ func (e *AcpxEngine) ensureSession(ctx context.Context, name string) error {
 	return nil
 }
 
+// mcpArgs 把 MCP 清单写成 acpx 能吃的临时配置文件,返回 `--mcp-config <path>` 参数。
+//
+// 没有配 MCP ⇒ 返回空参数(acpx 用它自己的项目/全局配置)。
+// 文件跑完即删(见 writeMCPConfig 的说明:里面有只读 key 的专用凭据)。
+func (e *AcpxEngine) mcpArgs() ([]string, func(), error) {
+	path, cleanup, err := writeMCPConfig(e.cfg.MCPServers)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	if path == "" {
+		return nil, cleanup, nil
+	}
+	return []string{"--mcp-config", path}, cleanup, nil
+}
+
 // execPrompt 跑一轮提示,读 stdout 的 ACP 流。
 func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string, emit func(engine.Event)) (string, error) {
 	e.mu.Lock()
@@ -306,7 +330,15 @@ func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string,
 	ctx, cancel := context.WithTimeout(ctx, e.cfg.Timeout)
 	defer cancel()
 
+	// MCP 挂载:acpx 只能从文件读 MCP ⇒ 写一份临时配置(跑完即删)。
+	mcpArgs, cleanup, err := e.mcpArgs()
+	if err != nil {
+		return "", err
+	}
+	defer cleanup()
+
 	args := e.baseArgs()
+	args = append(args, mcpArgs...)
 	args = append(args, e.agentToken()...)
 	args = append(args, e.cfg.Args...)
 	args = append(args, "-s", sessionName, prompt)
@@ -450,9 +482,19 @@ func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
 
+	// MCP 挂载:acpx 只能从文件读 MCP ⇒ 写一份临时配置(跑完即删)。
+	mcpPath, mcpCleanup, err := writeMCPConfig(cfg.MCPServers)
+	if err != nil {
+		return "", err
+	}
+	defer mcpCleanup()
+
 	args := []string{"--format", "json"}
 	if cfg.Cwd != "" {
 		args = append(args, "--cwd", cfg.Cwd)
+	}
+	if mcpPath != "" {
+		args = append(args, "--mcp-config", mcpPath)
 	}
 	switch cfg.Permission {
 	case PermissionApproveAll:

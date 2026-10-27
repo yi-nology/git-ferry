@@ -396,8 +396,8 @@ MCP 端点与 AI 助手**共用同一注册表**（`internal/agent/tools`），M
 | 后端 | 形态 | 工具在哪执行 |
 |------|------|-------------|
 | `internal` | 内置 eino 助手，进程内调 OpenAI 兼容端点 | 本进程（直调 core service） |
-| `acpx` | 外部 coding agent，经 acpx CLI 驱动 | agent 侧（acpx 负责 client 角色） |
-| `stdio` | 外部 coding agent，原生 ACP，自己当 client | agent 侧（可挂本服务 `/mcp`） |
+| `acpx` | 外部 coding agent，经 acpx CLI 驱动 | agent 侧（acpx 负责 client 角色；经 `--mcp-config` 临时配置挂本服务 `/mcp`） |
+| `stdio` | 外部 coding agent，原生 ACP，自己当 client | agent 侧（经 `session/new` 挂本服务 `/mcp`） |
 
 - 门面（`internal/agent.Runner`）只做**与后端无关**的三件事：并发闸门、会话记账、事件转发。
 - 事件契约（`engine.Event`）与后端无关，SSE 出参零变化；外部后端多出 `thinking` / `plan` / `permission` 三种事件。
@@ -408,6 +408,9 @@ MCP 端点与 AI 助手**共用同一注册表**（`internal/agent/tools`），M
   相对路径先过 `pkg/pathx.SanitizeRelStrict`（严格档，显式 `..` 一律拒），
   再解析符号链接后判包含 —— 软链逃逸与「`a/../b` 抵消」都挡住。
 - 挂本服务 `/mcp` 给外部 agent 时，MCP 专用 key 固定**只读角色**（MCP 路径上危险工具不弹确认）。
+  **两个后端都挂**：`stdio` 经 ACP 的 `session/new`（进程内，不落盘）；
+  `acpx` 经 `--mcp-config` 临时文件（acpx 只能从文件读 MCP ⇒ key 必然落盘一次，
+  故：私有目录 0700 + 文件 0600 + 跑完即删）。
 - 委派工具 `ai_code_delegate`（危险）让内置助手把一段编码任务派给外部 agent；
   委派是**异步**的（确认后立刻返回任务 ID，结果回填会话 + 轮询取回），
   避免外部 agent 的耗时把对话连接挂到代理超时。

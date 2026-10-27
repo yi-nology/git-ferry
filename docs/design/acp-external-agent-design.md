@@ -916,22 +916,26 @@ T1/T2/T3 是同一族病:**同一个概念有两套写法**(旧的单字段 / �
 
 | | stdio(原生 ACP) | acpx |
 |---|---|---|
-| 对话接管 | ✅ 实测:MiniMax Code 接管对话,调 `mcp__gitferry__list_repos` 拿到 311 个仓库 | ✅ 实测:接管对话(约 116s) |
-| 挂 git-ferry 的 /mcp | ✅(外部 agent 经 MCP client 调回本服务) | ❌(**不挂**)—— 外部 agent 只能自己找工具 |
+| 对话接管 | ✅ 实测:MiniMax Code 接管对话,调 `mcp__gitferry__list_repos` 拿到 311 个仓库 | ✅ 实测:接管对话(116s);**§20 修好 MCP 挂载后 26s** |
+| 挂 git-ferry 的 /mcp | ✅(外部 agent 经 MCP client 调回本服务) | ✅(**§20 补上**:acpx 从文件读 MCP 配置) |
 | 透出 agent 会话 ID | ✅(`mvs_…` / MiniMax Code) | ❌(会话在 acpx 自己的存储里,设计如此) |
 | 逐次授权卡 | ✅(ask 档可用) | ❌(非交互 ⇒ ask 档直接被拒) |
 | 一次性委派 | ✅(本轮新增 `RunOnceStdio`) | ✅(`acpx <agent> exec`) |
 
-**stdio 才是完整能力**,acpx 是「能跑起来但边界更小」的通道。
-选型建议:要外部 agent 用回本服务的领域工具 ⇒ 必须 stdio。
+> §18.3 初稿写的是「acpx 不挂 /mcp」——**那是我们没写配置,不是 acpx 做不到**。
+> acpx 一直支持 `--mcp-config`,§20 补上后两个通道都能挂本服务的领域工具。
+
+**stdio 仍是能力更全的通道**:它能弹逐次授权卡、能透出 agent 会话 ID、
+MCP 挂载是自己在进程内做的(不落盘)。acpx 的差别只在「授权卡」与「会话 ID」两项。
 
 ### 18.4 实测到的外部 agent 行为
 
 - **stdio 委派**:MiniMax Code 会先回一句英文铺垫再给中文结论(acpx 路径只给结论)——
   两种传输的文本聚合口径不同,不影响正确性。
-- **acpx 对话**:外部 agent 找不到 MCP 工具时会**自己用 bash/grep 在文件系统里搜**
-  (本次实测连续 27 次工具调用)。这不是 bug,是「没挂 MCP」的必然结果 ——
-  但它说明 acpx 通道下外部 agent 的行为不可控,给它挂上 MCP 才有意义。
+- **acpx 对话(挂 MCP 之前)**:外部 agent 找不到 MCP 工具时会**自己用 bash/grep 在文件系统里搜**
+  (实测连续 27 次工具调用,最后撞 300s 超时被杀)。**这不是 agent 的毛病,
+  是「没挂 MCP」的必然结果** —— 它在找一件它拿不到的东西。
+  §20 把 MCP 挂上之后,同一个 prompt **26s 内**就调到了 `mcp__gitferry__list_repos`。
 
 ### 18.5 本轮新增测试
 
@@ -989,3 +993,59 @@ agent 报一个根外的 cwd 就能把命令挪到沙箱外跑。
 
 规范全文见仓根 `AGENTS.md`(oekit 家族每仓都有 AGENTS.md,本仓此前没有 ⇒ 补上)。
 
+
+## 20. 补掉 acpx 通道的 MCP 挂载(2026-10-27)
+
+### 20.1 症状
+
+acpx 后端下,外部 agent 拿不到本服务的领域工具 ⇒ 它**满环境自己找**
+(实测连续 27 次 `bash`/`grep`,最后 300s 撞超时被杀,用户看到「助手卡住了」)。
+
+### 20.2 根因:不是 acpx 做不到,是我们没写配置
+
+acpx 一直支持 `--mcp-config <path>`。此前 `buildAIEngine` 的 acpx 分支
+**根本没调 `mcpServersFor`** ⇒ 配置里写的 `mcp_enabled` 对 acpx 形同虚设。
+
+**这是「配置与实际行为不符」的又一例**:界面上 `mcp_enabled: true` 存着、
+日志里也不报错,但 acpx 通道上压根没挂。
+
+### 20.3 acpx 的 MCP 配置形状(实测源码,不是照抄文档)
+
+查 acpx 0.21.0 的 `parseMcpServers`/`parseServer`/`parseNameValuePairs`:
+
+```json
+{ "mcpServers": [
+    { "name": "gitferry", "type": "http",
+      "url": "http://127.0.0.1:8890/mcp",
+      "headers": [ {"name": "X-API-Key", "value": "..."} ] } ] }
+```
+
+三个坑:
+
+| 坑 | 后果 |
+|---|---|
+| `mcpServers` 是**数组**,不是「名字 → 配置」的对象 | acpx 直接 `expected array` 报错 |
+| `headers`/`env` 是**数组** `[{name,value}]` | 写成对象**不报错**,但**工具列表是空的** ⇒ agent 找不到工具(比报错更难查) |
+| `type` 不写按 stdio 解析 | 写 http 端点却按 stdio 起进程 ⇒ 连不上 |
+
+### 20.4 修法
+
+- `internal/agent/engine/acp/mcpconfig.go`:把 MCP 清单写成 acpx 能吃的临时配置
+  (私有目录 0700 + 文件 0600 + **跑完立刻删**;路径不进日志)。
+  里面有只读 key 的专用凭据 ⇒ 落盘是 acpx 的硬约束(它只能从文件读),
+  缓解手段与本仓「密钥只进环境变量或 0600 文件」的约定同档。
+- `acpx.go`:会话创建(`sessions new`)、对话(`-s <session>`)、一次性执行
+  (`RunOnce`)三条路径都带上 `--mcp-config`。
+- `ai_backend.go`:acpx 分支也走 `mcpServersFor`;**委派执行器也挂 MCP**
+  (被派的 agent 在本机干活时可能需要回本服务取数据)——
+  挂不上就**不装委派执行器**,而不是让它在缺工具的情况下跑。
+
+### 20.5 实测效果
+
+同一个 prompt(「调用 gitferry MCP 的 list_repos 工具」):
+
+| | 修前 | 修后 |
+|---|---|---|
+| acpx 对话 | 303s 撞超时被杀,全程在文件系统里找 | **26s**,直接调 `mcp__gitferry__list_repos` 拿到 311 个仓库 |
+
+stdio 通道不受影响(它一直是自己挂 MCP 的)。

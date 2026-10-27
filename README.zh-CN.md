@@ -465,7 +465,7 @@ make install-skills
 |------|------|------|
 | `internal` | 内置 eino 助手，进程内调 OpenAI 兼容端点 | 已有内网模型/vLLM |
 | `acpx` | 外部 agent，经 [acpx](https://github.com/openclaw/acpx) CLI 驱动 | 一个命令面对 20+ 个 agent，免自己写协议 |
-| `stdio` | 外部 agent，原生 ACP，自己当 client | 要**授权卡**与**挂本服务 MCP** |
+| `stdio` | 外部 agent，原生 ACP，自己当 client | 要**授权卡**与 **agent 侧会话 ID** |
 
 要点：
 
@@ -486,10 +486,11 @@ make install-skills
   同步等会把对话连接挂到超时），结果稍后回到会话，界面轮询取回。
   委派按 profile 自己的传输方式执行：`acpx` 走 `acpx <agent> exec`，
   `stdio` 走一次性 ACP 会话（起进程 → initialize → session/new → session/prompt → 关进程）。
-- **后端怎么选**：**只有 `stdio` 会把本服务的 `/mcp` 挂给外部 agent** ——
-  也只有 `stdio` 能让外部 agent 把领域工具（同步 / 镜像 / 运维）调回本服务。
-  `acpx` 不挂：外部 agent 在那条通道上会自己满环境找工具。
-  `acpx` 还是非交互的（`ask` 授权档直接被拒），且拿不到 agent 侧的会话 ID。
+- **后端怎么选**：**两个后端都把本服务的 `/mcp` 挂给外部 agent**
+  （`stdio` 走 ACP 的 `session/new`，`acpx` 走 `--mcp-config` 临时配置），
+  领域工具（同步 / 镜像 / 运维）都能被外部 agent 调回来。
+  差别在另外两项：`stdio` 能弹**逐次授权卡**、能透出 **agent 侧会话 ID**；
+  `acpx` 是非交互的（`ask` 授权档直接被拒）且会话在它自己的存储里。
 
 界面：![AI 配置·外部后端](docs/screenshots/ai-settings-external.png)
 
