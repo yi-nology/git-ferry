@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"time"
 )
 

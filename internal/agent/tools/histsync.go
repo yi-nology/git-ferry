@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/oekit/pkg/errors"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 
@@ -70,7 +70,7 @@ func (r *Registry) listHistoryChannels(ctx context.Context, in listHistoryChanne
 	}
 	list, total, err := r.svc.ListHistoryChannels(ctx, (page-1)*limit, limit)
 	if err != nil {
-		return nil, fmt.Errorf("列出历史同步通道失败: %w", err)
+		return nil, errors.Wrap(err, "列出历史同步通道失败")
 	}
 	return map[string]any{
 		"total": total, "page": page, "limit": limit, "channels": list,
@@ -81,7 +81,7 @@ func (r *Registry) listHistoryChannels(ctx context.Context, in listHistoryChanne
 func (r *Registry) planHistoryChannel(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	plan, err := r.svc.HistoryPlan(ctx, in.ChannelID)
 	if err != nil {
-		return nil, fmt.Errorf("按通道生成历史同步计划失败: %w", err)
+		return nil, errors.Wrap(err, "按通道生成历史同步计划失败")
 	}
 	return map[string]any{
 		"channel_id": plan.ChannelID,
@@ -98,7 +98,7 @@ func (r *Registry) planHistoryChannel(ctx context.Context, in historyChannelRef)
 func (r *Registry) resolveHistoryChannel(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	plan, err := r.svc.HistoryResolve(ctx, in.ChannelID)
 	if err != nil {
-		return nil, fmt.Errorf("按通道计算历史同步解法失败: %w", err)
+		return nil, errors.Wrap(err, "按通道计算历史同步解法失败")
 	}
 	out := map[string]any{
 		"channel_id":  plan.ChannelID,
@@ -142,7 +142,7 @@ func (r *Registry) listHistoryRuns(ctx context.Context, in listHistoryRunsInput)
 	}
 	list, total, err := r.svc.ListHistoryRuns(ctx, in.ChannelID, (page-1)*limit, limit)
 	if err != nil {
-		return nil, fmt.Errorf("列出历史同步执行记录失败: %w", err)
+		return nil, errors.Wrap(err, "列出历史同步执行记录失败")
 	}
 	out := map[string]any{
 		"channel_id": in.ChannelID,
@@ -163,7 +163,7 @@ func (r *Registry) listHistoryRuns(ctx context.Context, in listHistoryRunsInput)
 func (r *Registry) verifyHistoryChannelAudit(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	res, err := r.svc.VerifyHistoryChannelChain(ctx, in.ChannelID)
 	if err != nil {
-		return nil, fmt.Errorf("校验历史同步执行记录链失败: %w", err)
+		return nil, errors.Wrap(err, "校验历史同步执行记录链失败")
 	}
 	return map[string]any{
 		"channel_id": in.ChannelID,
@@ -193,7 +193,7 @@ type historyOverrideInput struct {
 func (r *Registry) listHistoryOverrides(ctx context.Context, in historyOverrideListInput) (map[string]any, error) { //nolint:gocritic // hugeParam: eino utils.InferTool 要求入参是结构体值,指针会破坏入参 schema 推断
 	list, err := r.svc.ListHistoryOverrides(ctx, in.ChannelID)
 	if err != nil {
-		return nil, fmt.Errorf("列出历史同步裁决失败: %w", err)
+		return nil, errors.Wrap(err, "列出历史同步裁决失败")
 	}
 	return map[string]any{"channel_id": in.ChannelID, "overrides": list}, nil
 }
@@ -234,7 +234,7 @@ func (r *Registry) setHistoryOverride(ctx context.Context, in historyOverrideInp
 func (r *Registry) previewHistoryChannel(ctx context.Context, in historyChannelRef) (map[string]any, error) {
 	rep, err := r.svc.HistoryPreview(ctx, in.ChannelID)
 	if err != nil {
-		return nil, fmt.Errorf("历史同步预检失败: %w", err)
+		return nil, errors.Wrap(err, "历史同步预检失败")
 	}
 	return map[string]any{
 		"channel_id":        rep.ChannelID,

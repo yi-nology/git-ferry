@@ -2,11 +2,19 @@ package git_sync
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/logx"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("git-sync")
 
 // recordAudit 记录一条审计日志（best-effort：写入失败仅告警，不影响主流程）。
 //
@@ -47,9 +55,9 @@ func recordAuditDetail(ctx context.Context, c *app.RequestContext, action, resou
 	}
 	if svc := GetSyncService(); svc != nil {
 		if err := svc.RecordOperation(ctx, entry); err != nil {
-			slog.Warn("record audit log failed", "error", err, "action", action, "resource", resource)
+			logger.Warn("record audit log failed", "error", err, "action", action, "resource", resource)
 		}
 	} else {
-		slog.Warn("record audit log skipped: service unavailable", "action", action)
+		logger.Warn("record audit log skipped: service unavailable", "action", action)
 	}
 }

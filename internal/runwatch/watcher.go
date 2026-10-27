@@ -13,7 +13,6 @@ package runwatch
 import (
 	"cmp"
 	"context"
-	"log/slog"
 	"slices"
 	"sort"
 	"sync"
@@ -21,10 +20,19 @@ import (
 
 	"github.com/oekit/concurrency/async"
 	"github.com/oekit/concurrency/loop"
+	"github.com/oekit/logx"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/metrics"
 	"github.com/yi-nology/git-ferry/internal/notify"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("runwatch")
 
 // ModeEvent / ModePoll 事件源模式。
 const (
@@ -114,7 +122,7 @@ func (w *Watcher) Start(ctx context.Context) {
 			<-ctx.Done()
 			cancel()
 		})
-		slog.Info("run watcher started",
+		logger.Info("run watcher started",
 			"mode", ModeEvent, "max_auto_retries", w.cfg.Retry.MaxAutoRetries)
 		return
 	}
@@ -125,7 +133,7 @@ func (w *Watcher) Start(ctx context.Context) {
 		func(c context.Context) {
 			w.tick(c)
 		})
-	slog.Info("run watcher started",
+	logger.Info("run watcher started",
 		"mode", ModePoll,
 		"interval_seconds", w.cfg.IntervalSeconds,
 		"max_auto_retries", w.cfg.Retry.MaxAutoRetries)
@@ -204,10 +212,10 @@ func (w *Watcher) maybeAutoRetry(ctx context.Context, run *corebridge.SyncRun) {
 	if !d.Retry {
 		return
 	}
-	slog.Info("auto retry failed sync run",
+	logger.Info("auto retry failed sync run",
 		"run_id", run.ID, "task", run.TaskKey, "attempt", d.Attempt)
 	if err := w.svc.RunTaskAsync(run.TaskKey, "auto_retry", nil); err != nil {
-		slog.Warn("auto retry failed", "run_id", run.ID, "error", err, "reason", d.Reason)
+		logger.Warn("auto retry failed", "run_id", run.ID, "error", err, "reason", d.Reason)
 	}
 }
 
@@ -217,7 +225,7 @@ func (w *Watcher) Tick(ctx context.Context) { w.tick(ctx) }
 func (w *Watcher) tick(ctx context.Context) {
 	runs, err := w.collectRecent(ctx)
 	if err != nil {
-		slog.Warn("run watch collect failed", "error", err)
+		logger.Warn("run watch collect failed", "error", err)
 		return
 	}
 	w.pruneMaps(runs)

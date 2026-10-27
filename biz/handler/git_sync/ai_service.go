@@ -3,11 +3,12 @@ package git_sync
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"github.com/yi-nology/git-ferry/biz/model/ai"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	"github.com/oekit/pkg/errors"
 	"strings"
 	"sync"
+
+	"github.com/yi-nology/git-ferry/biz/model/ai"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"

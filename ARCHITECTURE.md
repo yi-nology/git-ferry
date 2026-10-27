@@ -55,6 +55,24 @@
 | **壳不渗入** | hz handler / response / converter / version 留在本仓 |
 | **hz 标准** | HTTP 层遵循 hz IDL 代码生成规范 |
 | **拒绝静默失败** | 参数不合法时让真实错误暴露，不做静默兜底（详见 §7） |
+| **oekit 家族优先** | 能用 oekit 原语就别手搓；四条硬规则（errors/logx/async/Delegating）由 `internal/convention` 机械门禁守住（详见 §1.6） |
+
+### 1.6 oekit 家族的使用纪律
+
+本仓是 [oekit](https://github.com/oekit) 家族的使用方。模块矩阵的**权威索引**是
+<https://oekit.github.io/llms.txt> 与 <https://oekit.github.io/versions.json>
+（不要凭记忆猜 API 或版本；`go doc github.com/oekit/<mod>[/<pkg>]` 可查源码）。
+
+四条硬规则在本仓的落地口径（**逐条有机械闸门**，见 `internal/convention/`）：
+
+| 规则 | 本仓口径 | 闸门 |
+|---|---|---|
+| 错误处理用 `pkg/errors` | 包装走 `errors.Wrap`；业务错误用 `BizError` 自带状态码，由 `response.Biz` 统一渲染 | 禁 stdlib `errors` 导入、禁 `fmt.Errorf(...%w...)` |
+| 日志用 logx kv 风格 | 每包 `var logger = logx.Delegating("组件名")`；后端在 `serve.SetupLogger` 接到**与默认 slog 同一个 handler** | 禁直连 `slog.*`、禁 `logx.Default()` 包级捕获 |
+| 禁止裸 `go func` | 一律 `concurrency/async`（panic 收编，否则一个后台 goroutine panic 带走整个进程） | 扫源码 |
+| SDK 包用 Delegating | `Delegating` 是**调用时**解析，包级 var 不会绑死在 init 时刻的后端上 | 扫源码 |
+
+规范全文见仓根 [`AGENTS.md`](AGENTS.md)。
 
 ### 1.5 核心功能
 
@@ -386,6 +404,9 @@ MCP 端点与 AI 助手**共用同一注册表**（`internal/agent/tools`），M
 - 外部后端经 **ACP**（Agent Client Protocol，JSON-RPC over stdio）驱动；协议形状以实测为准，
   夹具见 `internal/agent/engine/acp/testdata/`。
 - 外部 agent 是**跑在本机上的子进程**，工作目录即代码层能给到的沙箱边界。
+  沙箱判定只有**一份**（`internal/agent/engine/acp/sandbox.go`）：`fs/*` 与 `terminal/*` 共用，
+  相对路径先过 `pkg/pathx.SanitizeRelStrict`（严格档，显式 `..` 一律拒），
+  再解析符号链接后判包含 —— 软链逃逸与「`a/../b` 抵消」都挡住。
 - 挂本服务 `/mcp` 给外部 agent 时，MCP 专用 key 固定**只读角色**（MCP 路径上危险工具不弹确认）。
 - 委派工具 `ai_code_delegate`（危险）让内置助手把一段编码任务派给外部 agent；
   委派是**异步**的（确认后立刻返回任务 ID，结果回填会话 + 轮询取回），

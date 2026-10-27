@@ -3,18 +3,26 @@ package acp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
+	"github.com/oekit/pkg/errors"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/oekit/concurrency/async"
+	"github.com/oekit/logx"
 
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("acp")
 
 // AcpxEngine 通过 acpx CLI 驱动外部 coding agent。
 //
@@ -154,7 +162,7 @@ func (e *AcpxEngine) closeSession(name string) {
 	cmd.Dir = e.cfg.Cwd
 	cmd.Env = scrubbedEnv()
 	if out, err := cmd.CombinedOutput(); err != nil {
-		slog.Warn("关闭 acpx 会话失败", "session", name, "error", err, "output", strings.TrimSpace(string(out)))
+		logger.Warn("关闭 acpx 会话失败", "session", name, "error", err, "output", strings.TrimSpace(string(out)))
 	}
 }
 
@@ -252,7 +260,7 @@ func (e *AcpxEngine) runTurn(ctx context.Context, sessionName, prompt string, em
 	}
 	e.forgetSession(sessionName)
 	if err2 := e.ensureSession(ctx, sessionName); err2 != nil {
-		return "", fmt.Errorf("%w(重建 acpx 会话也失败: %v)", err, err2)
+		return "", errors.Wrap(err, "重建 acpx 会话也失败", "rebuild_err", err2)
 	}
 	return e.execPrompt(ctx, sessionName, prompt, emit)
 }
@@ -310,12 +318,12 @@ func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string,
 	cmd.Env = scrubbedEnv()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", fmt.Errorf("acpx stdout 管道失败: %w", err)
+		return "", errors.Wrap(err, "acpx stdout 管道失败")
 	}
 	stderr := newRingBuffer(8 * 1024)
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
-		return "", fmt.Errorf("acpx 启动失败(%s): %w", e.cfg.Binary, err)
+		return "", errors.Wrap(err, fmt.Sprintf("acpx 启动失败(%s)", e.cfg.Binary))
 	}
 
 	mapper := newUpdateMapper()
@@ -326,7 +334,7 @@ func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string,
 	for {
 		msg, err := reader.next()
 		if err != nil {
-			streamErr = fmt.Errorf("读取 acpx 输出失败: %w", err)
+			streamErr = errors.Wrap(err, "读取 acpx 输出失败")
 			break
 		}
 		if msg == nil {
@@ -470,12 +478,12 @@ func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
 	cmd.Env = scrubbedEnv()
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", fmt.Errorf("acpx stdout 管道失败: %w", err)
+		return "", errors.Wrap(err, "acpx stdout 管道失败")
 	}
 	stderr := newRingBuffer(8 * 1024)
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
-		return "", fmt.Errorf("acpx 启动失败(%s): %w", cfg.Binary, err)
+		return "", errors.Wrap(err, fmt.Sprintf("acpx 启动失败(%s)", cfg.Binary))
 	}
 
 	mapper := newUpdateMapper()
@@ -485,7 +493,7 @@ func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
 	for {
 		msg, err := reader.next()
 		if err != nil {
-			streamErr = fmt.Errorf("读取 acpx 输出失败: %w", err)
+			streamErr = errors.Wrap(err, "读取 acpx 输出失败")
 			break
 		}
 		if msg == nil {
@@ -533,7 +541,7 @@ func Probe(ctx context.Context, cfg *Config) (string, error) {
 
 	bin, err := exec.LookPath(cfg.Binary)
 	if err != nil {
-		return "", fmt.Errorf("找不到 acpx(%s): %w —— 请先 npm install -g acpx", cfg.Binary, err)
+		return "", errors.Wrap(err, fmt.Sprintf("找不到 acpx(%s):  —— 请先 npm install -g acpx", cfg.Binary))
 	}
 	cmd := exec.CommandContext(ctx, bin, "--version") //nolint:gosec // G204:路径来自配置
 	out, err := cmd.CombinedOutput()

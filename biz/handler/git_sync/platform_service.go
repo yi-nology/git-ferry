@@ -3,10 +3,9 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/google/uuid"
+	"github.com/oekit/kitx/uidgen"
 	"github.com/oekit/pkg/convert"
 	platform "github.com/yi-nology/git-ferry/biz/model/platform"
 	"github.com/yi-nology/git-ferry/internal/converter"
@@ -43,7 +42,7 @@ func CreatePlatform(ctx context.Context, c *app.RequestContext) {
 	}
 
 	p := &corebridge.Platform{
-		Key:                   uuid.New().String(),
+		Key:                   uidgen.UUIDWithHyphen(),
 		Name:                  req.Name,
 		Type:                  req.Type,
 		InstanceURL:           req.InstanceUrl,
@@ -224,7 +223,7 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 	if err != nil {
 		// 更新平台状态为错误
 		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, corebridge.PlatformStatusError, err.Error()); statusErr != nil {
-			slog.Warn("failed to update platform status after test error", "key", req.Key, "error", statusErr)
+			logger.Warn("failed to update platform status after test error", "key", req.Key, "error", statusErr)
 		}
 		response.InternalError(c, err.Error())
 		return
@@ -233,7 +232,7 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 	// 按实际连接结果落库:connected=false 时记录失败详情,不能一律写成功
 	if result != nil && result.Connected {
 		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, corebridge.PlatformStatusActive, "connection successful"); statusErr != nil {
-			slog.Warn("failed to update platform status to active", "key", req.Key, "error", statusErr)
+			logger.Warn("failed to update platform status to active", "key", req.Key, "error", statusErr)
 		}
 	} else {
 		failMsg := "connection failed"
@@ -241,7 +240,7 @@ func TestPlatformConnection(ctx context.Context, c *app.RequestContext) {
 			failMsg = result.Message
 		}
 		if statusErr := GetSyncService().UpdatePlatformStatus(ctx, req.Key, corebridge.PlatformStatusError, failMsg); statusErr != nil {
-			slog.Warn("failed to update platform status to error", "key", req.Key, "error", statusErr)
+			logger.Warn("failed to update platform status to error", "key", req.Key, "error", statusErr)
 		}
 	}
 

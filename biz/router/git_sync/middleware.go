@@ -4,12 +4,20 @@ package git_sync
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/hertz-contrib/requestid"
+	"github.com/oekit/logx"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("git-sync-router")
 
 // AuthMiddleware routes to the shell-provided auth provider, or the default
 // X-API-Key check. See auth_hook.go.
@@ -37,9 +45,9 @@ func RequestLogMiddleware() app.HandlerFunc {
 			"request_id", requestID,
 		}
 		if latency > 1*time.Second || status >= 500 {
-			slog.Warn("api request", logAttrs...)
+			logger.Warn("api request", logAttrs...)
 		} else {
-			slog.Debug("api request", logAttrs...)
+			logger.Debug("api request", logAttrs...)
 		}
 	}
 }

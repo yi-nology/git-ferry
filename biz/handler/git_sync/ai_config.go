@@ -94,8 +94,8 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	}
 	// 写闸门:只读角色不改 AI 配置。
 	if !CanWriteRole(GetAuthRole(c)) {
-		response.Error(c, consts.StatusForbidden,
-			"forbidden: 角色 "+string(GetAuthRole(c))+" 不能修改 AI 配置")
+		response.Biz(c, response.NewBizError(consts.StatusForbidden,
+			"forbidden: 角色 "+string(GetAuthRole(c))+" 不能修改 AI 配置"))
 		return
 	}
 	var req ai.AIConfigRequest
@@ -203,8 +203,8 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	}
 	if backend != curBackend || !agent.SameExternalPermissions(&ext, &cur.External) {
 		if GetAuthRole(c) != RoleAdmin {
-			response.Error(c, consts.StatusForbidden,
-				"forbidden: 切换 AI 后端或修改外部 agent 授权档需要 admin 角色")
+			response.Biz(c, response.NewBizError(consts.StatusForbidden,
+				"forbidden: 切换 AI 后端或修改外部 agent 授权档需要 admin 角色"))
 			return
 		}
 		// 治理动作留审计:谁在什么时候把 AI 换成了什么、授权档改成了什么。

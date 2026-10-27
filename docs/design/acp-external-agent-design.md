@@ -940,3 +940,52 @@ T1/T2/T3 是同一族病:**同一个概念有两套写法**(旧的单字段 / �
 - `internal/agent/engine/acp/stdio_once_test.go`:stdio 一次性执行跑通(假 agent)、
   ask 档要拒、stdio 委派按名字选 profile。
 - `biz/handler/git_sync/ai_config_test.go`:改 **profile** 的授权档同样要 admin。
+
+## 19. oekit 深度重构轮(2026-10-27)
+
+这一轮不是加功能,是**把本仓挪进 oekit 的规范里**:四条硬规则逐条落地,
+手搓实现换成 oekit 原语,规则落成**机械闸门**(不靠人记)。
+
+### 19.1 四条硬规则的落地
+
+| oekit 规则 | 本仓改造 | 闸门 |
+|---|---|---|
+| 错误处理必须用 `pkg/errors` | 63 处 `fmt.Errorf(...%w...)` → `errors.Wrap(err, msg)`;stdlib `errors` 导入全部换成 oekit 的(同名同型,`Is`/`As` 一个 import 即可) | `internal/convention`:禁 stdlib `errors`、禁 `%w` |
+| 日志用 logx kv 风格,SDK 包用 Delegating | 9 个包各声明 `var logger = logx.Delegating("组件名")`;30 处直连 `slog.*` 改走包级 logger;`serve.SetupLogger` 把 logx 接到**与默认 slog 同一个 handler** ⇒ 格式/级别/trace_id 完全一致 | 禁直连 `slog.*`、禁 `logx.Default()` 包级捕获 |
+| 禁止裸 `go func` | 5 处裸 goroutine → `async.GoSafe` | 扫源码 |
+| SDK 包用 Delegating | 同上 | 同上 |
+
+**为什么包级 logger 必须是 Delegating 而不是 `logx.Default()`**:包级 var 在 init 时求值,
+直接捕获 `Default()` 会永远绑在 init 那一刻的后端上,`main` 里随后的 `SetDefault`
+对它无效 ⇒ 日志进黑洞。`Delegating` 是**调用时**解析。
+
+### 19.2 手搓实现 → oekit 原语
+
+| 原手搓 | 换成 | 顺带修掉 |
+|---|---|---|
+| ACP 沙箱路径判定(`checkInside` 手写前缀比较) | `pkg/pathx.SanitizeRelStrict`(严格档) | 「`a/../b` 抵消」是纯文本语义、看不见符号链接 ⇒ 严格档在**拼根之前**就拒 |
+| 外部 agent 自己的 UUID(`google/uuid`) | `kitx/uidgen`(零三方依赖,自带 v4 + 雪花) | 少一个直接依赖 |
+| 硬编码的 403 响应(RBAC 闸门、治理闸门) | `errors.BizError` 自带状态码 + `response.Biz` 统一渲染 | 「这个错误该落成 403 还是 400」由**产生处**定,渲染处不猜;错误响应统一成同一信封 |
+
+### 19.3 顺带堵上的一个真洞:terminal 的 cwd 没被管
+
+`terminal/create` 的工作目录此前是**直接用 agent 给的**(`cwd = p.Cwd`),
+而文档写的是「命令的工作目录固定在 root 内」—— 实现根本没管:
+agent 报一个根外的 cwd 就能把命令挪到沙箱外跑。
+
+这正是 §17/§18 反复出现的那类病:**文档说的与代码做的不是一回事**。
+
+修法:fs/* 与 terminal/* **共用一份沙箱**(`sandbox.go`),
+`resolveCwd` 走同一条判定(相对路径先过严格档 → 解析符号链接 → 判包含),
+根外直接拒。工作目录不存在也拒(没有「写新文件」那条回退路径可用)。
+
+### 19.4 规则要落成机械闸门
+
+`internal/convention/` 把四条规则变成**可执行的检查**(CI 跑):
+裸 goroutine / stdlib errors / `fmt.Errorf %w` / 直连 slog / `logx.Default()` 包级捕获。
+
+与 `internal/release/` 的发版门禁同思路:**纪律变成闸门,而不是文档里的一句话**。
+下一次有人「顺手写个 go func」,CI 会当场拦住。
+
+规范全文见仓根 `AGENTS.md`(oekit 家族每仓都有 AGENTS.md,本仓此前没有 ⇒ 补上)。
+

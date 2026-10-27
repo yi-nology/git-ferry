@@ -2,9 +2,8 @@ package git_sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
+	"github.com/oekit/pkg/errors"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -90,7 +89,7 @@ func ExportGitHubMigration(ctx context.Context, c *app.RequestContext) {
 		// 超时(ErrTimeout)按原实现口径静默收束:保留轮询前的旧 state。
 		// 其余错误 = 请求上下文被取消(客户端断开),同样保留旧 state 并提前结束轮询。
 		if perr != nil && !errors.Is(perr, retry.ErrTimeout) {
-			slog.Warn("migration poll interrupted", "migration_id", info.ID, "error", perr)
+			logger.Warn("migration poll interrupted", "migration_id", info.ID, "error", perr)
 		}
 	}
 

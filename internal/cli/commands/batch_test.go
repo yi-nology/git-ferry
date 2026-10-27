@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"github.com/oekit/pkg/stringx"
 	"testing"
+
+	"github.com/oekit/pkg/stringx"
 
 	"github.com/stretchr/testify/assert"
 

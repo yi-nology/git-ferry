@@ -17,9 +17,18 @@ import (
 	"github.com/oekit/core/chain"
 	hertzx "github.com/oekit/hertz"
 	"github.com/oekit/hertz/chainmw"
+	"github.com/oekit/logx"
 	"github.com/yi-nology/git-ferry-core/pkg/proclog"
 	"github.com/yi-nology/git-ferry/biz/router"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("serve")
 
 // serviceName 是 bootstrap 生命周期与日志里的服务标识。
 const serviceName = "git-ferry"
@@ -46,7 +55,7 @@ func Recovery() app.HandlerFunc {
 				if c, ok := req.(*app.RequestContext); ok {
 					method, path = string(c.Method()), string(c.Path())
 				}
-				slog.Error("handler panic recovered",
+				logger.Error("handler panic recovered",
 					"panic", fmt.Sprintf("%v", pv.Value),
 					"stack", pv.Stack,
 					"method", method,
@@ -134,7 +143,18 @@ func ExitOnFail(msg string, err error) {
 	proclog.ExitOnFail(msg, err)
 }
 
-// SetupLogger 按 level/format 配置默认 slog；实现在 core pkg/proclog（两壳共用）。
+// SetupLogger 按 level/format 配置默认 slog;实现在 core pkg/proclog(两壳共用)。
+//
+// **同时把 logx 门面接到同一个 slog handler 上**:各包的包级 logger
+// (logx.Delegating)与进程默认 slog 走**同一条出口** ⇒
+// 格式一致、级别一致、trace_id 一致 —— 不会出现「两套日志两套格式」。
+//
+// handler 直接取 slog 默认 logger 的 handler ⇒ 与 proclog 装上的**是同一个**;
+// logx 侧只负责级别过滤与结构化字段注入(service / component)。
 func SetupLogger(level, format string) {
 	proclog.Setup(level, format)
+	logx.UseSlog(serviceName,
+		logx.WithHandler(slog.Default().Handler()),
+		logx.WithLevel(logx.ParseLogLevelOr(level, logx.LevelInfo)),
+	)
 }

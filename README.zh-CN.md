@@ -639,6 +639,10 @@ cd frontend && npm ci && npm run build
 3. 保持 `make test` / `make lint` 通过
 4. 用模板提交 Pull Request
 
+**AI agent 从这里开始**：[`AGENTS.md`](AGENTS.md) —— 本仓的硬规矩
+（oekit 四条硬规则、单一入口纪律、发版门禁），每一条都有机械闸门
+（`internal/convention/` 与 `internal/release/`）兜着。
+
 ## License
 
 MIT License，详见 [LICENSE](LICENSE)。

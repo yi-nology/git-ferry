@@ -3,10 +3,9 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"io"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -17,11 +16,20 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 	"github.com/oekit/concurrency/async"
+	"github.com/oekit/logx"
 
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
 	"github.com/yi-nology/git-ferry/internal/agent/engine/delegate"
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("ai")
 
 // einoEngine 内置后端:eino ChatModelAgent + 工具装饰器。
 //
@@ -47,7 +55,7 @@ func NewEinoEngine(cfg *Config, apiKey string, svc tools.SyncService) (engine.En
 		Timeout:     time.Duration(cfg.TimeoutSeconds) * time.Second,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("构建模型失败: %w", err)
+		return nil, errors.Wrap(err, "构建模型失败")
 	}
 	return NewEinoEngineWithModel(cfg, cm, tools.NewRegistry(svc))
 }
@@ -65,7 +73,7 @@ func NewEinoEngineWithModel(cfg *Config, cm model.BaseModel[*schema.Message], re
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("构建 ChatModelAgent 失败: %w", err)
+		return nil, errors.Wrap(err, "构建 ChatModelAgent 失败")
 	}
 	return &einoEngine{
 		runner: adk.NewRunner(context.Background(), adk.RunnerConfig{
@@ -163,7 +171,7 @@ func (e *einoEngine) Run(ctx context.Context, sess engine.Session, in engine.Inp
 		defer func() {
 			if rec := recover(); rec != nil {
 				emit(engine.Event{Type: engine.EventError, Content: fmt.Sprintf("内部错误: %v", rec)})
-				slog.Error("ai agent panic", "panic", rec, "session", sess.SessionID())
+				logger.Error("ai agent panic", "panic", rec, "session", sess.SessionID())
 			}
 		}()
 

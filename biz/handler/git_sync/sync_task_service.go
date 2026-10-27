@@ -2,8 +2,8 @@ package git_sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"

@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 
+	"github.com/oekit/logx"
 	"github.com/yi-nology/git-ferry/biz/handler/git_sync"
 	"github.com/yi-nology/git-ferry/biz/serve"
 	"github.com/yi-nology/git-ferry/internal/agent"
@@ -15,8 +15,17 @@ import (
 	"github.com/yi-nology/git-ferry/internal/runwatch"
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
+
 	_ "github.com/yi-nology/go-git-platform/backends/all"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("git-ferry")
 
 func main() {
 	shellCfg, err := corebridge.LoadShellConfig("conf/config.yaml")
@@ -117,13 +126,13 @@ func main() {
 
 	// 启动时按合并结果构建(启用失败不退出:设置页可改后热生效)
 	if r, err := buildRunner(&aiSettings); err != nil {
-		slog.Warn("ai disabled at boot, fix via settings page", "error", err)
+		logger.Warn("ai disabled at boot, fix via settings page", "error", err)
 	} else {
 		aiRunnerMu.Lock()
 		aiRunner = r
 		aiRunnerMu.Unlock()
 		if r != nil {
-			slog.Info("ai tools: policy=default, persist=on")
+			logger.Info("ai tools: policy=default, persist=on")
 		}
 	}
 
@@ -146,7 +155,7 @@ func main() {
 		// 换后端不关旧的话,机器上会攒下一堆孤儿进程。
 		if old != nil {
 			if cerr := old.Close(); cerr != nil {
-				slog.Warn("close previous ai backend failed", "error", cerr)
+				logger.Warn("close previous ai backend failed", "error", cerr)
 			}
 		}
 		return nil
@@ -196,7 +205,7 @@ func main() {
 		aiRunnerMu.Unlock()
 		if runner != nil {
 			if err := runner.Close(); err != nil {
-				slog.Warn("close ai backend failed", "error", err)
+				logger.Warn("close ai backend failed", "error", err)
 			}
 		}
 		syncSvc.Stop()

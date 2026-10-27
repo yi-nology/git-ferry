@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"strings"
 	"time"
@@ -100,7 +99,7 @@ func externalAuditFunc(svc *corebridge.Service, ext *agent.ExternalAgentConfig) 
 			Detail:       detail,
 		}
 		if err := svc.RecordOperation(ctx, entry); err != nil {
-			slog.Warn("外部 agent 审计写入失败", "error", err, "action", action, "tool", tool)
+			logger.Warn("外部 agent 审计写入失败", "error", err, "action", action, "tool", tool)
 		}
 	}
 }
@@ -241,7 +240,7 @@ func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 	baseCfg := acpConfigFor(&base, delegatePermissionFor(base.Permission), cfg.Backend)
 	dr, err := acp.NewDelegateRunner(&baseCfg)
 	if err != nil {
-		slog.Warn("委派执行器未装配(外部 agent 不可用)", "error", err)
+		logger.Warn("委派执行器未装配(外部 agent 不可用)", "error", err)
 		return
 	}
 	dr.WithResolver(func(name string) (acp.Config, bool) {
@@ -256,7 +255,7 @@ func attachDelegator(cfg *agent.Config, eng engine.Engine) {
 		return
 	}
 	b.SetDelegator(dr)
-	slog.Info("ai delegate ready", "agent", base.Agent, "command", base.Command,
+	logger.Info("ai delegate ready", "agent", base.Agent, "command", base.Command,
 		"profiles", cfg.ExternalProfileNames())
 }
 
@@ -266,7 +265,7 @@ func logAIBackend(cfg *agent.Config, eng engine.Engine) {
 		return
 	}
 	ext, transport := cfg.EffectiveExternal()
-	slog.Info("ai backend ready",
+	logger.Info("ai backend ready",
 		"backend", eng.ID(),
 		"label", eng.Label(),
 		"agent", eng.ModelName(),

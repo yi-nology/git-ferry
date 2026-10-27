@@ -2,7 +2,7 @@ package git_sync
 
 import (
 	"context"
-	"errors"
+	"github.com/oekit/pkg/errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"

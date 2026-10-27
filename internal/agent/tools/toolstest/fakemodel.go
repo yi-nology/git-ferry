@@ -2,7 +2,7 @@ package toolstest
 
 import (
 	"context"
-	"errors"
+	"github.com/oekit/pkg/errors"
 	"sync"
 
 	"github.com/cloudwego/eino/components/model"

@@ -2,10 +2,11 @@ package git_sync
 
 import (
 	"context"
-	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"strconv"
 	"strings"
+
+	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/pkg/convert"

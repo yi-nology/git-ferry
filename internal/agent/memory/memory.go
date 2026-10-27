@@ -7,6 +7,7 @@ package memory
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -55,7 +56,7 @@ func Open(path string) (*Store, error) {
 	}
 	if len(data) > 0 {
 		if err := json.Unmarshal(data, &s.entries); err != nil {
-			return nil, fmt.Errorf("parse ai memory: %w", err)
+			return nil, errors.Wrap(err, "parse ai memory")
 		}
 	}
 	return s, nil

@@ -6,6 +6,7 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,10 +77,10 @@ func OpenSettings(path string) (*SettingsStore, error) {
 		if os.IsNotExist(err) {
 			return s, nil
 		}
-		return nil, fmt.Errorf("read ai settings: %w", err)
+		return nil, errors.Wrap(err, "read ai settings")
 	}
 	if err := json.Unmarshal(data, &s.cur); err != nil {
-		return nil, fmt.Errorf("parse ai settings: %w", err)
+		return nil, errors.Wrap(err, "parse ai settings")
 	}
 	return s, nil
 }
@@ -167,7 +168,7 @@ func (s *SettingsStore) persist(st *Settings) error {
 		return fmt.Errorf("ai settings path empty")
 	}
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o750); err != nil {
-		return fmt.Errorf("mkdir ai settings: %w", err)
+		return errors.Wrap(err, "mkdir ai settings")
 	}
 	//nolint:gosec // G117:APIKey 仅序列化到本地 0600 设置文件,读接口不回传明文
 	data, err := json.MarshalIndent(st, "", "  ")
@@ -176,7 +177,7 @@ func (s *SettingsStore) persist(st *Settings) error {
 	}
 	tmp := s.path + ".tmp"
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return fmt.Errorf("write ai settings: %w", err)
+		return errors.Wrap(err, "write ai settings")
 	}
 	return os.Rename(tmp, s.path)
 }

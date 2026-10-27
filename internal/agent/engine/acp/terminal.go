@@ -3,11 +3,14 @@ package acp
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/oekit/concurrency/async"
 )
 
 // terminalHandler 实现 **client 侧**的 terminal/* 能力。
@@ -16,8 +19,12 @@ import (
 // 声明需要它)。实测 mcode 不用它,但 claude-agent-acp / codex-acp 一类会要求。
 //
 // 沙箱:命令的工作目录固定在 root 内;输出有上限,防把磁盘写爆。
+//
+// **工作目录必须过沙箱判定**(与 fs/* 同一份边界):此前 cwd 是**直接用
+// agent 给的**——文档写着「固定在 root 内」,实现却没管 ⇒ agent 报一个
+// 根外的 cwd 就能把命令挪到沙箱外跑。
 type terminalHandler struct {
-	root string
+	*sandbox
 
 	mu    sync.Mutex
 	terms map[string]*termProc
@@ -33,8 +40,19 @@ type terminalHandler struct {
 // 让 agent 自己决定先放掉哪个,比悄悄回收它正在用的终端安全。
 const maxTerminals = 16
 
-func newTerminalHandler(root string) *terminalHandler {
-	return &terminalHandler{root: root, terms: make(map[string]*termProc), max: maxTerminals}
+func newTerminalHandler(root string) (*terminalHandler, error) {
+	sb, err := newSandbox(root)
+	if err != nil {
+		// 根目录不可用 ⇒ **不能退化成「无沙箱」**(那等于把边界打开),
+		// 直接报错,由调用方如实告诉用户「这个 agent 起不来」。
+		return nil, err
+	}
+	return newTerminalHandlerWith(sb), nil
+}
+
+// newTerminalHandlerWith 用已建好的沙箱构造处理器(与 fs/* 共用同一份边界)。
+func newTerminalHandlerWith(sb *sandbox) *terminalHandler {
+	return &terminalHandler{sandbox: sb, terms: make(map[string]*termProc), max: maxTerminals}
 }
 
 // termProc 一个终端进程。
@@ -74,14 +92,20 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 		OutputByteLimit int                 `json:"outputByteLimit"`
 	}
 	if err := json.Unmarshal(raw, &p); err != nil {
-		return nil, fmt.Errorf("参数解析失败: %w", err)
+		return nil, errors.Wrap(err, "参数解析失败")
 	}
 	if p.Command == "" {
 		return nil, fmt.Errorf("command 不能为空")
 	}
 	cwd := h.root
 	if p.Cwd != "" {
-		cwd = p.Cwd
+		// **工作目录必须过沙箱判定**:agent 给的 cwd 直接用 ⇒
+		// 报个根外路径就能把命令挪到沙箱外。
+		resolved, err := h.resolveCwd(p.Cwd)
+		if err != nil {
+			return nil, err
+		}
+		cwd = resolved
 	}
 	limit := p.OutputByteLimit
 	if limit <= 0 {
@@ -111,10 +135,10 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 	cmd.Stdout = buf
 	cmd.Stderr = buf
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("启动终端失败: %w", err)
+		return nil, errors.Wrap(err, "启动终端失败")
 	}
 	tp := &termProc{cmd: cmd, out: buf, done: make(chan struct{})}
-	go func() {
+	async.GoSafe(func() {
 		err := cmd.Wait()
 		if err != nil {
 			var ee *exec.ExitError
@@ -125,7 +149,7 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 			}
 		}
 		close(tp.done)
-	}()
+	})
 	id := fmt.Sprintf("term-%d", h.seq.Add(1))
 	h.mu.Lock()
 	h.terms[id] = tp
@@ -218,7 +242,7 @@ func (h *terminalHandler) terminalID(raw json.RawMessage) (string, error) {
 		TerminalID string `json:"terminalId"`
 	}
 	if err := json.Unmarshal(raw, &p); err != nil {
-		return "", fmt.Errorf("参数解析失败: %w", err)
+		return "", errors.Wrap(err, "参数解析失败")
 	}
 	if p.TerminalID == "" {
 		return "", fmt.Errorf("terminalId 不能为空")

@@ -3,8 +3,8 @@ package acp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,13 +51,15 @@ func NewEngine(cfg *Config) (*Engine, error) {
 	}
 	root, err := filepath.Abs(cfg.Cwd)
 	if err != nil {
-		return nil, fmt.Errorf("解析工作目录失败: %w", err)
+		return nil, errors.Wrap(err, "解析工作目录失败")
 	}
 	if err := os.MkdirAll(root, 0o750); err != nil {
-		return nil, fmt.Errorf("创建工作目录失败: %w", err)
+		return nil, errors.Wrap(err, "创建工作目录失败")
 	}
 	cfg.Cwd = root
-	fs, err := newFSHandler(root)
+	// **一个沙箱,两条能力共用**:fs/* 与 terminal/* 的边界判定必须是同一份
+	// (各写一套 ⇒ 迟早漂移:terminal 的 cwd 曾经直接用 agent 给的)。
+	sb, err := newSandbox(root)
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +67,8 @@ func NewEngine(cfg *Config) (*Engine, error) {
 		cfg:   *cfg,
 		procs: make(map[string]*sessionProc),
 		perms: newPermRegistry(),
-		fs:    fs,
-		terms: newTerminalHandler(root),
+		fs:    &fsHandler{sandbox: sb},
+		terms: newTerminalHandlerWith(sb),
 		stop:  make(chan struct{}),
 	}
 	e.startJanitor()
@@ -195,13 +197,13 @@ func (e *Engine) prompt(ctx context.Context, proc *sessionProc, message string, 
 	// defer cancel 会误发一次 cancel,把**下一轮**也取消掉。
 	finished := make(chan struct{})
 	defer close(finished)
-	go func() {
+	async.GoSafe(func() {
 		select {
 		case <-ctx.Done():
 			_ = proc.client.notify("session/cancel", map[string]any{"sessionId": proc.sessionID})
 		case <-finished:
 		}
-	}()
+	})
 
 	params := map[string]any{
 		"sessionId": proc.sessionID,
@@ -211,7 +213,7 @@ func (e *Engine) prompt(ctx context.Context, proc *sessionProc, message string, 
 		StopReason string `json:"stopReason"`
 	}
 	if err := proc.client.call(ctx, "session/prompt", params, &res); err != nil {
-		return text.String(), fmt.Errorf("ACP 回合失败: %w", err)
+		return text.String(), errors.Wrap(err, "ACP 回合失败")
 	}
 	return text.String(), nil
 }
@@ -293,18 +295,18 @@ func (e *Engine) start(ctx context.Context, key string) (*sessionProc, error) {
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("agent stdin 管道失败: %w", err)
+		return nil, errors.Wrap(err, "agent stdin 管道失败")
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("agent stdout 管道失败: %w", err)
+		return nil, errors.Wrap(err, "agent stdout 管道失败")
 	}
 	stderr := newRingBuffer(16 * 1024)
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
 		cancel()
-		return nil, fmt.Errorf("启动 agent 进程失败(%s): %w", e.cfg.Command, err)
+		return nil, errors.Wrap(err, fmt.Sprintf("启动 agent 进程失败(%s)", e.cfg.Command))
 	}
 
 	proc := &sessionProc{
@@ -314,7 +316,7 @@ func (e *Engine) start(ctx context.Context, key string) (*sessionProc, error) {
 	}
 	proc.client.onMessage = e.onMessage(proc)
 
-	go func() {
+	async.GoSafe(func() {
 		reader := newLineReader(stdout)
 		for {
 			msg, err := reader.next()
@@ -324,7 +326,7 @@ func (e *Engine) start(ctx context.Context, key string) (*sessionProc, error) {
 			proc.client.dispatch(msg)
 		}
 		proc.client.close()
-	}()
+	})
 
 	// initialize
 	initParams := e.cfg.initParams()
@@ -347,7 +349,7 @@ func (e *Engine) start(ctx context.Context, key string) (*sessionProc, error) {
 	defer initCancel()
 	if err := proc.client.call(initCtx, "initialize", initParams, &initRes); err != nil {
 		proc.close()
-		return nil, fmt.Errorf("ACP initialize 失败: %w(stderr: %s)", err, stderr.String())
+		return nil, errors.Wrap(err, "ACP initialize 失败", "stderr", stderr.String())
 	}
 	proc.agentName = initRes.AgentInfo.Title
 	if proc.agentName == "" {
@@ -369,7 +371,7 @@ func (e *Engine) start(ctx context.Context, key string) (*sessionProc, error) {
 	defer sessCancel()
 	if err := proc.client.call(sessCtx, "session/new", sessionParams, &newRes); err != nil {
 		proc.close()
-		return nil, fmt.Errorf("ACP session/new 失败: %w(stderr: %s)", err, stderr.String())
+		return nil, errors.Wrap(err, "ACP session/new 失败", "stderr", stderr.String())
 	}
 	proc.sessionID = newRes.SessionID
 	proc.touch()

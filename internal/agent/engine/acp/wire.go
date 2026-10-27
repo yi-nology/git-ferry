@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"io"
 	"strings"
 	"sync"
@@ -149,7 +149,7 @@ func (c *client) write(m *rpcMessage) error {
 	default:
 	}
 	if _, err := c.stdin.Write(b); err != nil {
-		return fmt.Errorf("写 ACP 报文失败: %w", err)
+		return errors.Wrap(err, "写 ACP 报文失败")
 	}
 	return nil
 }
@@ -194,7 +194,7 @@ func (c *client) call(ctx context.Context, method string, params, result any) er
 		}
 		if result != nil && len(msg.Result) > 0 {
 			if err := json.Unmarshal(msg.Result, result); err != nil {
-				return fmt.Errorf("解析 %s 响应失败: %w", method, err)
+				return errors.Wrap(err, fmt.Sprintf("解析 %s 响应失败", method))
 			}
 		}
 		return nil

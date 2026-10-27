@@ -4,8 +4,8 @@
 package agent
 
 import (
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"strings"
 
@@ -469,13 +469,13 @@ var ErrBusy = errors.New("ai_busy: 当前会话数已达上限,请稍后再试")
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // 启动配置路径由部署方控制
 	if err != nil {
-		return nil, fmt.Errorf("read config: %w", err)
+		return nil, errors.Wrap(err, "read config")
 	}
 	var overlay struct {
 		AI *Config `yaml:"ai"`
 	}
 	if err := yaml.Unmarshal(data, &overlay); err != nil {
-		return nil, fmt.Errorf("parse config: %w", err)
+		return nil, errors.Wrap(err, "parse config")
 	}
 	if overlay.AI == nil {
 		return &Config{}, nil
@@ -520,7 +520,7 @@ func (c *Config) Validate(apiKey string) error {
 				return errors.New("ai.external.agents[] 里的 profile 缺 name")
 			}
 			if err := CheckExternalProfileParams(&p, ProfileTransportOf(c.Backend, &p), profileLabel(&p)); err != nil {
-				return fmt.Errorf("ai.external.agents[%d]: %w", i, err)
+				return errors.Wrap(err, fmt.Sprintf("ai.external.agents[%d]", i))
 			}
 		}
 		p, transport := c.EffectiveExternal()

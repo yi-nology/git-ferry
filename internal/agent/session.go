@@ -2,12 +2,12 @@ package agent
 
 import (
 	"context"
-	"errors"
+	"github.com/oekit/pkg/errors"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/oekit/concurrency/loop"
+	"github.com/oekit/kitx/uidgen"
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
@@ -68,7 +68,7 @@ func NewSessionStore(ttl time.Duration, maxRounds int) *SessionStore {
 
 func (st *SessionStore) Create() *Session {
 	now := time.Now()
-	s := &Session{ID: uuid.NewString(), CreatedAt: now, LastAt: now, store: st}
+	s := &Session{ID: uidgen.UUIDWithHyphen(), CreatedAt: now, LastAt: now, store: st}
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	st.sessions[s.ID] = s

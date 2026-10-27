@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/yi-nology/git-ferry/internal/pkg/authz"
+	"github.com/yi-nology/git-ferry/internal/pkg/response"
 )
 
 // Role 访问角色(RBAC 最小集)。
@@ -50,7 +52,10 @@ func requireWriteRole(c *app.RequestContext) bool {
 	if r == RoleAdmin || r == RoleOperator {
 		return true
 	}
-	c.JSON(403, map[string]string{"error": "forbidden: role " + string(r) + " cannot write"})
+	// **码由产生处定**(response.NewBizError),渲染处不猜 ——
+	// 与其它业务错误走同一条出口(统一信封)。
+	response.Biz(c, response.NewBizError(consts.StatusForbidden,
+		"forbidden: role "+string(r)+" cannot write"))
 	c.Abort()
 	return false
 }
@@ -60,7 +65,8 @@ func requireAdminRole(c *app.RequestContext) bool {
 	if GetAuthRole(c) == RoleAdmin {
 		return true
 	}
-	c.JSON(403, map[string]string{"error": "forbidden: admin role required"})
+	response.Biz(c, response.NewBizError(consts.StatusForbidden,
+		"forbidden: admin role required"))
 	c.Abort()
 	return false
 }

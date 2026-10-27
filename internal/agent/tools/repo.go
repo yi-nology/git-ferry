@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"slices"
 
 	"github.com/cloudwego/eino/components/tool"
@@ -200,7 +201,7 @@ func (r *Registry) listRepos(ctx context.Context, in listReposInput) (map[string
 	}
 	list, total, err := r.svc.ListReposWithFilter(ctx, pageBounds(in.Page), pageLimit, filter)
 	if err != nil {
-		return nil, fmt.Errorf("查询仓库列表失败: %w", err)
+		return nil, errors.Wrap(err, "查询仓库列表失败")
 	}
 	repos := []repoSummary{}
 	for _, rp := range list {

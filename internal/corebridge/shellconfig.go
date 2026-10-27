@@ -1,7 +1,7 @@
 package corebridge
 
 import (
-	"errors"
+	"github.com/oekit/pkg/errors"
 	"os"
 
 	"github.com/yi-nology/git-ferry-core/model"

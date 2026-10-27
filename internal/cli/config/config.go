@@ -1,8 +1,8 @@
 package config
 
 import (
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"path/filepath"
 
@@ -64,7 +64,7 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	if err := yaml.Unmarshal(b, cfg); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
+		return nil, errors.Wrap(err, fmt.Sprintf("parse %s", path))
 	}
 	return cfg, nil
 }

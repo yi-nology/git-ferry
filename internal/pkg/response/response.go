@@ -1,14 +1,23 @@
 package response
 
 import (
-	"log/slog"
 	"math"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/oekit/logx"
+	"github.com/oekit/pkg/errors"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("response")
 
 // Error sends an error response with a custom status code (kept for backward compatibility)
 func Error(c *app.RequestContext, statusCode int, message string) {
@@ -54,12 +63,40 @@ func NotFound(c *app.RequestContext, message string) {
 // 出于安全:原始 detail 只写入服务端日志,不回传客户端(避免泄露 SQL/DSN/表名/文件路径等内部信息)。
 func InternalError(c *app.RequestContext, message string) {
 	if message != "" {
-		slog.Error("internal server error", "detail", message)
+		logger.Error("internal server error", "detail", message)
 	}
 	Error(c, consts.StatusInternalServerError, "internal server error")
 }
 
+// NewBizError 造一个**带 HTTP 码**的业务错误(oekit errors.BizError)。
+//
+// **为什么要有这个**:错误在 service 层产生、在 handler 层渲染 ——
+// 「这个错误该落成 403 还是 400」如果由渲染方现场挑,同一个业务错误
+// 在不同 handler 里可能落成不同状态码。BizError 把「码 + 消息」绑在
+// 错误自己身上 ⇒ 产生错误的地方定码,渲染的地方只负责回。
+//
+// 本仓响应信封里 `code` 字段就是 HTTP 状态码 ⇒ 业务码与 HTTP 码合一,
+// 免得信封里没地方放业务码。
+func NewBizError(statusCode int, message string) *errors.BizError {
+	return errors.NewBizErrorWithStatus(statusCode, statusCode, message)
+}
+
+// Biz 按业务错误回响应:错误自带码就用自己的,没带就走 FromError 的分类契约。
+func Biz(c *app.RequestContext, err error) {
+	be, ok := errors.AsBizError(err)
+	if !ok {
+		FromError(c, err)
+		return
+	}
+	code := be.HTTPCode
+	if code == 0 {
+		code = consts.StatusBadRequest
+	}
+	Error(c, code, be.Message)
+}
+
 // FromError 按 core 的错误分类契约(corebridge.Classify)选状态码并回响应。
+//   - 业务错误(BizError) → 用它自带的码(错误在产生处定的码,渲染处不猜)
 //   - not_found      → 404,回传业务消息(与既往 errors.Is(ErrNotFound) 分支一致)
 //   - validation     → 400
 //   - conflict       → 409(任务运行中/并发上限/合规冻结)
@@ -70,6 +107,14 @@ func InternalError(c *app.RequestContext, message string) {
 func FromError(c *app.RequestContext, err error) {
 	if err == nil {
 		InternalError(c, "")
+		return
+	}
+	if be, ok := errors.AsBizError(err); ok {
+		code := be.HTTPCode
+		if code == 0 {
+			code = consts.StatusBadRequest
+		}
+		Error(c, code, be.Message)
 		return
 	}
 	switch corebridge.Classify(err) {

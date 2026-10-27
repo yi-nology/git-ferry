@@ -6,8 +6,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
+	"github.com/oekit/pkg/errors"
 
 	coremodel "github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -141,13 +140,13 @@ func parseToolPayload(raw string, out any) error {
 		Error string `json:"error"`
 	}
 	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
-		return fmt.Errorf("结果解析失败: %w", err)
+		return errors.Wrap(err, "结果解析失败")
 	}
 	if probe.Error != "" {
 		return errors.New(probe.Error)
 	}
 	if err := json.Unmarshal([]byte(raw), out); err != nil {
-		return fmt.Errorf("结果解析失败: %w", err)
+		return errors.Wrap(err, "结果解析失败")
 	}
 	return nil
 }

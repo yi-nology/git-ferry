@@ -3,8 +3,9 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"strings"
+
+	"github.com/yi-nology/git-ferry/biz/model/ops"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/yi-nology/git-ferry/internal/corebridge"

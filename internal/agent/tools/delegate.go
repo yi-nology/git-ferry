@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/oekit/concurrency/async"
+
 	"github.com/yi-nology/git-ferry/internal/agent/engine/delegate"
 )
 
@@ -160,7 +162,7 @@ func (r *Registry) delegateIn(ctx context.Context, in delegateInput) (string, er
 			// 后台委派会被一起杀掉。保留 values(要拿会话 scope 回填结果),
 			// 只去掉取消信号。
 			bgCtx := context.WithoutCancel(ctx)
-			go func() {
+			async.GoSafe(func() {
 				out, err := r.delegator.Delegate(bgCtx, delegate.Request{
 					Prompt: in.Prompt,
 					Agent:  in.Agent,
@@ -172,7 +174,7 @@ func (r *Registry) delegateIn(ctx context.Context, in delegateInput) (string, er
 				if sa, ok := ScopeFrom(ctx).(SessionAppender); ok {
 					sa.Append("user", delegateResultNote(task.id, out, err))
 				}
-			}()
+			})
 
 			return marshalJSON(map[string]any{
 				"status":  "dispatched",

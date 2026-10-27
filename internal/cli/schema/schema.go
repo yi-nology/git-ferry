@@ -4,6 +4,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"sort"
 	"strings"
 	"sync"
@@ -63,7 +64,7 @@ func parse(raw []byte) ([]Domain, error) {
 	}
 	var doc openapiDoc
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		return nil, fmt.Errorf("parse openapi: %w", err)
+		return nil, errors.Wrap(err, "parse openapi")
 	}
 
 	byDomain := map[string]*Domain{}

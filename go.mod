@@ -8,7 +8,6 @@ require (
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/cloudwego/hertz v0.10.6
 	github.com/go-git/go-git/v5 v5.19.3
-	github.com/google/uuid v1.6.0
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
@@ -17,6 +16,7 @@ require (
 	github.com/oekit/concurrency v0.22.0
 	github.com/oekit/core v0.12.0
 	github.com/oekit/hertz v0.8.5
+	github.com/oekit/kitx v0.3.1
 	github.com/oekit/metrics v0.1.9
 	github.com/oekit/pkg v0.28.0
 	github.com/prometheus/client_golang v1.25.0
@@ -87,6 +87,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-github/v92 v92.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect

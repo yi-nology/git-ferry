@@ -7,16 +7,24 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
+	"github.com/oekit/pkg/errors"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/oekit/concurrency/async"
+	"github.com/oekit/logx"
 )
+
+// logger 是本包的日志出口(经 logx 门面)。
+//
+// **用 Delegating 而不是 Default()**:包级 var 在 init 时求值,
+// 直接捕获 Default() 会永远绑在 init 那一刻的默认 logger 上,
+// 消费方随后的 SetDefault 对它无效;Delegating 是**调用时**解析,
+// 自动跟随 main() 里装好的后端。
+var logger = logx.Delegating("notify")
 
 // RunEvent 一次同步运行的结束事件。
 type RunEvent struct {
@@ -72,7 +80,7 @@ func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
 			continue
 		}
 		if err := n.sendNtfy(ctx, cfg, ev); err != nil {
-			slog.Warn("notify ntfy failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
+			logger.Warn("notify ntfy failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
 		}
 	}
 	for i := range n.cfg.Gotify {
@@ -81,12 +89,12 @@ func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
 			continue
 		}
 		if err := n.sendGotify(ctx, cfg, ev); err != nil {
-			slog.Warn("notify gotify failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
+			logger.Warn("notify gotify failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
 		}
 	}
 	if n.cfg.Webhook != nil {
 		if err := n.sendWebhook(ctx, n.cfg.Webhook, ev); err != nil {
-			slog.Warn("notify webhook failed", "error", redactError(err), "url", redactSecretURL(n.cfg.Webhook.FailURL))
+			logger.Warn("notify webhook failed", "error", redactError(err), "url", redactSecretURL(n.cfg.Webhook.FailURL))
 		}
 	}
 }

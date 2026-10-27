@@ -2,7 +2,7 @@ package agent
 
 import (
 	"context"
-	"errors"
+	"github.com/oekit/pkg/errors"
 	"time"
 
 	"github.com/oekit/concurrency/async"

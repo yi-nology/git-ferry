@@ -3,8 +3,9 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 	"strings"
+
+	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"

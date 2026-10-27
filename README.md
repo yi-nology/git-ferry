@@ -643,6 +643,10 @@ Please report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Cred
 2. Keep `make test` / `make lint` green
 3. Open a PR using the template
 
+**AI agents start here**: [`AGENTS.md`](AGENTS.md) — the house rules (oekit
+hard rules, single-entry-point discipline, release gates), each of them backed
+by a mechanical check in `internal/convention/` and `internal/release/`.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -68,7 +69,7 @@ func (c *Client) Do(method, path string, body interface{}, query url.Values) (*o
 		default:
 			buf, err := json.Marshal(body)
 			if err != nil {
-				return nil, fmt.Errorf("marshal request body: %w", err)
+				return nil, errors.Wrap(err, "marshal request body")
 			}
 			reader = bytes.NewReader(buf)
 		}
@@ -94,7 +95,7 @@ func (c *Client) Do(method, path string, body interface{}, query url.Values) (*o
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
+		return nil, errors.Wrap(err, "read response")
 	}
 	if c.Debug {
 		_, _ = fmt.Fprintf(io.Discard, "%s %s -> %d\n", method, path, resp.StatusCode)

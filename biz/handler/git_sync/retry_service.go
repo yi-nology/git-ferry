@@ -3,7 +3,6 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -80,7 +79,7 @@ func BatchRetryFailed(ctx context.Context, c *app.RequestContext) {
 	for _, item := range failed {
 		if err := svc.RunTaskAsync(item.taskKey, "batch_retry", nil); err != nil {
 			skipped++
-			slog.Warn("batch retry skip", "task", item.taskKey, "error", err)
+			logger.Warn("batch retry skip", "task", item.taskKey, "error", err)
 			continue
 		}
 		retried = append(retried, map[string]any{

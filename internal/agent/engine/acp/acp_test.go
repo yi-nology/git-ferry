@@ -340,7 +340,8 @@ func TestFsHandler_符号链接逃逸被拒(t *testing.T) {
 // TestTerminalHandler_有上限 终端只在 agent 调 terminal/release 时才释放;
 // agent 不释放的话这个 map 就一直涨 ⇒ 内存泄漏。给个上限,超了直接拒。
 func TestTerminalHandler_有上限(t *testing.T) {
-	h := newTerminalHandler(t.TempDir())
+	h, err := newTerminalHandler(t.TempDir())
+	require.NoError(t, err)
 	h.max = 2
 
 	for i := 0; i < 2; i++ {
@@ -348,7 +349,7 @@ func TestTerminalHandler_有上限(t *testing.T) {
 		require.NoError(t, err, "第 %d 个终端应当建得出来", i)
 		require.NotNil(t, res)
 	}
-	_, err := h.create(json.RawMessage(`{"command":"sleep","args":["5"]}`))
+	_, err = h.create(json.RawMessage(`{"command":"sleep","args":["5"]}`))
 	assert.ErrorContains(t, err, "上限", "超上限要明确报错,而不是悄悄回收 agent 正在用的终端")
 
 	// 释放一个之后又能建

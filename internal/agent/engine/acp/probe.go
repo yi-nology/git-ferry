@@ -2,11 +2,13 @@ package acp
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/oekit/concurrency/async"
 )
 
 // ProbeStdio 对 stdio transport 做一次**真实握手**。
@@ -31,20 +33,20 @@ func ProbeStdio(ctx context.Context, cfg *Config) (string, error) {
 	cmd.Dir = cfg.Cwd
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return "", fmt.Errorf("agent stdin 管道失败: %w", err)
+		return "", errors.Wrap(err, "agent stdin 管道失败")
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", fmt.Errorf("agent stdout 管道失败: %w", err)
+		return "", errors.Wrap(err, "agent stdout 管道失败")
 	}
 	stderr := newRingBuffer(8 * 1024)
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
-		return "", fmt.Errorf("启动 agent 失败(%s): %w", cfg.Command, err)
+		return "", errors.Wrap(err, fmt.Sprintf("启动 agent 失败(%s)", cfg.Command))
 	}
 
 	c := newClient(stdin, stderr)
-	go func() {
+	async.GoSafe(func() {
 		reader := newLineReader(stdout)
 		for {
 			m, rerr := reader.next()
@@ -54,7 +56,7 @@ func ProbeStdio(ctx context.Context, cfg *Config) (string, error) {
 			c.dispatch(m)
 		}
 		c.close()
-	}()
+	})
 
 	var res struct {
 		ProtocolVersion int `json:"protocolVersion"`
@@ -66,7 +68,7 @@ func ProbeStdio(ctx context.Context, cfg *Config) (string, error) {
 	}
 	if err := c.call(ctx, "initialize", cfg.initParams(), &res); err != nil {
 		pcancel()
-		return "", fmt.Errorf("ACP initialize 失败: %w(stderr: %s)", err, strings.TrimSpace(stderr.String()))
+		return "", errors.Wrap(err, "ACP initialize 失败", "stderr", strings.TrimSpace(stderr.String()))
 	}
 	pcancel()
 

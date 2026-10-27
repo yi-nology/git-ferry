@@ -1,8 +1,8 @@
 package acp
 
 import (
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"sync"
 
 	"github.com/yi-nology/git-ferry/internal/agent/engine"

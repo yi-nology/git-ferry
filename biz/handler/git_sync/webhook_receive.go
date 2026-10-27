@@ -2,7 +2,6 @@ package git_sync
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -194,7 +193,7 @@ func ReceiveWebhook(ctx context.Context, c *app.RequestContext) {
 	if err != nil {
 		// 签名验证失败是认证错误,返 401 而非 500;细节记服务端日志,不暴露给调用方
 		if sdkprov.IsWebhookValidation(err) {
-			slog.Warn("webhook signature verification failed", "repo", repoKey, "error", err, "client_ip", c.ClientIP())
+			logger.Warn("webhook signature verification failed", "repo", repoKey, "error", err, "client_ip", c.ClientIP())
 			response.Error(c, consts.StatusUnauthorized, "invalid webhook signature")
 		} else {
 			response.InternalError(c, err.Error())

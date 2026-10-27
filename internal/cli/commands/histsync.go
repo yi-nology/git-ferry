@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"sort"
 	"strings"
@@ -266,7 +267,7 @@ func histsyncCredential(cmd *cobra.Command) (string, error) {
 	if path := flagStr(cmd, "credential-file"); path != "" {
 		raw, err := os.ReadFile(path)
 		if err != nil {
-			return "", fmt.Errorf("读取凭据文件失败: %w", err)
+			return "", errors.Wrap(err, "读取凭据文件失败")
 		}
 		return strings.TrimSpace(string(raw)), nil
 	}
@@ -491,7 +492,7 @@ func histsyncOverrideSet(c *client.Client, _ *config.Config, cmd *cobra.Command,
 	if p := flagStr(cmd, "content-file"); p != "" {
 		raw, err := os.ReadFile(p)
 		if err != nil {
-			return nil, fmt.Errorf("读取裁决内容文件失败: %w", err)
+			return nil, errors.Wrap(err, "读取裁决内容文件失败")
 		}
 		content = string(raw)
 	}

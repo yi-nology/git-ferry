@@ -3,8 +3,8 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/oekit/pkg/errors"
 	"strings"
 )
 

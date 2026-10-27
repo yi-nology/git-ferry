@@ -3,8 +3,7 @@
 package config
 
 import (
-	"errors"
-	"fmt"
+	"github.com/oekit/pkg/errors"
 	"os"
 	"os/exec"
 	"runtime"
@@ -44,7 +43,7 @@ func loadSecret(account string) (string, error) {
 		if errors.As(err, &ee) && ee.ExitCode() == securityNotFoundExitCode {
 			return "", errSecretNotFound
 		}
-		return "", fmt.Errorf("读取 macOS Keychain 失败: %w", err)
+		return "", errors.Wrap(err, "读取 macOS Keychain 失败")
 	}
 	return strings.TrimRight(string(out), "\n"), nil
 }
