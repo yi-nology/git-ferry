@@ -11,14 +11,15 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oagentkit/guardx v0.15.0
+	github.com/oagentkit/guardx v0.17.0
 	github.com/oekit/bootstrap v0.6.5
 	github.com/oekit/concurrency v0.22.0
 	github.com/oekit/core v0.12.0
 	github.com/oekit/hertz v0.8.5
 	github.com/oekit/kitx v0.3.1
+	github.com/oekit/logx v0.7.1
 	github.com/oekit/metrics v0.1.9
-	github.com/oekit/pkg v0.28.0
+	github.com/oekit/pkg v0.29.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
@@ -109,7 +110,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
-	github.com/oekit/logx v0.7.1 // indirect
 	github.com/oekit/middleware v0.13.2 // indirect
 	github.com/oekit/redisx v0.10.4 // indirect
 	github.com/oekit/registry v0.5.0 // indirect
