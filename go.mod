@@ -17,10 +17,11 @@ require (
 	github.com/oekit/core v0.12.0
 	github.com/oekit/hertz v0.8.5
 	github.com/oekit/kitx v0.3.1
+	github.com/oekit/logx v0.7.1
 	github.com/oekit/metrics v0.1.9
 	github.com/oekit/pkg v0.28.0
 	github.com/prometheus/client_golang v1.25.0
-	github.com/prometheus/common v0.72.1
+	github.com/prometheus/common v0.73.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
@@ -91,6 +92,7 @@ require (
 	github.com/goph/emperror v0.17.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
+	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
@@ -109,12 +111,12 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
-	github.com/oekit/logx v0.7.1 // indirect
 	github.com/oekit/middleware v0.13.2 // indirect
 	github.com/oekit/redisx v0.10.4 // indirect
 	github.com/oekit/registry v0.5.0 // indirect
 	github.com/oekit/tracing v0.3.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
+	github.com/pandatix/go-abnf v0.5.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
