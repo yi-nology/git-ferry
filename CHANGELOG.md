@@ -2,6 +2,18 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.4.1] - 2026-11-05
+
+### Fixed
+
+- **image.yml 五个 docker/* action 的 pinned SHA 无效**（v2.4.0 首跑
+  `Unable to resolve action` 即败）：此前从模板照抄的 SHA 并非真实 commit，
+  改为逐个经 `gh api` 核实的真实 SHA（setup-qemu/setup-buildx/login-action v3、
+  metadata-action v5、build-push-action v6）。**v2.4.0 因此没有 GHCR 镜像产物，
+  二进制 Release 完整；从 v2.4.1 起镜像随 tag 正常发布。**
+- 升 core v0.31.1（CI lint 债清偿：errcheck/unused/staticcheck/ineffassign
+  共 20 项，死代码 6 个符号删除——见 core CHANGELOG）。
+
 ## [v2.4.0] - 2026-11-05
 
 ### Added
