@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.30.0
+	github.com/yi-nology/git-ferry-core v0.31.0
 	github.com/yi-nology/go-git-platform v0.108.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -51,9 +51,6 @@ require (
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.17 // indirect
 	github.com/cloudwego/gopkg v0.2.0 // indirect
 	github.com/cloudwego/netpoll v0.7.5 // indirect
-	github.com/cockroachdb/errors v1.14.0 // indirect
-	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
-	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
@@ -61,7 +58,6 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
-	github.com/getsentry/sentry-go v0.46.0 // indirect
 	github.com/glebarez/go-sqlite v1.23.0 // indirect
 	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
@@ -84,7 +80,6 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.29.2 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-github/v93 v93.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
@@ -100,8 +95,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.2 // indirect
@@ -112,7 +105,7 @@ require (
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/oekit/middleware v0.13.8 // indirect
-	github.com/oekit/redisx v0.10.4 // indirect
+	github.com/oekit/redisx v0.11.0 // indirect
 	github.com/oekit/registry v0.5.3 // indirect
 	github.com/oekit/tracing v0.3.2 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
@@ -124,7 +117,6 @@ require (
 	github.com/redis/go-redis/v9 v9.23.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sethvargo/go-envconfig v1.4.3 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

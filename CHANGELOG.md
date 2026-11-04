@@ -2,6 +2,42 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.4.0] - 2026-11-05
+
+### Added
+
+- **GHCR 镜像发布流水线**（`.github/workflows/image.yml`，首次落地）：
+  推 tag `v*` 自动多架构（amd64+arm64）构建并推 `ghcr.io/yi-nology/git-ferry:<version>`
+  与 `:latest`，带 sbom + provenance 供应链元数据，推送后回读 manifest 验证；
+  手动 dispatch 可出预览 tag（不覆盖 latest）。镜像内只带 `config.example.yaml`，
+  真实 conf 由部署方挂载（缺 `server.api_key` 即 fail-fast，防止开发密钥进生产）。
+  Dockerfile 落地容器内构建三要点：`ENV GOWORK=off` 兜底（容器内没有 go.work 的
+  同级源码目录）、`GOPRIVATE` 三家 org 直连 GitHub（绕 goproxy 对刚发布 tag 的
+  负缓存 + sumdb 镜像 404）、`ARG REGISTRY_MIRROR` 可切 Daocloud 源（网络受限
+  环境不改文件）。GHCR 免登录拉取需把包设为 public（仓库 Settings → Packages）。
+
+### Fixed
+
+- **CLI 表格中文被腰斩成非法 UTF-8**：`output/formatter.go` 的单元格截断原来按
+  字节切（`t[:45] + "..."`），中文任务名/路径在第 45 字节处切出乱码尾字节；
+  收编 oekit `stringx.TruncEllipsis`（rune 安全截断 + 省略号语义统一）。
+
+### Changed
+
+- **错误构造统一到 oekit `pkg/errors`**（对齐 core v0.31.0 与 go-git-platform
+  v0.108.0 的「容忍区取消」口径）：30 个文件 69 处 `fmt.Errorf` 全量迁移
+  `errors.Errorf`（本仓惯例为裸名导入）；迁移后非测试源码 `fmt.Errorf` 清零。
+- **convention 纪律闸门收严**：`TestConvention_禁止fmtErrorf` 从「仅禁 `%w`
+  形态」收严为全量禁令（存量已清零，此后出现即违规）；错误体系规则补齐
+  单行 `import "errors"` 检测盲区（`keychain_other.go` 构建标签文件此前假绿，
+  已一并迁移）。
+- **依赖地板追最新发布**：oekit bootstrap v0.6.8 / concurrency v0.23.4 /
+  core v0.12.1 / hertz v0.9.0（BREAKING 限于 crudh，本仓未用）/ kitx v0.3.4 /
+  metrics v0.1.11 / pkg v0.33.0（间接 logx v0.8.2 等）+ guardx v0.15.0 → v0.17.1
+  （injectband/permgate API 无感；新增 invoke 第三格 `WouldExecute` 与 logredact
+  载荷打码，暂未采用）+ go-git-platform v0.108.0 + **git-ferry-core v0.31.0**
+  （errors 统一 oekiterrors + 依赖地板追最新，见 core CHANGELOG）。
+
 ## [v2.3.0] - 2026-10-27
 
 用 [oekit](https://github.com/oekit) 家族规范深度重构一轮，并把**两条通道的能力拉齐**：
