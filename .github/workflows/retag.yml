@@ -1,0 +1,73 @@
+# 手动 retag 工具:把 registry 里已有镜像的 manifest 复制到新的 tag 名下。
+#
+# 用途(均为「镜像已在库、只差一个名字」的场景):
+#   - 补语义 tag:如 dispatch 模式产出的 :vX.Y.Z 想补 :latest / :X.Y
+#     (正常情况下这些 tag 由 push tag 时的 metadata-action 自动打,
+#      仅当某次发布时 image.yml 恰好坏掉、事后用 -f tag=<ver> 补发时才缺)
+#   - 修复 tag 指向(让旧 tag 名指向新 digest)
+#
+# 为什么是独立 workflow:imagetools create 在 registry 端复制 manifest,
+# 不拉层,需要 packages:write —— 本机 gh token 只有 read,在 CI 里跑
+# 直接复用 GITHUB_TOKEN 的 packages:write,免本机浏览器授权。
+#
+# 用法:
+#   gh workflow run retag.yml -f source=v2.4.1 -f targets="latest,2.4"
+
+name: Retag image
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: '已有 tag(源,如 v2.4.1)'
+        required: true
+        type: string
+      targets:
+        description: '目标 tag,逗号分隔(如 latest,2.4)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  retag:
+    name: Copy manifest to new tags
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy manifest
+        run: |
+          SRC="ghcr.io/${{ github.repository }}:${{ inputs.source }}"
+          ARGS=""
+          IFS=',' read -ra TAGS <<< "${{ inputs.targets }}"
+          for t in "${TAGS[@]}"; do
+            t="$(echo "$t" | xargs)" # 去首尾空格
+            [ -z "$t" ] && continue
+            ARGS="$ARGS -t ghcr.io/${{ github.repository }}:$t"
+          done
+          echo "docker buildx imagetools create $SRC $ARGS"
+          docker buildx imagetools create $SRC $ARGS
+
+      - name: Verify all target tags resolve
+        run: |
+          rc=0
+          IFS=',' read -ra TAGS <<< "${{ inputs.targets }}"
+          for t in "${TAGS[@]}"; do
+            t="$(echo "$t" | xargs)"
+            [ -z "$t" ] && continue
+            if docker buildx imagetools inspect "ghcr.io/${{ github.repository }}:$t" > /dev/null 2>&1; then
+              echo "✓ ghcr.io/${{ github.repository }}:$t"
+            else
+              echo "✗ ghcr.io/${{ github.repository }}:$t NOT FOUND"
+              rc=1
+            fi
+          done
+          exit $rc
