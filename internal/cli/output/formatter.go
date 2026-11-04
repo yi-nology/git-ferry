@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/oekit/pkg/errors"
+	"github.com/oekit/pkg/stringx"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,7 +29,7 @@ func Print(w io.Writer, env *Envelope, format string) error {
 	case "table":
 		return printTable(w, env)
 	default:
-		return fmt.Errorf("unsupported format %q (use json|table|yaml)", format)
+		return errors.Errorf("unsupported format %q (use json|table|yaml)", format)
 	}
 }
 
@@ -179,10 +181,8 @@ func formatCell(v interface{}) string {
 	}
 	switch t := v.(type) {
 	case string:
-		if len(t) > 48 {
-			return t[:45] + "..."
-		}
-		return t
+		// rune 安全截断:t[:45] 按字节切,中文任务名会被腰斩出非法 UTF-8
+		return stringx.TruncEllipsis(t, 48)
 	case float64:
 		if t == float64(int64(t)) {
 			return fmt.Sprintf("%d", int64(t))
@@ -198,10 +198,6 @@ func formatCell(v interface{}) string {
 		if err != nil {
 			return fmt.Sprintf("%v", t)
 		}
-		s := string(b)
-		if len(s) > 48 {
-			return s[:45] + "..."
-		}
-		return s
+		return stringx.TruncEllipsis(string(b), 48)
 	}
 }
