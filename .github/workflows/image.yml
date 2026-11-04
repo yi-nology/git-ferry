@@ -47,13 +47,13 @@ jobs:
           fetch-depth: 0
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@49a3c3e0e1515b8b833c81b0d2e0d4f8e6f8f6f0 # v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -62,7 +62,7 @@ jobs:
       # 算出本次要推的 tag 列表,后续 buildx 与 meta 两个 action 共用。
       - name: Compute tags
         id: meta
-        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e4ca96f6 # v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -75,7 +75,7 @@ jobs:
       # --load 不加:多架构产物无法 load 进本地 docker,靠 push 落库。
       # --sbom / --provenance 出供应链元数据,便于审计追溯。
       - name: Build & push
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: ./Dockerfile
