@@ -1,0 +1,99 @@
+# 镜像发布:构建 + 推 GHCR + 打 tag
+#
+# 为什么单独一个文件而不是并进 release.yml:
+# release.yml 的产物是**二进制与 CLI 包**(给「下载即用」的场景),
+# 镜像是**另一种交付形态**(给「docker run 即起」的场景),两者的
+# 触发条件、凭据、失败影响面都不同 ⇒ 独立 job,互不阻塞。
+#
+# 触发:
+#   - push tag `v*`  → 推 `ghcr.io/yi-nology/git-ferry:<version>` 与 `:latest`
+#   - 手动 dispatch  → 推 `:<branch>-<sha>` 预览镜像(不覆盖 latest)
+#
+# 凭据:GITHUB_TOKEN(内置,包权限需勾 packages: write)。
+# GHCR 免登录拉取需把包设为 public(仓库 Settings → Packages)。
+
+name: Image
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '镜像 tag（留空用 sha 短串）'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+# 与 release.yml 一致:自家模块系列不走公开代理与 checksum DB。
+env:
+  GOPRIVATE: github.com/oagentkit/*
+  GOPROXY: https://goproxy.cn,direct
+  GOSUMDB: sum.golang.google.cn
+
+jobs:
+  build:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@49a3c3e0e1515b8b833c81b0d2e0d4f8e6f8f6f0 # v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 算出本次要推的 tag 列表,后续 buildx 与 meta 两个 action 共用。
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e4ca96f6 # v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=sha,format=short
+
+      # --load 不加:多架构产物无法 load 进本地 docker,靠 push 落库。
+      # --sbom / --provenance 出供应链元数据,便于审计追溯。
+      - name: Build & push
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          sbom: true
+          provenance: true
+
+      - name: Verify image is pullable
+        run: |
+          # 推送后回读一次:确认 tag 真的落库,且 manifest 支持多架构。
+          docker buildx imagetools inspect \
+            "ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}" \
+            --format '{{json .Manifest}}' | head -c 400
+          echo
+          echo "✓ image published"

@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/yi-nology/git-ferry/internal/cli/cmdutil"
@@ -86,7 +86,7 @@ func newConfigGetCmd() *cobra.Command {
 					val = "***"
 				}
 			default:
-				return fmt.Errorf("unknown key %q (base_url|api_key|format)", key)
+				return errors.Errorf("unknown key %q (base_url|api_key|format)", key)
 			}
 			return emit(output.Success(map[string]any{key: val}, nil), "json")
 		},
@@ -111,11 +111,11 @@ func newConfigSetCmd() *cobra.Command {
 				cfg.APIKey = val
 			case "format":
 				if val != "json" && val != "table" && val != "yaml" {
-					return fmt.Errorf("format must be json|table|yaml")
+					return errors.Errorf("format must be json|table|yaml")
 				}
 				cfg.Format = val
 			default:
-				return fmt.Errorf("unknown key %q (base_url|api_key|format)", key)
+				return errors.Errorf("unknown key %q (base_url|api_key|format)", key)
 			}
 			if err := config.Save(cfg); err != nil {
 				return err

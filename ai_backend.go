@@ -172,7 +172,7 @@ func mcpServerFromConfig(c *agent.MCPServerConfig) (acp.MCPServer, error) {
 	if c.APIKeyEnv != "" {
 		key := os.Getenv(c.APIKeyEnv)
 		if key == "" {
-			return acp.MCPServer{}, fmt.Errorf("环境变量 %s 未设置(MCP 服务器 %s 的认证头)", c.APIKeyEnv, c.Name)
+			return acp.MCPServer{}, errors.Errorf("环境变量 %s 未设置(MCP 服务器 %s 的认证头)", c.APIKeyEnv, c.Name)
 		}
 		header := c.APIKeyHeader
 		if header == "" {
@@ -204,12 +204,12 @@ func mcpServerFor(mcpURL, apiKeyEnv string, shellCfg *corebridge.ShellConfig) (a
 	srv := acp.MCPServer{Name: "gitferry", Type: "http", URL: url}
 	if apiKeyEnv == "" {
 		// 没配专用 key ⇒ 外部 agent 带的是别人的凭据或匿名,一律视为不可用。
-		return srv, fmt.Errorf("ai.external.mcp_enabled 需要 ai.external.mcp_api_key_env " +
+		return srv, errors.Errorf("ai.external.mcp_enabled 需要 ai.external.mcp_api_key_env " +
 			"(挂给外部 agent 的 MCP 专用 key 的环境变量名;该 key 固定为只读角色)")
 	}
 	key := os.Getenv(apiKeyEnv)
 	if key == "" {
-		return srv, fmt.Errorf("环境变量 %s 未设置(外部 agent 的 MCP 专用 key)", apiKeyEnv)
+		return srv, errors.Errorf("环境变量 %s 未设置(外部 agent 的 MCP 专用 key)", apiKeyEnv)
 	}
 	srv.Headers = []acp.HttpHeader{{Name: "X-API-Key", Value: key}}
 	// 注册成带角色的附加 key(固定只读);旧的同用途 key 立即失效。

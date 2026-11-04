@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/yi-nology/git-ferry/internal/cli/client"
@@ -88,7 +89,7 @@ func emit(env *output.Envelope, format string) error {
 		return err
 	}
 	if !env.OK {
-		return fmt.Errorf("%s", env.Error.Message)
+		return errors.Errorf("%s", env.Error.Message)
 	}
 	return nil
 }

@@ -78,7 +78,7 @@ func (h *terminalHandler) handle(method string, raw json.RawMessage) (any, error
 	case "terminal/release":
 		return h.release(raw)
 	default:
-		return nil, fmt.Errorf("method not found: %s", method)
+		return nil, errors.Errorf("method not found: %s", method)
 	}
 }
 
@@ -95,7 +95,7 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 		return nil, errors.Wrap(err, "参数解析失败")
 	}
 	if p.Command == "" {
-		return nil, fmt.Errorf("command 不能为空")
+		return nil, errors.Errorf("command 不能为空")
 	}
 	cwd := h.root
 	if p.Cwd != "" {
@@ -118,7 +118,7 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 	h.mu.Lock()
 	if len(h.terms) >= maxAlive {
 		h.mu.Unlock()
-		return nil, fmt.Errorf("同时存活的终端已达上限(%d),请先 terminal/release 释放", maxAlive)
+		return nil, errors.Errorf("同时存活的终端已达上限(%d),请先 terminal/release 释放", maxAlive)
 	}
 	h.mu.Unlock()
 
@@ -165,7 +165,7 @@ func (h *terminalHandler) output(raw json.RawMessage) (any, error) {
 	}
 	tp := h.get(id)
 	if tp == nil {
-		return nil, fmt.Errorf("终端 %s 不存在", id)
+		return nil, errors.Errorf("终端 %s 不存在", id)
 	}
 	return map[string]any{
 		"output":    tp.out.String(),
@@ -185,7 +185,7 @@ func (h *terminalHandler) waitForExit(raw json.RawMessage) (any, error) {
 	}
 	tp := h.get(id)
 	if tp == nil {
-		return nil, fmt.Errorf("终端 %s 不存在", id)
+		return nil, errors.Errorf("终端 %s 不存在", id)
 	}
 	<-tp.done
 	return map[string]any{
@@ -204,7 +204,7 @@ func (h *terminalHandler) kill(raw json.RawMessage) (any, error) {
 	}
 	tp := h.get(id)
 	if tp == nil {
-		return nil, fmt.Errorf("终端 %s 不存在", id)
+		return nil, errors.Errorf("终端 %s 不存在", id)
 	}
 	tp.killed.Store(true)
 	if tp.cmd.Process != nil {
@@ -245,7 +245,7 @@ func (h *terminalHandler) terminalID(raw json.RawMessage) (string, error) {
 		return "", errors.Wrap(err, "参数解析失败")
 	}
 	if p.TerminalID == "" {
-		return "", fmt.Errorf("terminalId 不能为空")
+		return "", errors.Errorf("terminalId 不能为空")
 	}
 	return p.TerminalID, nil
 }

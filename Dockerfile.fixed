@@ -1,0 +1,83 @@
+# 可用的 Dockerfile(实测通过)
+#
+# 与仓内原 Dockerfile 的差异,每一处都是实测踩出来的:
+#
+# 1. go.work 必须排除 —— 它 use 了 ../../go-git-platform 与 ../git-ferry-core
+#    两个**同级源码目录**。容器里没有这两个目录,`go build` 直接报
+#    "cannot load module ... listed in go.work file" 失败。
+#    ⇒ .dockerignore 加 go.work/go.work.sum,且构建时 ENV GOWORK=off。
+#    (go.mod 里的 git-ferry-core v0.30.0 / go-git-platform v0.99.7 都是
+#     公共 tag,走模块代理即可,不需要同级源码。)
+#
+# 2. 容器内没有宿主的 ~/.gitconfig 与 GOPRIVATE,必须显式给 Go 代理。
+#    GOPRIVATE 里若含 git.enjoye.top/*,Go 会跳过代理直连内网域名 ——
+#    容器里连不上,go mod download 会**挂死**(不是快速失败,是最难查的一种)。
+#    ⇒ GOPRIVATE 只保留 github.com/oagentkit/*(走直连 GitHub)。
+#
+# 3. GOPROXY 里不要放 proxy.golang.org —— 实测在容器内超时不可达,
+#    Go 会先试它再回退,导致 go mod download 拖几分钟才失败。
+#    ⇒ 只留 goproxy.cn,direct。
+#
+# 4. 基础镜像指向 docker.m.daocloud.io —— 官方 registry-1.docker.io
+#    在本机网络下拉取超时(实测 context deadline exceeded)。
+#    若你的网络能直连 Docker Hub,可改回 golang:1.27-alpine / alpine:3.20。
+#
+# 构建(本机实测通过):
+#   docker build --build-arg VERSION=v2.3.0 -t git-ferry:local-test .
+#
+# 多架构(ARM64 麒麟 / x86):
+#   docker buildx build --platform linux/amd64,linux/arm64 \
+#     --build-arg VERSION=v2.3.0 -t <registry>/git-ferry:v2.3.0 .
+
+FROM --platform=$BUILDPLATFORM docker.m.daocloud.io/library/golang:1.27-alpine AS builder
+
+ARG TARGETARCH
+
+WORKDIR /src
+
+RUN apk add --no-cache git
+
+COPY go.mod go.sum ./
+
+# 见上方说明 2 / 3:容器内必须显式配代理,否则 go mod download 挂死。
+ENV GOPROXY=https://goproxy.cn,direct \
+    GOSUMDB=sum.golang.google.cn \
+    GOPRIVATE=github.com/oagentkit/* \
+    GONOSUMDB=github.com/oagentkit/* \
+    GOWORK=off
+
+RUN go mod download
+
+COPY . .
+
+ARG VERSION=docker-dev
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+    -trimpath \
+    -ldflags "-s -w -X github.com/yi-nology/git-ferry/internal/version.Version=${VERSION}" \
+    -o /out/git-ferry .
+
+FROM docker.m.daocloud.io/library/alpine:3.20
+
+WORKDIR /app
+
+RUN apk --no-cache add ca-certificates wget \
+    && addgroup -S appgroup && adduser -S appuser -G appgroup
+
+COPY --from=builder /out/git-ferry .
+# 只带示例配置:真实配置(api_key 等)由部署方挂载提供。
+# 程序硬编码读 conf/config.yaml,缺文件即 fail-fast 退出 ——
+# 这是有意的:防止把开发默认密钥带进生产。
+COPY --from=builder /src/conf/config.example.yaml ./conf/config.example.yaml
+
+RUN mkdir -p /app/data && chown appuser:appgroup /app/data
+
+VOLUME /app/data
+
+EXPOSE 8890
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:8890/health || exit 1
+
+USER appuser
+
+CMD ["./git-ferry"]

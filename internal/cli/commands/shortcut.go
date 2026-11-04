@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"fmt"
 	"net/url"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/yi-nology/git-ferry/internal/cli/client"
@@ -73,7 +73,7 @@ func flagBool(cmd *cobra.Command, name string) bool {
 func requireFlag(cmd *cobra.Command, name string) (string, error) {
 	v := flagStr(cmd, name)
 	if v == "" {
-		return "", fmt.Errorf("缺少必填参数 --%s", name)
+		return "", errors.Errorf("缺少必填参数 --%s", name)
 	}
 	return v, nil
 }

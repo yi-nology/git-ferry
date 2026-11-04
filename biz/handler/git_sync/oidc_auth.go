@@ -131,7 +131,7 @@ func parseHS256JWT(token, secret string) (*jwtClaims, error) {
 		return nil, errors.New("bad header json")
 	}
 	if !strings.EqualFold(header.Alg, "HS256") {
-		return nil, fmt.Errorf("unsupported alg %s", header.Alg)
+		return nil, errors.Errorf("unsupported alg %s", header.Alg)
 	}
 	signingInput := parts[0] + "." + parts[1]
 	mac := hmac.New(sha256.New, []byte(secret))

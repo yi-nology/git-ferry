@@ -2,7 +2,8 @@ package acp
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/oekit/pkg/errors"
 
 	"github.com/yi-nology/git-ferry/internal/agent/engine/delegate"
 )
@@ -61,7 +62,7 @@ func (d *DelegateRunner) Delegate(ctx context.Context, req delegate.Request) (st
 			// stdio:没有「内置 agent 名」这回事 ⇒ 拿名字当命令跑必然失败,
 			// 而且看不出真实原因 ⇒ 直接报错(不静默跑成默认 agent)。
 			if cfg.Transport == TransportStdio {
-				return "", fmt.Errorf("未找到名为 %q 的外部 agent profile;"+
+				return "", errors.Errorf("未找到名为 %q 的外部 agent profile;"+
 					"stdio 传输的 agent 要用 command 指定,不能只给名字", req.Agent)
 			}
 			cfg.Agent = req.Agent

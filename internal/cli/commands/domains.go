@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/stringx"
 	"github.com/spf13/cobra"
 
@@ -96,10 +97,10 @@ func repoCreate(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []stri
 	// (绑定时被静默丢弃)⇒ RemoteUrl 为空 ⇒ 400 ⇒ **该命令从来没能成功过**。
 	remoteURL := flagStr(cmd, "clone-url")
 	if remoteURL == "" {
-		return nil, fmt.Errorf("--clone-url 不能为空(仓库的克隆地址)")
+		return nil, errors.Errorf("--clone-url 不能为空(仓库的克隆地址)")
 	}
 	if v := flagStr(cmd, "key"); v != "" {
-		return nil, fmt.Errorf("服务端不支持自定义仓库 key(按平台与仓库地址推导)")
+		return nil, errors.Errorf("服务端不支持自定义仓库 key(按平台与仓库地址推导)")
 	}
 	platformID, err := resolvePlatformID(c, platform)
 	if err != nil {
@@ -124,7 +125,7 @@ func resolvePlatformID(c *client.Client, key string) (string, error) {
 		return "", err
 	}
 	if !env.OK {
-		return "", fmt.Errorf("查询平台列表失败: %s", env.Error.Message)
+		return "", errors.Errorf("查询平台列表失败: %s", env.Error.Message)
 	}
 	for _, raw := range client.ExtractItems(env.Data) {
 		var p struct {
@@ -138,7 +139,7 @@ func resolvePlatformID(c *client.Client, key string) (string, error) {
 			return strconv.FormatInt(p.ID, 10), nil
 		}
 	}
-	return "", fmt.Errorf("找不到平台 %q(用 `gitferry platform +list` 看可用的 key)", key)
+	return "", errors.Errorf("找不到平台 %q(用 `gitferry platform +list` 看可用的 key)", key)
 }
 
 func repoDelete(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {
@@ -293,7 +294,7 @@ func taskBatchRun(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []st
 		}
 	}
 	if len(keys) == 0 {
-		return nil, fmt.Errorf("缺少 --task-keys a,b,c")
+		return nil, errors.Errorf("缺少 --task-keys a,b,c")
 	}
 
 	dry := flagBool(cmd, "dry-run")
@@ -443,7 +444,7 @@ func historyRetry(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []st
 	}
 	n, convErr := strconv.Atoi(runID)
 	if convErr != nil {
-		return nil, fmt.Errorf("--run-id 必须是数字，实际 %q", runID)
+		return nil, errors.Errorf("--run-id 必须是数字，实际 %q", runID)
 	}
 	return c.Post("/api/v1/ops/retry", map[string]any{"run_id": n})
 }
@@ -787,7 +788,7 @@ func opsOrgMap(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []strin
 		src = flagStr(cmd, "key")
 	}
 	if src == "" {
-		return nil, fmt.Errorf("缺少 --source-repo（或 --key）")
+		return nil, errors.Errorf("缺少 --source-repo（或 --key）")
 	}
 	body := map[string]any{
 		"source_repo_key": src,

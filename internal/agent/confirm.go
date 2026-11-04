@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
-	"fmt"
 	"github.com/oekit/pkg/errors"
 	"time"
 )
@@ -29,7 +28,7 @@ var (
 // setPending 在会话上登记一次待确认调用(新调用覆盖旧调用),返回确认令牌。
 func (st *SessionStore) setPending(s *Session, toolName, argsJSON string) (string, error) {
 	if toolName == "" || argsJSON == "" {
-		return "", fmt.Errorf("SetPending: 工具名与参数不能为空")
+		return "", errors.Errorf("SetPending: 工具名与参数不能为空")
 	}
 	st.mu.Lock()
 	defer st.mu.Unlock()

@@ -177,7 +177,7 @@ func findRunView(svc SyncService, ctx context.Context, runID uint) (*runView, st
 			"run %d 未找到,但有 %d 个任务的历史查询失败,**无法断言它不存在**:%s",
 			runID, len(historyErrs), strings.Join(historyErrs, "; "))}
 	}
-	return nil, "", fmt.Errorf("run %d not found", runID)
+	return nil, "", errors.Errorf("run %d not found", runID)
 }
 
 // diagnoseRunView 规则化诊断(与壳层 /ops/diagnose 同源逻辑)。

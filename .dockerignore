@@ -2,6 +2,12 @@
 .git
 .gitignore
 
+# Go workspace —— 必须排除。
+# go.work use 了 ../../go-git-platform 与 ../git-ferry-core 两个同级源码目录,
+# 容器内没有它们 ⇒ `go build` 报 "cannot load module ... in go.work file" 失败。
+go.work
+go.work.sum
+
 # IDE
 .idea
 .vscode
@@ -30,6 +36,7 @@ designs/
 frontend/
 
 # Scripts
+scripts/
 script/
 test_api.sh
 test_flow.sh
