@@ -30,8 +30,9 @@ permissions:
   packages: write
 
 # 与 release.yml 一致:自家模块系列不走公开代理与 checksum DB。
+# 三家 org 前缀都直连 GitHub——goproxy 对刚发布的 tag 有负缓存,CI 追新会间歇 404。
 env:
-  GOPRIVATE: github.com/oagentkit/*
+  GOPRIVATE: github.com/oagentkit/*,github.com/oekit/*,github.com/yi-nology/*
   GOPROXY: https://goproxy.cn,direct
   GOSUMDB: sum.golang.google.cn
 
