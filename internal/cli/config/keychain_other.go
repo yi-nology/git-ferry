@@ -2,7 +2,7 @@
 
 package config
 
-import "errors"
+import "github.com/oekit/pkg/errors"
 
 // 非 macOS 平台：无系统 Keychain，统一走文件配置。
 func loadSecret(account string) (string, error) { return "", errSecretNotFound }

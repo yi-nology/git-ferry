@@ -135,19 +135,22 @@ func TestConvention_禁止裸goroutine(t *testing.T) {
 func TestConvention_错误处理必须用oekit的errors(t *testing.T) {
 	root := repoRoot(t)
 	files := goFiles(t, root)
-	hits := linesWith(files, root, regexp.MustCompile(`(?m)^\s*"errors"\s*$`))
+	hits := linesWith(files, root, regexp.MustCompile(`(?m)(^\s*"errors"\s*$|^\s*import\s+"errors"\s*$)`))
 	assert.Empty(t, hits,
 		"发现 stdlib \"errors\" 导入:改用 github.com/oekit/pkg/errors(同名同型,Is/As 一个 import 即可)")
 }
 
-// TestConvention_禁止fmtErrorf包w %w 包装统一走 errors.Wrap(err, msg):
-// 显式 nil-safe(不会出 \"%!w(<nil>)\"),且能挂 kv 上下文。
-func TestConvention_禁止fmtErrorf包w(t *testing.T) {
+// TestConvention_禁止fmtErrorf 错误构造统一走 oekit pkg/errors:
+// Errorf 与 fmt.Errorf 同型(nil-safe 为增益),Wrap 可挂 kv 上下文;
+// 与 stdlib errors 的 Is/As 同一性也靠同一个 import 维系。
+// 存量已于本轮清零(30 文件迁移),此后出现即违规——
+// 与 go-git-platform v0.108.0 的「容忍区取消」同口径。
+func TestConvention_禁止fmtErrorf(t *testing.T) {
 	root := repoRoot(t)
 	files := goFiles(t, root)
-	hits := linesWith(files, root, regexp.MustCompile(`fmt\.Errorf\([^)]*%w`))
+	hits := linesWith(files, root, regexp.MustCompile(`fmt\.Errorf\(`))
 	assert.Empty(t, hits,
-		"发现 fmt.Errorf(...%w...):改用 errors.Wrap(err, msg)(oekit/pkg/errors)")
+		"发现 fmt.Errorf:改用 errors.Errorf / errors.Wrap(oekit/pkg/errors)")
 }
 
 // TestConvention_日志必须走logx门面 直连 slog 打日志 ⇒ 绕过了统一门面:
