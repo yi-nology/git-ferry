@@ -2,6 +2,18 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.4.2] - 2026-11-06
+
+### Changed
+
+- **依赖地板追最新**：guardx v0.17.1 → v0.18.0（logredact JSON 保形脱敏等，
+  injectband/permgate 无 API 变更）；oekit concurrency v0.25.0 / core v0.12.2 /
+  hertz v0.9.2（genproto 撞包加固，go1.27 兼容）/ kitx v0.3.5 / pkg v0.34.1；
+  go-git-platform v0.108 → v0.113（`Namespace→NamespacePath` BREAKING，
+  本仓无消费面）；**core v0.32.0**（冷备加密收编 secretx 信封 + 依赖地板）。
+- guardx logredact 收编经评估**不实装**：agent 工具调用不打参数日志、
+  notify 走结构化 URL 解析，logredact 无真实落点，避免为收编而收编。
+
 ## [v2.4.1] - 2026-11-05
 
 ### Fixed
