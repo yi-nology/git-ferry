@@ -11,22 +11,22 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oagentkit/guardx v0.17.1
+	github.com/oagentkit/guardx v0.18.0
 	github.com/oekit/bootstrap v0.6.8
-	github.com/oekit/concurrency v0.23.4
-	github.com/oekit/core v0.12.1
-	github.com/oekit/hertz v0.9.0
-	github.com/oekit/kitx v0.3.4
+	github.com/oekit/concurrency v0.25.0
+	github.com/oekit/core v0.12.2
+	github.com/oekit/hertz v0.9.2
+	github.com/oekit/kitx v0.3.5
 	github.com/oekit/logx v0.8.2
 	github.com/oekit/metrics v0.1.11
-	github.com/oekit/pkg v0.33.0
+	github.com/oekit/pkg v0.34.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.31.1
-	github.com/yi-nology/go-git-platform v0.108.0
+	github.com/yi-nology/go-git-platform v0.113.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -146,6 +146,7 @@ require (
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
+	google.golang.org/genproto v0.0.0-20261026165753-2ffab32bce7e // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
