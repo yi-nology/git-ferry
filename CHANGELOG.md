@@ -2,6 +2,14 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.4.4] - 2026-11-06
+
+### Changed
+
+- **core v0.32.1 → v0.32.2**：go.mod 恢复 tidy 态（v0.32.0/1 升 gorm driver
+  v1.6.0 时 go.mod 的 mysql indirect 未同步到 v1.8.1，CI `go vet` 报
+  `updates to go.mod needed`；本轮对齐，功能无变化），见 core CHANGELOG。
+
 ## [v2.4.3] - 2026-11-06
 
 ### Changed
