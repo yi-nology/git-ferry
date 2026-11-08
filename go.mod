@@ -11,7 +11,7 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oagentkit/guardx v0.23.0
+	github.com/oagentkit/guardx v0.23.4
 	github.com/oekit/bootstrap v0.6.15
 	github.com/oekit/concurrency v0.29.0
 	github.com/oekit/core v0.13.1
@@ -19,13 +19,13 @@ require (
 	github.com/oekit/kitx v0.4.2
 	github.com/oekit/logx v0.8.6
 	github.com/oekit/metrics v0.1.14
-	github.com/oekit/pkg v0.37.4
+	github.com/oekit/pkg v0.38.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.33.2
+	github.com/yi-nology/git-ferry-core v0.33.3
 	github.com/yi-nology/go-git-platform v0.117.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1

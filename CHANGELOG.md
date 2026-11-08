@@ -2,6 +2,17 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.5.1] - 2026-11-08
+
+### Changed
+
+- **吃自提 issue 的第二轮红利**：guardx v0.23.4（v0.23.3 五连修含 **#96
+  egressproxy DNS 解析围栏**——Permit 走 CheckResolving fail-closed + 拨号钉住）、
+  pkg v0.38.0（v0.37.7 **ctxscope With/From 写读对称修复 #245**——entry 指针
+  载体，存 nil 读回 (零值, true) + `IsSet` 糖）、**core v0.33.3**（mirror
+  reservations 补收编 KeyedMutex）。本仓 ctxscope 三处收编点行为不受 #245
+  影响（无"存 nil 再读回"语义），升级为跟随性。
+
 ## [v2.5.0] - 2026-11-08
 
 ### Changed
