@@ -11,22 +11,22 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oagentkit/guardx v0.18.0
-	github.com/oekit/bootstrap v0.6.8
-	github.com/oekit/concurrency v0.25.0
-	github.com/oekit/core v0.12.2
-	github.com/oekit/hertz v0.9.2
-	github.com/oekit/kitx v0.3.5
-	github.com/oekit/logx v0.8.2
-	github.com/oekit/metrics v0.1.11
-	github.com/oekit/pkg v0.34.1
+	github.com/oagentkit/guardx v0.23.0
+	github.com/oekit/bootstrap v0.6.15
+	github.com/oekit/concurrency v0.29.0
+	github.com/oekit/core v0.13.1
+	github.com/oekit/hertz v0.10.2
+	github.com/oekit/kitx v0.4.2
+	github.com/oekit/logx v0.8.6
+	github.com/oekit/metrics v0.1.14
+	github.com/oekit/pkg v0.37.4
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.32.2
-	github.com/yi-nology/go-git-platform v0.113.0
+	github.com/yi-nology/git-ferry-core v0.33.1
+	github.com/yi-nology/go-git-platform v0.117.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -105,10 +105,10 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
-	github.com/oekit/middleware v0.13.8 // indirect
-	github.com/oekit/redisx v0.11.0 // indirect
-	github.com/oekit/registry v0.5.3 // indirect
-	github.com/oekit/tracing v0.3.2 // indirect
+	github.com/oekit/middleware v0.13.13 // indirect
+	github.com/oekit/redisx v0.11.2 // indirect
+	github.com/oekit/registry v0.5.5 // indirect
+	github.com/oekit/tracing v0.3.5 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
@@ -132,8 +132,8 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
-	github.com/yi-nology/go-gitcode v0.14.0 // indirect
-	github.com/yi-nology/go-gongfeng v0.2.1 // indirect
+	github.com/yi-nology/go-gitcode v0.15.0 // indirect
+	github.com/yi-nology/go-gongfeng v0.3.0 // indirect
 	gitlab.com/gitlab-org/api/client-go/v3 v3.43.0 // indirect
 	go.uber.org/atomic v1.12.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect

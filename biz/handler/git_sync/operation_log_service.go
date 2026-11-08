@@ -52,29 +52,16 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// ListOperations 与 OperationStats 互不依赖,并行执行缩短响应时间。
-	// stats goroutine 使用独立 context:handler 提前返回(如列表查询失败)
-	// 时请求 ctx 被取消,goroutine 中的 DB 查询也会被终止而非泄漏。
+	// 旁路统计收编 oekit async.Spawn+Handle(concurrency#197 落地物):脱离请求
+	// 生命周期(WithoutCancel 语义内置)+panic 收编进结果+泛型结果类型,
+	// 手拼 channel+GoSafe+WithoutCancel+超时五件套删除。
 	type statsResult struct {
 		today, week, total int64
-		err                error
 	}
 	svc := GetSyncService()
-	statsCh := make(chan statsResult, 1)
-	statsCtx, statsCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-	defer statsCancel()
-	async.GoSafe(func() {
-		var r statsResult
-		defer func() { statsCh <- r }()
-		// 用 oekit async.RunSafeRetLabeled:panic 收编为 error 回传调用方
-		// (错误载体带原始 payload 与栈),而不是只被全局 PanicHandler 吞掉——
-		// 吞掉的话这里会把「统计 panic」当成「统计成功且全为 0」返回 200。
-		res, err := async.RunSafeRetLabeled("OperationStats",
-			func() (statsResult, error) {
-				today, week, total, err := svc.OperationStats(statsCtx)
-				return statsResult{today: today, week: week, total: total}, err
-			})
-		r = res
-		r.err = err
+	statsHandle := async.Spawn(ctx, "OperationStats", func(sctx context.Context) (statsResult, error) {
+		today, week, total, err := svc.OperationStats(sctx)
+		return statsResult{today: today, week: week, total: total}, err
 	})
 
 	list, total, err := svc.ListOperations(ctx, offset, limit, &filter)
@@ -83,9 +70,15 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	sr := <-statsCh
-	if sr.err != nil {
-		response.InternalError(c, sr.err.Error())
+	// 旁路统计限时 join:最多等 5s(超时任务继续跑完、迟到结果丢弃——
+	// Spawn 语义显式化);请求 ctx 取消也提前放弃等待。
+	sr, serr, timedOut := statsHandle.WaitUpTo(ctx, 5*time.Second)
+	if serr != nil {
+		response.InternalError(c, serr.Error())
+		return
+	}
+	if timedOut {
+		response.InternalError(c, "operation stats timed out after 5s")
 		return
 	}
 	today, week, statsTotal := sr.today, sr.week, sr.total

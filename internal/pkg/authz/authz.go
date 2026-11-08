@@ -15,7 +15,11 @@
 // 它是纯叶子包,谁都能引。
 package authz
 
-import "context"
+import (
+	"context"
+
+	"github.com/oekit/pkg/ctxscope"
+)
 
 // Role 访问角色。
 type Role string
@@ -51,12 +55,16 @@ func IsAdmin(r Role) bool {
 	return r == RoleAdmin
 }
 
-// ctxKey 是角色在 context 里的键(私有类型,避免与别的包撞键)。
-type ctxKey struct{}
+// roleKey 角色的作用域 key(oekit ctxscope,命名空间治理标识防跨包撞键;
+// oekit/pkg#201 落地物收编)。
+var roleKey = ctxscope.NewKey[Role]("git-ferry/authz.Role")
 
 // WithRole 把角色放进 ctx。
 func WithRole(ctx context.Context, r Role) context.Context {
-	return context.WithValue(ctx, ctxKey{}, r)
+	if ctx == nil {
+		return nil
+	}
+	return ctxscope.With(ctx, roleKey, r)
 }
 
 // RoleFromContext 取 ctx 里的角色;**缺省 readonly(安全侧)**。
@@ -67,7 +75,7 @@ func RoleFromContext(ctx context.Context) Role {
 	if ctx == nil {
 		return RoleReadonly
 	}
-	if r, ok := ctx.Value(ctxKey{}).(Role); ok && r != "" {
+	if r, ok := ctxscope.From(ctx, roleKey); ok && r != "" {
 		return r
 	}
 	return RoleReadonly

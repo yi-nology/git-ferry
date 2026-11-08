@@ -1,6 +1,10 @@
 package tools
 
-import "context"
+import (
+	"context"
+
+	"github.com/oekit/pkg/ctxscope"
+)
 
 // SessionScope 危险工具所需的会话能力(agent.Session 实现之;测试用 fake)。
 // 定义在 tools 侧保持依赖方向 tools ← agent 单向。
@@ -22,15 +26,17 @@ type SessionScope interface {
 	PermissionMode() string
 }
 
-type scopeKey struct{}
+// scopeKey 会话能力的作用域 key(oekit ctxscope,命名空间治理标识防跨包撞键;
+// oekit/pkg#201 落地物,本仓三处手搓 WithValue+私有 key 的第一处收编)。
+var scopeKey = ctxscope.NewKey[SessionScope]("git-ferry/agent.SessionScope")
 
 // WithScope 把会话能力注入 ctx(Runner 在每轮对话开始时调用)。
 func WithScope(ctx context.Context, sc SessionScope) context.Context {
-	return context.WithValue(ctx, scopeKey{}, sc)
+	return ctxscope.With(ctx, scopeKey, sc)
 }
 
 // ScopeFrom 取会话能力;非 agent 链路为 nil。
 func ScopeFrom(ctx context.Context) SessionScope {
-	sc, _ := ctx.Value(scopeKey{}).(SessionScope)
+	sc, _ := ctxscope.From(ctx, scopeKey)
 	return sc
 }

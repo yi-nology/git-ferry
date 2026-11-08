@@ -32,23 +32,23 @@ const (
 
 // Policy 工具权限策略(可运行时切换,如只读模式)。
 //
-// 判定主体交给 oagentkit guardx/permgate:它把「要不要人确认」表达成
-// 规则引擎(Mode + Capability + Ruleset),裁决结果带 RuleID/Reason,
-// 且预留了按工具入参内容匹配、按会话授权等扩展位——
-// 权限策略从此是数据而不是一段 switch,后续加配置化规则不必再重写判定层。
+// 判定主体交给 oagentkit guardx/permgate(Mode + Capability + Ruleset),
+// 裁决结果带 RuleID/Reason——权限判定事实源**只在 permgate 一处**。
+// 「只读档下放行某个写工具」这类 break-glass 例外已由上游原生支持
+// (guardx v0.20.0 修 #58:配置级白名单 AllowedTools 位次提升到只读拦截
+// 之前——白名单是「比模式更强的信任」,压过只读档与 project ask;
+// 硬禁 disallowed/project deny 仍在它前面,白名单不是绕禁的后门)。
 type Policy struct {
-	mu        sync.RWMutex
-	mode      string            // ModeDefault | ModeReadOnly | ModeAudit
-	overrides map[string]Action // 工具名 → 动作(最高优先)
-	gate      *permgate.Service
+	mu   sync.RWMutex
+	mode string // ModeDefault | ModeReadOnly | ModeAudit
+	gate *permgate.Service
 }
 
 // NewPolicy 默认策略:危险工具 confirm,其余 readonly。
 func NewPolicy() *Policy {
 	return &Policy{
-		mode:      ModeDefault,
-		overrides: map[string]Action{},
-		gate:      &permgate.Service{},
+		mode: ModeDefault,
+		gate: &permgate.Service{},
 	}
 }
 
@@ -86,13 +86,6 @@ func (p *Policy) ModeFor(ctx context.Context) string {
 	return p.Mode()
 }
 
-// Override 单独覆盖某工具动作。
-func (p *Policy) Override(tool string, act Action) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.overrides[tool] = act
-}
-
 // Classify 判定工具动作。
 //
 // danger:该工具是否需要用户确认 —— **由调用方(Registry)传入**。
@@ -104,23 +97,11 @@ func (p *Policy) Override(tool string, act Action) {
 //   - 其余工具 → Capability{ReadOnly}  → permgate 裁决 Allow → ActionReadOnly
 //   - 只读模式 → permgate ModeReadOnly → 非只读工具 Deny → ActionDenied
 //
-// 只留一处本地判定:显式 override 最高优先——permgate 的规则集排在只读档之下,
-// 表达不了「把某个工具显式改成只读/放行」。
-//
-// 「只读模式下危险工具一律拒」这一条**已由上游原生支持**
-// (oagentkit/guardx v0.14.0 起:checkAlwaysAsk 在会话授权之后、ask 之前插了
-// 只读拦截段,checkStandard 把只读拦截插在 project ask 之前),本地不再兜底。
+// 「只读模式下危险工具一律拒」与「只读档下白名单放行单个写工具」
+// 均已由上游原生支持(guardx v0.14.0 / v0.20.0,见 Policy 注释)。
 // 上游口径:会话授权在只读档仍放行(是用户已给出的决定,不是「问」)——
 // 本仓从不调用 AllowForSession,故无行为差异。
 func (p *Policy) Classify(ctx context.Context, tool string, danger bool) Action {
-	p.mu.RLock()
-	override, hasOverride := p.overrides[tool]
-	p.mu.RUnlock()
-
-	if hasOverride {
-		return override
-	}
-
 	// **会话级模式优先**:会话里显式切过的档只影响这个会话。
 	mode := p.ModeFor(ctx)
 	d := p.gate.Check(context.Background(), tool, nil, permgateMode(mode), toolCapability(danger))

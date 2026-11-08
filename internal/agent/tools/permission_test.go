@@ -23,12 +23,6 @@ func TestPolicy_ReadonlyDeniesDanger(t *testing.T) {
 	assert.Equal(t, ActionReadOnly, p.Classify(context.Background(), "list_repos", IsDangerTool("list_repos")))
 }
 
-func TestPolicy_Override(t *testing.T) {
-	p := NewPolicy()
-	p.Override("list_repos", ActionDenied)
-	assert.Equal(t, ActionDenied, p.Classify(context.Background(), "list_repos", IsDangerTool("list_repos")))
-}
-
 // TestPolicy_AuditModeBehavesAsDefault 审计档行为同默认档(危险工具走确认)。
 func TestPolicy_AuditModeBehavesAsDefault(t *testing.T) {
 	p := NewPolicy()
@@ -38,14 +32,18 @@ func TestPolicy_AuditModeBehavesAsDefault(t *testing.T) {
 	assert.Equal(t, ActionReadOnly, p.Classify(context.Background(), "list_repos", IsDangerTool("list_repos")))
 }
 
-// TestPolicy_OverrideBeatsReadonlyMode 显式 override 优先于只读档:
-// permgate 的规则集排在模式判定之下,这一档必须留在本地判定。
-func TestPolicy_OverrideBeatsReadonlyMode(t *testing.T) {
+// TestPolicy_ReadonlyBreakGlassContract 钉住上游契约(guardx v0.20.0 #58):
+// 只读档下**配置级白名单可放行普通写工具**的 break-glass 存在,但
+// **AlwaysAsk(危险)工具不可被白名单绕过**——「白名单不是绕禁的后门」。
+// 本仓工具模型 danger→AlwaysAsk ⇒ 对本仓而言白名单放行不可达,
+// 该测试在守护这个口径:上游若放宽,这里先红提醒复评。
+func TestPolicy_ReadonlyBreakGlassContract(t *testing.T) {
 	p := NewPolicy()
 	p.SetMode("readonly")
-	p.Override("run_task", ActionReadOnly)
-	assert.Equal(t, ActionReadOnly, p.Classify(context.Background(), "run_task", IsDangerTool("run_task")))
-	assert.Equal(t, ActionDenied, p.Classify(context.Background(), "rebuild_task", IsDangerTool("rebuild_task")), "未被 override 的危险工具在只读档仍被拒")
+	p.gate.AllowedTools = map[string]bool{"run_task": true}
+	assert.Equal(t, ActionDenied, p.Classify(context.Background(), "run_task", IsDangerTool("run_task")),
+		"AlwaysAsk 工具白名单也不放行(上游契约:白名单不是绕禁的后门)")
+	assert.Equal(t, ActionDenied, p.Classify(context.Background(), "rebuild_task", IsDangerTool("rebuild_task")))
 }
 
 // TestPolicy_ReadonlyDeniesDanger_NativeUpstream 只读档对危险工具是「拒」不是「问」——

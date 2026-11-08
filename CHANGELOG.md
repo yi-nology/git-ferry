@@ -2,6 +2,41 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.5.0] - 2026-11-08
+
+### Changed
+
+- **收编本轮自提 issue 的上游落地物**（#58/#195/#197/#201 上游 1-2 天内收编）：
+  - **ctxscope 三处**（pkg#201 → pkg v0.37.0 落地）：`tools/scope.go`（会话能力）、
+    `pkg/authz`（角色）、`agent/decorator.go`（事件 sink）的手写
+    `context.WithValue` + 私有 `struct{}` key + 类型断言三件套全换
+    `ctxscope.NewKey[T]("git-ferry/…")` 命名空间 key——跨包撞键防护就位；
+  - **`async.Spawn+Handle` 旁路统计**（concurrency#197 → v0.29.0 落地）：
+    操作日志列表页「主查询+旁路统计限时 join」的 channel+GoSafe+WithoutCancel
+    +超时手拼五件套删除（15 行 → 6 行），泛型结果类型 + `WaitUpTo` 的
+    timedOut 显式化，`statsResult.err` 字段随之删除；
+  - **permgate 死代码清理**（guardx#58 → v0.20.0 修复后的红利）：`Policy.overrides`
+    map 与 `Override` 方法（零调用方死功能）删除——权限判定事实源收敛到
+    permgate 单处；本地 override 的存在理由（「上游表达不了」）已不成立。
+    新增 `TestPolicy_ReadonlyBreakGlassContract` 钉住上游契约
+    （AlwaysAsk 工具不可被白名单绕过）。
+- **依赖地板追最新**：oekit concurrency v0.29.0（PanicHandler 新签名 #184 由
+  core v0.33.1 吸收）/ hertz v0.10.2 / kitx v0.4.2（jwt 子包）/ logx v0.8.6 /
+  metrics v0.1.14 / bootstrap v0.6.15 / core v0.13.1 / pkg v0.37.1 /
+  guardx v0.23.0 / go-git-platform v0.117.0 / **git-ferry-core v0.33.1**。
+
+### 评估后不收编（避免为收编而收编）
+
+- `async.GoDetached`（委派后台任务）：其 `DetachedContext` 从 Background 派生
+  **只保留 trace、丢 values**——委派结果回填依赖 ctx 里的会话 scope，实测
+  收编后回填测试红；`context.WithoutCancel`（留 values 去取消）正是本场景的
+  最小正确形态，保留手拼并注释说明。
+- `cache.SingleValue`（GitHub App token）：token 是 per-installation 多 key
+  形态，现用 `LocalCache+SingleFlightCache` 恰是对位原语。
+- `ratelimit.Throttle`（pendingWebhook 待补跑）：pending 是「标记集合」
+  （Mark/Take），Throttle 是「窗口内合并执行 fn」——语义不同。
+- `pagination.Walk`（metadata 分页收集）：SDK 自带 `EachBounded` 已对位。
+
 ## [v2.4.4] - 2026-11-06
 
 ### Changed

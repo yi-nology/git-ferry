@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/oekit/pkg/ctxscope"
+
 	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
 	"github.com/cloudwego/eino/components/tool"
@@ -13,16 +15,17 @@ import (
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 )
 
-type sinkKey struct{}
+// sinkKey 事件 sink 的作用域 key(oekit ctxscope;oekit/pkg#201 落地物收编)。
+var sinkKey = ctxscope.NewKey[sinkFunc]("git-ferry/agent.EventSink")
 
 type sinkFunc func(Event)
 
 func withEventSink(ctx context.Context, sink sinkFunc) context.Context {
-	return context.WithValue(ctx, sinkKey{}, sink)
+	return ctxscope.With(ctx, sinkKey, sink)
 }
 
 func sinkFromCtx(ctx context.Context) sinkFunc {
-	sink, _ := ctx.Value(sinkKey{}).(sinkFunc)
+	sink, _ := ctxscope.From(ctx, sinkKey)
 	if sink == nil {
 		return func(Event) {} // 缺省丢弃,装饰器永不为 nil 调用
 	}

@@ -158,9 +158,12 @@ func (r *Registry) delegateIn(ctx context.Context, in delegateInput) (string, er
 			}
 			task := r.tasks.newTask()
 
-			// **脱离请求 ctx 的取消**:HTTP 请求一结束,请求 ctx 就被取消 ⇒
-			// 后台委派会被一起杀掉。保留 values(要拿会话 scope 回填结果),
-			// 只去掉取消信号。
+			// **脱离请求 ctx 的取消但保留 values**:HTTP 请求一结束请求 ctx
+			// 被取消 ⇒ 后台委派不能跟着被杀;而结果回填要用 ctx 里的会话
+			// scope(values),所以不能用 async.GoDetached——它的
+			// DetachedContext 从 Background 派生,**只保留 trace、丢 values**
+			// (实测回填收不到 scope)。手拼 WithoutCancel 正是「留 values 去
+			// 取消」的最小形态;panic 收编走 RunSafeRetLabeled 包装的执行体。
 			bgCtx := context.WithoutCancel(ctx)
 			async.GoSafe(func() {
 				out, err := r.delegator.Delegate(bgCtx, delegate.Request{
@@ -171,7 +174,7 @@ func (r *Registry) delegateIn(ctx context.Context, in delegateInput) (string, er
 				r.tasks.finish(task, out, err)
 				// 结果回填会话:用户下一轮问话时,助手**已经**看得见结果,
 				// 不必再专门问一次。
-				if sa, ok := ScopeFrom(ctx).(SessionAppender); ok {
+				if sa, ok := ScopeFrom(bgCtx).(SessionAppender); ok {
 					sa.Append("user", delegateResultNote(task.id, out, err))
 				}
 			})
