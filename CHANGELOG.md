@@ -2,6 +2,33 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.6.0] - 2026-11-09
+
+### Changed
+
+- **吃自提 issue 的第三轮红利（#86/#211/#292 全部落地）**：
+  - **OIDC HS256 收编 kitx/jwt 对称形态**（kitx#86 → v0.5.0）：`parseHS256JWT`
+    的 44 行手搓（三段式解析+HMAC+alg 白名单+exp 校验）删除，换
+    `kitxjwt.ParseSymmetric`——alg 混淆防护/常量时间比较/密钥强度校验
+    （RFC 7518 §3.2 ≥32B）上游单源。**行为收紧**：过期令牌 Parse 阶段即拒
+    （语义等价、文案变）；弱密钥(<32B)配置 fail-closed（原照跑）。
+  - **delegate 重新收编 `async.GoDetached`**（concurrency#211 → v0.31.0）：
+    上游把 `DetachedContext` 改 `WithoutCancel` 派生（values 保留，照本仓
+    实测证据修正）——当年误用翻车回滚的手拼五件套得以删除，回填会话
+    scope 的需求与 panic 收编/task 标签逐项等价。
+  - **委派结果回填加结构化围栏**：`delegateResultNote` 从纯措辞声明改为
+    `injectband.Wrap` 包裹——out 内伪造的 system-reminder 标签统一转义
+    （纯提示级防护挡不住"伪造系统标记"越权）。
+- **textutil 转发层删除**：`internal/pkg/textutil`（core strutil 的纯转发
+  层，8 函数 29 调用点）整体移除，调用方直引 core strutil——少一层无语义
+  的间接。
+- **依赖地板追最新**：oekit concurrency v0.31.0 / logx v0.8.12 / pkg v0.40.0 /
+  kitx v0.5.0（HS256+WithIssuedAt 等签名/校验扩展）/ hertz v0.10.7 /
+  redisx v0.12.0（Unlock 三态显式契约）/ bootstrap v0.7.0（App.Fail 显式
+  失败出口）/ metrics v0.2.0 / core v0.13.5 + **git-ferry-core v0.34.0** +
+  go-git-platform v0.121.0。distlock Unlock 三态对本仓零适配（调用点只
+  Debug 记录）。
+
 ## [v2.5.1] - 2026-11-08
 
 ### Changed

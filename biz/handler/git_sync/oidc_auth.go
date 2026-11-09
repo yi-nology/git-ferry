@@ -2,15 +2,12 @@ package git_sync
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/oekit/pkg/errors"
 	"net/http"
 	"strings"
-	"time"
+
+	kitxjwt "github.com/oekit/kitx/jwt"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
@@ -74,11 +71,8 @@ func OIDCAuthMiddleware() app.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims.Exp > 0 && time.Now().Unix() > claims.Exp {
-			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: token expired"})
-			c.Abort()
-			return
-		}
+		// exp 校验已内建于 kitx ParseSymmetric(RegisteredClaims 过期验证)——
+		// 原手搓 `claims.Exp > 0 && now > claims.Exp` 删除,语义等价。
 		userClaim := cfg.UserClaim
 		if userClaim == "" {
 			userClaim = "sub"
@@ -114,49 +108,34 @@ type jwtClaims struct {
 }
 
 // parseHS256JWT 解析并校验 HS256 JWT 签名。
+// 收编 oekit kitx/jwt 对称形态(kitx#86 落地物):alg 单算法白名单(关死 alg
+// 混淆)、hmac.Equal 常量时间比较、exp 校验、密钥强度校验(RFC 7518 §3.2
+// ≥32B,弱密钥 fail-closed)——44 行手搓面删除,这些坑上游单源。
+// 行为变化:①过期令牌在 Parse 阶段即拒(原实现在中间件手搓,语义等价、
+// 错误文案变);②弱密钥(<32B)配置的部署所有请求 401 且错误文案带下限说明
+// (原实现照跑不拒)——安全侧收紧。
 func parseHS256JWT(token, secret string) (*jwtClaims, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return nil, errors.New("malformed token")
-	}
-	headerJSON, err := base64.RawURLEncoding.DecodeString(parts[0])
+	claims, err := kitxjwt.ParseSymmetric(token, []byte(secret))
 	if err != nil {
-		return nil, errors.New("bad header")
+		return nil, err
 	}
-	var header struct {
-		Alg string `json:"alg"`
-		Typ string `json:"typ"`
+	out := &jwtClaims{
+		Iss:   claims.Issuer,
+		Sub:   claims.Subject,
+		Extra: claims.Extra,
 	}
-	if err := json.Unmarshal(headerJSON, &header); err != nil {
-		return nil, errors.New("bad header json")
+	if claims.ExpiresAt != nil {
+		out.Exp = claims.ExpiresAt.Unix()
 	}
-	if !strings.EqualFold(header.Alg, "HS256") {
-		return nil, errors.Errorf("unsupported alg %s", header.Alg)
+	// aud 双形态映射(RFC 7519:string / list)——中间件 audienceHas 口径不变
+	switch len(claims.Audience) {
+	case 0:
+	case 1:
+		out.Aud, _ = json.Marshal(claims.Audience[0])
+	default:
+		out.Aud, _ = json.Marshal(claims.Audience)
 	}
-	signingInput := parts[0] + "." + parts[1]
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(signingInput))
-	expect := mac.Sum(nil)
-	got, err := base64.RawURLEncoding.DecodeString(parts[2])
-	if err != nil {
-		return nil, errors.New("bad signature encoding")
-	}
-	if !hmac.Equal(expect, got) {
-		return nil, errors.New("signature mismatch")
-	}
-	payloadJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, errors.New("bad payload")
-	}
-	var claims jwtClaims
-	if err := json.Unmarshal(payloadJSON, &claims); err != nil {
-		return nil, errors.New("bad payload json")
-	}
-	// 收集 Extra 供自定义 claim 读取
-	var raw map[string]any
-	_ = json.Unmarshal(payloadJSON, &raw)
-	claims.Extra = raw
-	return &claims, nil
+	return out, nil
 }
 
 func audienceHas(aud json.RawMessage, want string) bool {

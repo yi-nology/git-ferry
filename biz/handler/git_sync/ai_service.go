@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 	"github.com/yi-nology/git-ferry/biz/model/ai"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
@@ -135,7 +135,7 @@ func AIChat(ctx context.Context, c *app.RequestContext) {
 			publish(agent.Event{Type: "done"})
 			return
 		}
-		publish(agent.Event{Type: "tool_end", Tool: req.ConfirmedToolCall.Tool, Result: textutil.TruncateRunes(out, 600)})
+		publish(agent.Event{Type: "tool_end", Tool: req.ConfirmedToolCall.Tool, Result: strutil.TruncateRunes(out, 600)})
 		publish(agent.Event{Type: "done"})
 		return
 	}

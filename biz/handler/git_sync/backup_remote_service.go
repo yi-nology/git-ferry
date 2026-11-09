@@ -10,8 +10,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/pkg/pathx"
 
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
 // PushBackup POST /api/v1/ops/push-backup
@@ -80,7 +80,7 @@ func PushBackup(ctx context.Context, c *app.RequestContext) {
 		"task_key": req.TaskKey,
 		"remote":   req.Remote,
 		"refspec":  refspec,
-		"output":   textutil.TruncateRunes(out, 2000),
+		"output":   strutil.TruncateRunes(out, 2000),
 	})
 }
 

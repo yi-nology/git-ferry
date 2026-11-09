@@ -5,8 +5,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
 )
 
 // force-push 审批（gitea-mirror block-and-approve 模式）：
@@ -94,7 +94,7 @@ func ApproveForcePush(ctx context.Context, c *app.RequestContext) {
 // actorName 从请求头推断操作者（API Key 只保留前 8 位做展示）。
 func actorName(c *app.RequestContext) string {
 	if v := string(c.GetHeader("X-API-Key")); v != "" {
-		return "apikey:" + textutil.SanitizePathToken(v[:min(8, len(v))])
+		return "apikey:" + strutil.SanitizePathToken(v[:min(8, len(v))])
 	}
 	return "admin"
 }

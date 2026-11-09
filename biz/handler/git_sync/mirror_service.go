@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/pkg/convert"
@@ -276,7 +276,7 @@ func MirrorRunList(ctx context.Context, c *app.RequestContext) {
 			"kind": r.Kind, "tags": r.Tags, "status": r.Status,
 			"allowOverwrite": r.AllowOverwrite,
 			"startedAt":      r.StartedAt, "finishedAt": r.FinishedAt,
-			"error": textutil.TruncateRunes(r.Error, 300),
+			"error": strutil.TruncateRunes(r.Error, 300),
 		})
 	}
 	response.Success(c, map[string]any{"list": light, "total": total})

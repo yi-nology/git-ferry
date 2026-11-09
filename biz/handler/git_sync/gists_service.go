@@ -10,7 +10,7 @@ import (
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 )
 
 // BackupGists POST /api/v1/ops/gists-backup
@@ -43,7 +43,7 @@ func BackupGists(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(c, "sync.backup_dir not configured")
 		return
 	}
-	dest := filepath.Join(backupDir, "gists", textutil.SanitizePathToken(req.PlatformKey),
+	dest := filepath.Join(backupDir, "gists", strutil.SanitizePathToken(req.PlatformKey),
 		time.Now().UTC().Format("20060102-150405"))
 	prov, perr := newIssueProvider(plat, "")
 	if perr != nil {

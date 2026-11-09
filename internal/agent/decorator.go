@@ -7,7 +7,7 @@ import (
 
 	"github.com/oekit/pkg/ctxscope"
 
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
@@ -49,13 +49,13 @@ func (d *decoratedTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 
 func (d *decoratedTool) InvokableRun(ctx context.Context, argsJSON string, opts ...tool.Option) (string, error) {
 	sink := sinkFromCtx(ctx)
-	sink(Event{Type: "tool_start", Tool: d.name, Args: textutil.Truncate(argsJSON, 300)})
+	sink(Event{Type: "tool_start", Tool: d.name, Args: strutil.Truncate(argsJSON, 300)})
 
 	out, err := d.inner.InvokableRun(ctx, argsJSON, opts...)
 	if err != nil {
 		// 工具失败转 JSON 给模型,不中断 agent,由模型向用户解释
 		out = toolErrorJSON(err)
-		sink(Event{Type: "tool_end", Tool: d.name, Result: textutil.Truncate(out, resultCap)})
+		sink(Event{Type: "tool_end", Tool: d.name, Result: strutil.Truncate(out, resultCap)})
 		return out, nil
 	}
 	// 超大输出落盘,只回预览(控制上下文成本)
@@ -70,16 +70,16 @@ func (d *decoratedTool) InvokableRun(ctx context.Context, argsJSON string, opts 
 	// 清单仍然用于**展示层**(tools/list 过滤、system prompt 的清单),
 	// 执行层的闸门由 dangerGuard 自己的角色检查兜底(与清单无关)。
 	if strings.Contains(out, `"status":"confirmation_required"`) {
-		ev := Event{Type: "tool_confirm", Tool: d.name, Args: textutil.Truncate(argsJSON, 300)}
+		ev := Event{Type: "tool_confirm", Tool: d.name, Args: strutil.Truncate(argsJSON, 300)}
 		if sc := tools.ScopeFrom(ctx); sc != nil {
 			if name, token, args := sc.LastConfirm(); name == d.name {
-				ev.Token, ev.Args = token, textutil.Truncate(args, 300)
+				ev.Token, ev.Args = token, strutil.Truncate(args, 300)
 			}
 		}
 		sink(ev)
 		return out, nil
 	}
-	sink(Event{Type: "tool_end", Tool: d.name, Result: textutil.Truncate(out, resultCap)})
+	sink(Event{Type: "tool_end", Tool: d.name, Result: strutil.Truncate(out, resultCap)})
 	return out, nil
 }
 

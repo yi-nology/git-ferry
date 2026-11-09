@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/yi-nology/git-ferry-core/health"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 )
 
 // deepAnalyzeInput 深度分析(子代理风格:一次多步,减少来回)。
@@ -48,14 +48,14 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 	for _, t := range tasks {
 		// 健康维度（与 get_sync_health 同源）
 		facts := health.Facts{
-			"has_name":          textutil.BoolFact(t.Name != ""),
-			"has_cron":          textutil.BoolFact(t.Cron != ""),
+			"has_name":          strutil.BoolFact(t.Name != ""),
+			"has_cron":          strutil.BoolFact(t.Cron != ""),
 			"cron":              t.Cron,
-			"enabled":           textutil.BoolFact(t.Enabled),
-			"git_force":         textutil.BoolFact(t.GitForce),
+			"enabled":           strutil.BoolFact(t.Enabled),
+			"git_force":         strutil.BoolFact(t.GitForce),
 			"force_push_policy": t.ForcePushPolicy,
-			"backup_enabled":    textutil.BoolFact(t.GitBundle),
-			"sync_wiki":         textutil.BoolFact(t.SyncWiki),
+			"backup_enabled":    strutil.BoolFact(t.GitBundle),
+			"sync_wiki":         strutil.BoolFact(t.SyncWiki),
 		}
 		runs, _, herr := r.svc.ListHistory(ctx, t.Key, 0, 5)
 		historyErr := ""
@@ -89,7 +89,7 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 		if herr == nil && len(runs) > 0 {
 			last := runs[0]
 			recent[len(recent)-1]["status"] = last.Status
-			recent[len(recent)-1]["error"] = textutil.Truncate(last.ErrorMessage, 120)
+			recent[len(recent)-1]["error"] = strutil.Truncate(last.ErrorMessage, 120)
 			if last.Status == "failed" {
 				v := &runView{
 					ID: last.ID, TaskKey: t.Key, Status: last.Status,
@@ -102,7 +102,7 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 					TaskKey:  t.Key,
 					Status:   last.Status,
 					ErrType:  last.ErrorType,
-					ErrMsg:   textutil.Truncate(last.ErrorMessage, 200),
+					ErrMsg:   strutil.Truncate(last.ErrorMessage, 200),
 					Severity: fmtStr(d["severity"]),
 				})
 			}
@@ -184,12 +184,12 @@ func summarizeAnalyze(question string, failures []analyzeHit, weakDims map[strin
 	}
 	var b strings.Builder
 	if len(failures) > 0 {
-		b.WriteString("共 " + textutil.Itoa(len(failures)) + " 条失败;主因类型=" + dominant + "。")
+		b.WriteString("共 " + strutil.Itoa(len(failures)) + " 条失败;主因类型=" + dominant + "。")
 	}
 	if len(weakDims) > 0 {
 		b.WriteString("薄弱维度:")
 		for k, v := range weakDims {
-			b.WriteString(" " + k + "×" + textutil.Itoa(v) + ";")
+			b.WriteString(" " + k + "×" + strutil.Itoa(v) + ";")
 		}
 	}
 	if question != "" && dominant != "" {
@@ -201,7 +201,7 @@ func summarizeAnalyze(question string, failures []analyzeHit, weakDims map[strin
 func nextActions(failures []analyzeHit, weakDims map[string]int) []string {
 	acts := []string{}
 	if len(failures) > 0 {
-		acts = append(acts, "diagnose_run(run_id="+textutil.Itoa(int(failures[0].RunID))+") 拿详细建议")
+		acts = append(acts, "diagnose_run(run_id="+strutil.Itoa(int(failures[0].RunID))+") 拿详细建议")
 		if failures[0].ErrType == "auth" {
 			acts = append(acts, "更新平台 token 后 retry_sync_run")
 		}

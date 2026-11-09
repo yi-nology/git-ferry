@@ -15,7 +15,7 @@ import (
 	"github.com/yi-nology/git-ferry/internal/cli/client"
 	"github.com/yi-nology/git-ferry/internal/cli/config"
 	"github.com/yi-nology/git-ferry/internal/cli/output"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 )
 
 // ---------- repo ----------
@@ -779,7 +779,7 @@ func jsonRawArray(items []json.RawMessage) json.RawMessage {
 }
 
 // itoa int → 字符串(统一走 core strutil,别在壳层再包一层 strconv)。
-func itoa(n int) string { return textutil.Itoa(n) }
+func itoa(n int) string { return strutil.Itoa(n) }
 
 // opsOrgMap 调用 /ops/resolve-org-target 做 org 映射预览。
 func opsOrgMap(c *client.Client, _ *config.Config, cmd *cobra.Command, _ []string) (*output.Envelope, error) {

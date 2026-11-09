@@ -9,7 +9,7 @@ import (
 	"github.com/oekit/concurrency/loop"
 	"github.com/oekit/kitx/uidgen"
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 )
 
 // ErrSessionNotFound 会话不存在或已过期。
@@ -228,7 +228,7 @@ func (st *SessionStore) Compact(s *Session, max int) int {
 	dropped := len(s.Messages) - keep
 	summary := Message{
 		Role:    "system",
-		Content: "[上下文已压缩] 更早 " + textutil.Itoa(dropped) + " 条对话已省略,仅保留关键结论。",
+		Content: "[上下文已压缩] 更早 " + strutil.Itoa(dropped) + " 条对话已省略,仅保留关键结论。",
 	}
 	tail := append([]Message{summary}, s.Messages[len(s.Messages)-keep:]...)
 	s.Messages = tail

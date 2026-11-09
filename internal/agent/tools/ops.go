@@ -8,7 +8,7 @@ import (
 
 	"github.com/yi-nology/git-ferry-core/health"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 )
 
 // ===== 同步健康评分(供 AI 解读) =====
@@ -53,14 +53,14 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 	failures := []toolFailure{}
 	for _, t := range tasks {
 		facts := health.Facts{
-			"has_name":          textutil.BoolFact(t.Name != ""),
-			"has_cron":          textutil.BoolFact(t.Cron != ""),
+			"has_name":          strutil.BoolFact(t.Name != ""),
+			"has_cron":          strutil.BoolFact(t.Cron != ""),
 			"cron":              t.Cron,
-			"enabled":           textutil.BoolFact(t.Enabled),
-			"git_force":         textutil.BoolFact(t.GitForce),
+			"enabled":           strutil.BoolFact(t.Enabled),
+			"git_force":         strutil.BoolFact(t.GitForce),
 			"force_push_policy": t.ForcePushPolicy,
-			"backup_enabled":    textutil.BoolFact(t.GitBundle),
-			"sync_wiki":         textutil.BoolFact(t.SyncWiki),
+			"backup_enabled":    strutil.BoolFact(t.GitBundle),
+			"sync_wiki":         strutil.BoolFact(t.SyncWiki),
 		}
 		runs, _, herr := r.svc.ListHistory(ctx, t.Key, 0, 10)
 		historyErr := ""

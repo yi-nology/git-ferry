@@ -9,7 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/ut"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yi-nology/git-ferry/internal/pkg/textutil"
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 
 	"github.com/yi-nology/git-ferry-core/health"
 )
@@ -29,14 +29,14 @@ func TestScoreLevelMapping(t *testing.T) {
 }
 
 func TestCSVEscape(t *testing.T) {
-	assert.Equal(t, "plain", textutil.CSVEscape("plain"))
-	assert.Equal(t, `"a,b"`, textutil.CSVEscape("a,b"))
-	assert.Equal(t, `"say ""hi"""`, textutil.CSVEscape(`say "hi"`))
+	assert.Equal(t, "plain", strutil.CSVEscape("plain"))
+	assert.Equal(t, `"a,b"`, strutil.CSVEscape("a,b"))
+	assert.Equal(t, `"say ""hi"""`, strutil.CSVEscape(`say "hi"`))
 }
 
 func TestBoolFact(t *testing.T) {
-	assert.Equal(t, "true", textutil.BoolFact(true))
-	assert.Equal(t, "false", textutil.BoolFact(false))
+	assert.Equal(t, "true", strutil.BoolFact(true))
+	assert.Equal(t, "false", strutil.BoolFact(false))
 }
 
 func TestGenerateDeployKey(t *testing.T) {
