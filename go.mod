@@ -21,7 +21,7 @@ require (
 	github.com/oekit/metrics v0.2.0
 	github.com/oekit/pkg v0.40.0
 	github.com/prometheus/client_golang v1.25.0
-	github.com/prometheus/common v0.72.1
+	github.com/prometheus/common v0.73.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.12.1
@@ -111,6 +111,7 @@ require (
 	github.com/oekit/registry v0.5.9 // indirect
 	github.com/oekit/tracing v0.3.7 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
+	github.com/pandatix/go-abnf v0.5.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
