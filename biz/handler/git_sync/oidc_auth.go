@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"github.com/yi-nology/git-ferry-core/pkg/proclog"
 	"github.com/yi-nology/git-ferry/internal/pkg/authz"
 )
 
@@ -36,8 +37,18 @@ type OIDCConfig struct {
 var oidcCfg *OIDCConfig
 
 // SetOIDCConfig 注册 OIDC 配置(壳层启动时调用)。
+//
+// 弱密钥在此**启动期 fail-fast**(kitx HS256 契约:RFC 7518 §3.2 ≥32B):
+// 让「密钥太弱」这种配置错误在启动时崩溃并给出下限说明,而不是等首个
+// 请求 401(错误文案虽也清楚,但延迟到运行期才暴露)。缺省 disabled/空串
+// 不校验(走 API Key 鉴权的部署不受影响)。
 func SetOIDCConfig(cfg *OIDCConfig) {
 	oidcCfg = cfg
+	if cfg != nil && cfg.Enabled && cfg.Secret != "" {
+		if _, err := kitxjwt.NewSymmetric([]byte(cfg.Secret)); err != nil {
+			proclog.ExitOnFail("oidc.secret 不合格(需要 ≥32 字节,RFC 7518 §3.2)", err)
+		}
+	}
 }
 
 // OIDCAuthMiddleware 校验 Authorization: Bearer <jwt>(HS256)。

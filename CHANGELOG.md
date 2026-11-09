@@ -20,8 +20,8 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
     `injectband.Wrap` 包裹——out 内伪造的 system-reminder 标签统一转义
     （纯提示级防护挡不住"伪造系统标记"越权）。
 - **textutil 转发层删除**：`internal/pkg/textutil`（core strutil 的纯转发
-  层，8 函数 29 调用点）整体移除，调用方直引 core strutil——少一层无语义
-  的间接。
+  层，8 函数 29 调用点）整体清退，调用方直引 core strutil——少一层无语义
+  的间接（壳 internal 包,不涉对外 API 面）。
 - **依赖地板追最新**：oekit concurrency v0.31.0 / logx v0.8.12 / pkg v0.40.0 /
   kitx v0.5.0（HS256+WithIssuedAt 等签名/校验扩展）/ hertz v0.10.7 /
   redisx v0.12.0（Unlock 三态显式契约）/ bootstrap v0.7.0（App.Fail 显式

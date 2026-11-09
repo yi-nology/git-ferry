@@ -337,22 +337,41 @@ func TestDrift_OK(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "checked")
 }
 
+// testSecret32 kitx HS256 密钥强度下限(RFC 7518 §3.2 ≥32B)的合规测试密钥;
+// 弱密钥契约由 TestOIDCJWT_RejectsWeakSecret 单独钉住。
+const testSecret32 = "test-secret-0123456789abcdef-0123"
+
 func TestOIDCJWT_ParsesValidToken(t *testing.T) {
 	// 构造 HS256 JWT
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
 	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"alice","role":"operator","exp":4102444800}`))
-	mac := hmac.New(sha256.New, []byte("secret"))
+	mac := hmac.New(sha256.New, []byte(testSecret32))
 	mac.Write([]byte(header + "." + payload))
 	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 	token := header + "." + payload + "." + sig
 
-	claims, err := parseHS256JWT(token, "secret")
+	claims, err := parseHS256JWT(token, testSecret32)
 	require.NoError(t, err)
 	assert.Equal(t, "alice", claims.Sub)
 	assert.Equal(t, "operator", stringClaim(claims.Extra, "role"))
 
-	_, err = parseHS256JWT(token, "wrong")
+	// 签名不匹配(密钥本身合规)⇒ 拒
+	_, err = parseHS256JWT(token, "other-secret-0123456789abcdef-012345")
 	assert.Error(t, err)
+}
+
+// TestOIDCJWT_RejectsWeakSecret 钉住 kitx HS256 的密钥强度契约:
+// <32B(RFC 7518 §3.2 下限)fail-closed——弱密钥部署升级后必须换强密钥,
+// 见 CHANGELOG v2.6.0 的行为收紧说明。
+func TestOIDCJWT_RejectsWeakSecret(t *testing.T) {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"alice","exp":4102444800}`))
+	mac := hmac.New(sha256.New, []byte("secret")) // 6B 弱密钥
+	mac.Write([]byte(header + "." + payload))
+	token := header + "." + payload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	_, err := parseHS256JWT(token, "secret")
+	assert.Error(t, err, "弱密钥(<32B)应被 kitx 密钥强度校验拒绝")
 }
 
 func TestParseRole(t *testing.T) {

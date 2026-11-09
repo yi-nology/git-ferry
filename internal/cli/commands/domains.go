@@ -12,10 +12,10 @@ import (
 	"github.com/oekit/pkg/stringx"
 	"github.com/spf13/cobra"
 
+	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 	"github.com/yi-nology/git-ferry/internal/cli/client"
 	"github.com/yi-nology/git-ferry/internal/cli/config"
 	"github.com/yi-nology/git-ferry/internal/cli/output"
-	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 )
 
 // ---------- repo ----------

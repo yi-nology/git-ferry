@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/yi-nology/git-ferry-core/health"
-	"github.com/yi-nology/git-ferry/internal/corebridge"
 	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // ===== 同步健康评分(供 AI 解读) =====

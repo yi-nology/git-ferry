@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
 	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
+	mirrormodel "github.com/yi-nology/git-ferry/biz/model/mirror"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/pkg/convert"
