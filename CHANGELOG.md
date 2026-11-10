@@ -2,6 +2,28 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v2.7.0] - 2026-11-10
+
+### Added
+
+- **镜像 scrub 规则路径白名单（API 面）**：`MirrorScrubRuleReq` 增
+  `pathAllowlist`（glob 列表，`/` 分段、`**` 跨层）——命中但在白名单内的
+  痕迹放行且留痕（内容不改动，报告带 `Allowlisted` 标记）；mandatory
+  （密钥类）规则不允许配置该字段（建通道时即拒）。IDL 契约、handler
+  透传、OpenAPI 契约（`make apidoc` 再生成，含内嵌副本）三处同步。
+- **依赖 git-ferry-core v0.35.0（oss-sync 三件收编）**：
+  - **镜像发布自毁保护**：镜像目标与源仓库 URL 归一化比对（https/ssh/scp
+    形式等价识别，剥凭据/端口/`.git` 装饰），目标=源工作区自身 / 与源仓库
+    远端同址 / 目标 module 身份与 URL 不一致 ⇒ 发布前拒绝且零写入；
+    建通道与发布两处预检双拦。
+  - **scrub 白名单引擎**：`ScrubRule.PathAllowlist`（放行但留痕，密钥类无
+    放行面）、`ScrubHit` 带 `Path`/`Allowlisted`；glob 模式建通道时编译
+    校验。
+  - **策略快照 + 公开侧复验**：`TagReport.PolicySnapshot` 确定性 JSON 随
+    发布逐 tag 带出；`mirror/verifycmd` 供公开仓 CI 用同一份 policy 复验
+    仓树（身份残留 + 痕迹规则，allowlisted 打印不算失败）；
+    `VerifyWorkflowTemplate` 生成公开仓门禁 workflow 文本。
+
 ## [v2.6.0] - 2026-11-09
 
 ### Changed

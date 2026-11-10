@@ -2674,6 +2674,12 @@
           "name": {
             "type": "string"
           },
+          "pathAllowlist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "pattern": {
             "type": "string"
           },

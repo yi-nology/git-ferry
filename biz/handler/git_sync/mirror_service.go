@@ -73,11 +73,12 @@ func toMirrorScrubRuleInputs(reqs []*mirrormodel.MirrorScrubRuleReq) []corebridg
 			continue
 		}
 		out = append(out, corebridge.MirrorScrubRuleInput{
-			Name:        strings.TrimSpace(r.Name),
-			Category:    strings.TrimSpace(r.Category),
-			Pattern:     r.Pattern,
-			Severity:    strings.TrimSpace(r.Severity),
-			Replacement: r.Replacement,
+			Name:          strings.TrimSpace(r.Name),
+			Category:      strings.TrimSpace(r.Category),
+			Pattern:       r.Pattern,
+			Severity:      strings.TrimSpace(r.Severity),
+			Replacement:   r.Replacement,
+			PathAllowlist: r.PathAllowlist,
 		})
 	}
 	return out
