@@ -33,6 +33,9 @@ struct MirrorScrubRuleReq {
     3: string pattern (api.json="pattern")
     4: string severity (api.json="severity")
     5: string replacement (api.json="replacement")
+    // 路径白名单(glob,'/' 分段,'**' 跨层):命中但在白名单内 = 放行但留痕。
+    // mandatory(密钥类)规则不允许配置(密钥类没有放行面)。
+    6: list<string> pathAllowlist (api.json="pathAllowlist")
 }
 
 struct UpdateMirrorTargetReq {
