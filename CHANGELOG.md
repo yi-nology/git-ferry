@@ -2,6 +2,37 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed
+
+- **core v0.35.1 → v0.39.0**(一次性吃进 2026-11-12 技术评审四个版本):
+  P0 正确性(重试链 DB 派生计数/pending webhook 落库/镜像锁
+  mirror_lock_fail_closed/先 release 后 emit)、P1 持久化(事务 outbox
+  SIGKILL 补偿送达/SyncRun.BackupStatus 正交列/版本化 schema 迁移)、
+  P2 分布式地基(durable_queue 执行队列 lease 认领/工作目录磁盘配额)、
+  P3 治理(RPO 事实/跨平台对账/对账周期化+reconcile.drift 漂移事件)。
+  配置全部默认关闭或零变化,升级即获得修复、无需迁移操作(schema 迁移
+  自动收敛)。
+
+### Added
+
+- **SyncRunInfo.backup_status 字段透出**(IDL field 16,api.json
+  `backup_status`):同步与备份状态分别显示——同步成功+备份失败时
+  灾备目标未达成可见(评审验收)。converter 走既有反射契约自动搬运。
+- **watcher 的 `auto_retry` 字面量换 corebridge.TriggerAutoRetry**:
+  触发源字符串是重试链的界定符,收编进 core 常量防写错字节静默失效。
+
+### Notes
+
+- hz 工具链 v0.9.7 → v0.9.8 重新生成时会把既有字段的 form/json tag
+  从 snake_case 改成 camelCase(破坏 API 兼容)并重命名 RunID→RunId;
+  本轮**回滚生成文件后手改**(照 retryTotal 模式补 7 处),hz 生成物
+  的 tag 风格回归坑记档于此,后续 hz update 需警惕。
+- 壳层 go.work 临时摘除本地 go-git-platform use(与 core 同因:
+  其本地 HEAD 升 oekit/pkg v0.46.0 收编删除 errors.Errorf);
+  go.mod 钉的老版保留 API,地板迁移(独立车道)完成后恢复。
+
 ## [v2.7.0] - 2026-11-10
 
 ### Added

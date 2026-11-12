@@ -147,6 +147,9 @@ struct SyncRunInfo {
     13: string errorType (api.json="error_type")
     14: i32 retryTotal (api.json="retry_total")
     15: list<SyncRunStepInfo> steps (api.json="steps")
+    // 备份阶段状态(空=n/a,success/failed):与 status(同步)正交——
+    // 同步成功+备份失败=灾备目标未达成,两个状态分别显示。
+    16: string backupStatus (api.json="backup_status")
 }
 
 struct SyncRunStepInfo {

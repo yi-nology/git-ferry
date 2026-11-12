@@ -2529,6 +2529,10 @@ func (p *CreateTaskReq) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 16
 			goto WriteFieldError
 		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
+			goto WriteFieldError
+		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
 			goto WriteFieldError
@@ -5354,6 +5358,9 @@ type SyncRunInfo struct {
 	ErrorType      string             `thrift:"errorType,13" form:"error_type" json:"error_type" query:"error_type"`
 	RetryTotal     int32              `thrift:"retryTotal,14" form:"retry_total" json:"retry_total" query:"retry_total"`
 	Steps          []*SyncRunStepInfo `thrift:"steps,15,default,list<SyncRunStepInfo>" form:"steps" json:"steps" query:"steps"`
+	// 备份阶段状态(空=n/a,success/failed):与 status(同步)正交——
+	// 同步成功+备份失败=灾备目标未达成,两个状态分别显示。
+	BackupStatus string `thrift:"backupStatus,16" form:"backup_status" json:"backup_status" query:"backup_status"`
 }
 
 func NewSyncRunInfo() *SyncRunInfo {
@@ -5428,6 +5435,10 @@ func (p *SyncRunInfo) GetSteps() (v []*SyncRunStepInfo) {
 	return p.Steps
 }
 
+func (p *SyncRunInfo) GetBackupStatus() (v string) {
+	return p.BackupStatus
+}
+
 var fieldIDToName_SyncRunInfo = map[int16]string{
 	1:  "id",
 	2:  "taskKey",
@@ -5444,6 +5455,7 @@ var fieldIDToName_SyncRunInfo = map[int16]string{
 	13: "errorType",
 	14: "retryTotal",
 	15: "steps",
+	16: "backupStatus",
 }
 
 func (p *SyncRunInfo) IsSetWebhookEventId() bool {
@@ -5568,6 +5580,14 @@ func (p *SyncRunInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField16(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5777,6 +5797,17 @@ func (p *SyncRunInfo) ReadField15(iprot thrift.TProtocol) error {
 		return err
 	}
 	p.Steps = _field
+	return nil
+}
+func (p *SyncRunInfo) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.BackupStatus = _field
 	return nil
 }
 
@@ -6119,6 +6150,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
+func (p *SyncRunInfo) writeField16(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("backupStatus", thrift.STRING, 16); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.BackupStatus); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
 func (p *SyncRunInfo) String() string {

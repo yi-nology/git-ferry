@@ -214,7 +214,7 @@ func (w *Watcher) maybeAutoRetry(ctx context.Context, run *corebridge.SyncRun) {
 	}
 	logger.Info("auto retry failed sync run",
 		"run_id", run.ID, "task", run.TaskKey, "attempt", d.Attempt)
-	if err := w.svc.RunTaskAsync(run.TaskKey, "auto_retry", nil); err != nil {
+	if err := w.svc.RunTaskAsync(run.TaskKey, corebridge.TriggerAutoRetry, nil); err != nil {
 		logger.Warn("auto retry failed", "run_id", run.ID, "error", err, "reason", d.Reason)
 	}
 }

@@ -63,6 +63,10 @@ const StatusSuccess = model.StatusSuccess
 // 触发来源常量(手动触发路径使用)
 const TriggerManual = model.TriggerManual
 
+// TriggerAutoRetry 失败自动补偿触发源(core 重试链的界定符,
+// 触发源字符串=链的界定符,禁止散落字面量)。
+const TriggerAutoRetry = model.TriggerAutoRetry
+
 // RebuildTrigger 全量重建触发器:core 会在拿到执行权后清空工作目录,
 // 强制从源重新克隆(见 git-ferry-core service/rebuild.go)。
 const RebuildTrigger = model.TriggerRebuild
