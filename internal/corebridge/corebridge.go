@@ -67,6 +67,14 @@ const TriggerManual = model.TriggerManual
 // 触发源字符串=链的界定符,禁止散落字面量)。
 const TriggerAutoRetry = model.TriggerAutoRetry
 
+// ===== P3 治理能力的类型透出(对账/恢复点/策略回放) =====
+type (
+	ReconcileResult         = model.ReconcileResult
+	ReconcileRecord         = model.ReconcileRecord
+	RecoveryPoint           = model.RecoveryPoint
+	ApplyTaskPoliciesResult = coreservice.ApplyTaskPoliciesResult
+)
+
 // RebuildTrigger 全量重建触发器:core 会在拿到执行权后清空工作目录,
 // 强制从源重新克隆(见 git-ferry-core service/rebuild.go)。
 const RebuildTrigger = model.TriggerRebuild

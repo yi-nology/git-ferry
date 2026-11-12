@@ -150,6 +150,9 @@ struct SyncRunInfo {
     // 备份阶段状态(空=n/a,success/failed):与 status(同步)正交——
     // 同步成功+备份失败=灾备目标未达成,两个状态分别显示。
     16: string backupStatus (api.json="backup_status")
+    // 执行时策略快照(确定性 JSON):审计「这次执行在什么策略下跑的」,
+    // 策略后续被改不影响历史执行复核。
+    17: string policySnapshot (api.json="policy_snapshot")
 }
 
 struct SyncRunStepInfo {

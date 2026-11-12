@@ -3563,6 +3563,9 @@
       },
       "SyncRunInfo": {
         "properties": {
+          "backup_status": {
+            "type": "string"
+          },
           "commit_range": {
             "type": "string"
           },
@@ -3588,6 +3591,9 @@
           "id": {
             "format": "int64",
             "type": "integer"
+          },
+          "policy_snapshot": {
+            "type": "string"
           },
           "retry_total": {
             "format": "int32",
@@ -6537,6 +6543,41 @@
         ]
       }
     },
+    "/api/v1/ops/policies/apply": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "策略回放(单任务失败不中断)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/policies/export": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "任务策略导出(确定性 JSON)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/push-backup": {
       "post": {
         "requestBody": {
@@ -6589,6 +6630,45 @@
           }
         },
         "summary": "一键重建(admin)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/reconcile": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "单任务跨平台对账",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/reconcile/results": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "对账结果列表(默认只列漂移)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
+    "/api/v1/ops/recovery-points": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "恢复点索引",
         "tags": [
           "Ops"
         ]

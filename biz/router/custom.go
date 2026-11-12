@@ -92,6 +92,12 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.POST("/push-backup", git_sync.WriteGuard(), git_sync.PushBackup)
 	ops.GET("/repo-files", git_sync.RepoFiles)
 	ops.GET("/bundles", git_sync.ListBundles)
+	// P3 治理:对账 / 恢复点 / 策略即代码
+	ops.GET("/reconcile", git_sync.ReconcileTask)
+	ops.GET("/reconcile/results", git_sync.ReconcileResults)
+	ops.GET("/recovery-points", git_sync.RecoveryPoints)
+	ops.GET("/policies/export", git_sync.ExportPolicies)
+	ops.POST("/policies/apply", git_sync.WriteGuard(), git_sync.ApplyPolicies)
 	ops.GET("/bundles/verify", git_sync.VerifyBundle)
 	ops.POST("/bundles/restore", git_sync.AdminGuard(), git_sync.RestoreBundle)
 	ops.GET("/diagnose", git_sync.DiagnoseRun)

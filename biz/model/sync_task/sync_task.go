@@ -755,6 +755,10 @@ func (p *SyncTaskInfo) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 17
 			goto WriteFieldError
 		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
+			goto WriteFieldError
+		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
 			goto WriteFieldError
@@ -5361,6 +5365,8 @@ type SyncRunInfo struct {
 	// 备份阶段状态(空=n/a,success/failed):与 status(同步)正交——
 	// 同步成功+备份失败=灾备目标未达成,两个状态分别显示。
 	BackupStatus string `thrift:"backupStatus,16" form:"backup_status" json:"backup_status" query:"backup_status"`
+	// 执行时策略快照(确定性 JSON):审计「这次执行在什么策略下跑的」。
+	PolicySnapshot string `thrift:"policySnapshot,17" form:"policy_snapshot" json:"policy_snapshot" query:"policy_snapshot"`
 }
 
 func NewSyncRunInfo() *SyncRunInfo {
@@ -5439,6 +5445,10 @@ func (p *SyncRunInfo) GetBackupStatus() (v string) {
 	return p.BackupStatus
 }
 
+func (p *SyncRunInfo) GetPolicySnapshot() (v string) {
+	return p.PolicySnapshot
+}
+
 var fieldIDToName_SyncRunInfo = map[int16]string{
 	1:  "id",
 	2:  "taskKey",
@@ -5456,6 +5466,7 @@ var fieldIDToName_SyncRunInfo = map[int16]string{
 	14: "retryTotal",
 	15: "steps",
 	16: "backupStatus",
+	17: "policySnapshot",
 }
 
 func (p *SyncRunInfo) IsSetWebhookEventId() bool {
@@ -5588,6 +5599,14 @@ func (p *SyncRunInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5808,6 +5827,17 @@ func (p *SyncRunInfo) ReadField16(iprot thrift.TProtocol) error {
 		_field = v
 	}
 	p.BackupStatus = _field
+	return nil
+}
+func (p *SyncRunInfo) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.PolicySnapshot = _field
 	return nil
 }
 
@@ -6167,6 +6197,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
+func (p *SyncRunInfo) writeField17(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("policySnapshot", thrift.STRING, 17); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.PolicySnapshot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
 
 func (p *SyncRunInfo) String() string {

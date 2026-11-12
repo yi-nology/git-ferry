@@ -138,22 +138,22 @@ func TestGoldenJSONShape(t *testing.T) {
 		{
 			name: "SyncRunInfo",
 			got:  ToSyncRunInfo(goldenRun()),
-			want: `{"id":21,"task_key":"task-key","trigger_source":"manual","status":"success","start_time":"2024-05-17 08:30:15","end_time":"2024-05-17 08:30:15","commit_range":"abc..def","details":"details text","error_message":"boom","created_at":"2024-05-17 08:30:15","webhook_event_id":91,"duration_ms":1234,"error_type":"network","retry_total":2,"steps":[{"id":31,"step_name":"fetch","status":"success","start_time":"2024-05-17 08:30:15","end_time":"2024-05-17 08:30:15","duration_ms":55,"error_msg":"step err","error_type":"net","retry_count":1}],"backup_status":""}`,
+			want: `{"id":21,"task_key":"task-key","trigger_source":"manual","status":"success","start_time":"2024-05-17 08:30:15","end_time":"2024-05-17 08:30:15","commit_range":"abc..def","details":"details text","error_message":"boom","created_at":"2024-05-17 08:30:15","webhook_event_id":91,"duration_ms":1234,"error_type":"network","retry_total":2,"steps":[{"id":31,"step_name":"fetch","status":"success","start_time":"2024-05-17 08:30:15","end_time":"2024-05-17 08:30:15","duration_ms":55,"error_msg":"step err","error_type":"net","retry_count":1}],"backup_status":"","policy_snapshot":""}`,
 		},
 		{
 			name: "SyncRunInfoZero",
 			got:  ToSyncRunInfo(&model.SyncRun{}),
-			want: `{"id":0,"task_key":"","trigger_source":"","status":"","start_time":"0001-01-01 00:00:00","end_time":"","commit_range":"","details":"","error_message":"","created_at":"0001-01-01 00:00:00","duration_ms":0,"error_type":"","retry_total":0,"steps":null,"backup_status":""}`,
+			want: `{"id":0,"task_key":"","trigger_source":"","status":"","start_time":"0001-01-01 00:00:00","end_time":"","commit_range":"","details":"","error_message":"","created_at":"0001-01-01 00:00:00","duration_ms":0,"error_type":"","retry_total":0,"steps":null,"backup_status":"","policy_snapshot":""}`,
 		},
 		{
 			name: "SyncRunInfoLight",
 			got:  ToSyncRunInfoListLight([]*model.SyncRun{goldenRun()})[0],
-			want: `{"id":21,"task_key":"task-key","trigger_source":"manual","status":"success","start_time":"2024-05-17 08:30:15","end_time":"2024-05-17 08:30:15","commit_range":"abc..def","details":"","error_message":"boom","created_at":"2024-05-17 08:30:15","duration_ms":1234,"error_type":"network","retry_total":2,"steps":null,"backup_status":""}`,
+			want: `{"id":21,"task_key":"task-key","trigger_source":"manual","status":"success","start_time":"2024-05-17 08:30:15","end_time":"2024-05-17 08:30:15","commit_range":"abc..def","details":"","error_message":"boom","created_at":"2024-05-17 08:30:15","duration_ms":1234,"error_type":"network","retry_total":2,"steps":null,"backup_status":"","policy_snapshot":""}`,
 		},
 		{
 			name: "SyncRunInfoLightZero",
 			got:  ToSyncRunInfoListLight([]*model.SyncRun{{}})[0],
-			want: `{"id":0,"task_key":"","trigger_source":"","status":"","start_time":"0001-01-01 00:00:00","end_time":"","commit_range":"","details":"","error_message":"","created_at":"0001-01-01 00:00:00","duration_ms":0,"error_type":"","retry_total":0,"steps":null,"backup_status":""}`,
+			want: `{"id":0,"task_key":"","trigger_source":"","status":"","start_time":"0001-01-01 00:00:00","end_time":"","commit_range":"","details":"","error_message":"","created_at":"0001-01-01 00:00:00","duration_ms":0,"error_type":"","retry_total":0,"steps":null,"backup_status":"","policy_snapshot":""}`,
 		},
 		{
 			name: "SyncRunStepInfo",

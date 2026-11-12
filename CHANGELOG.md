@@ -2,6 +2,21 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Added
+
+- **P3 治理能力 HTTP 透出**(手写路由,不进 IDL/hz 生成,避开 tag 回归坑):
+  `GET /api/v1/ops/reconcile?task_key=`(手动触发跨平台对账)、
+  `GET /api/v1/ops/reconcile/results?all=1`(对账结果,默认只列漂移)、
+  `GET /api/v1/ops/recovery-points?task_key=&limit=`(恢复点索引,
+  惰性清理)、`GET /api/v1/ops/policies/export`(任务策略确定性 JSON
+  导出,可进 git 走 PR)、`POST /api/v1/ops/policies/apply`(策略回放,
+  WriteGuard,部分成功完整报告)。
+- **SyncRunInfo.policy_snapshot 透出**(IDL 17,手改生成文件七处):
+  执行时策略快照——审计历史执行的策略依据。
+- apidoc 清单与 openapi.json 同步(make apidoc 重生成,契约测试钉住)。
+
 ## [v2.8.0] - 2026-11-13
 
 ### Changed

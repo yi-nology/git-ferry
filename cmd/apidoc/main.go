@@ -658,6 +658,10 @@ func addCustomPaths(paths, schemas map[string]any) {
 		{"/api/v1/ops/rbac", "当前角色与权限"},
 		{"/api/v1/ops/inventory", "资产盘点"},
 		{"/api/v1/ops/bundles", "冷备 bundle 列表"},
+		{"/api/v1/ops/reconcile", "单任务跨平台对账"},
+		{"/api/v1/ops/reconcile/results", "对账结果列表(默认只列漂移)"},
+		{"/api/v1/ops/recovery-points", "恢复点索引"},
+		{"/api/v1/ops/policies/export", "任务策略导出(确定性 JSON)"},
 		{"/api/v1/ops/bundles/verify", "校验 bundle"},
 		{"/api/v1/ops/dr-drill/history", "灾备演练历史"},
 		{"/api/v1/ops/dr-drill/export", "灾备演练历史导出"},
@@ -676,6 +680,7 @@ func addCustomPaths(paths, schemas map[string]any) {
 		})
 	}
 	opsPOST := []struct{ path, summary string }{
+		{"/api/v1/ops/policies/apply", "策略回放(单任务失败不中断)"},
 		{"/api/v1/ops/dr-drill", "灾备演练(单/批)"},
 		{"/api/v1/ops/backup-manifest", "生成 Merkle 完整性清单"},
 		{"/api/v1/ops/metadata-backup", "元数据/资产快照"},
