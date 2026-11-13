@@ -10,10 +10,10 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   升级/Errorf 收敛)、oekit pkg v0.40→**v0.47.1**、go-git-platform
   v0.121→**v0.131.0**(清零战役 Y4 六单)、concurrency/guardx/hertz/
   bootstrap/logx/metrics/kitx 等全套 `go get -u`。
-- **三个 breaking 依赖按 SDK 权威钉回**(MVS 对齐,等 SDK 适配后随版):
-  go-gitcode v0.17→**v0.16**、go-gongfeng v0.5→**v0.4**(SubscribeMR
-  3值→2值 breaking)、apache/thrift v0.25→**v0.13**(thriftgo 生成代码
-  无 ctx 参数,既定钉版约束)。
+- **三个依赖按 SDK 权威钉回**(上游新版本 API 有变而 SDK 未跟进,MVS 对齐,
+  等 SDK 适配后随版):go-gitcode v0.17→**v0.16**、go-gongfeng v0.5→**v0.4**
+  (SubscribeMR 3值→2值签名调整)、apache/thrift v0.25→**v0.13**(thriftgo
+  生成代码无 ctx 参数,既定钉版约束)。
 - **golangci 配置**:staticcheck 关闭 SA1019(oekit errors.Errorf 的
   deprecation)——本仓硬规则「统一走 oekit 门面」(internal/convention
   fmt.Errorf 全量禁令)优先于上游兼容层提示;保留 v2 默认排除集。
