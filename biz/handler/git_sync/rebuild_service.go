@@ -2,11 +2,11 @@ package git_sync
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/pathx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -61,14 +61,14 @@ func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 // safeWorkDir 拼 workdir 并拒绝路径穿越(task_key 含 / \ .. 一律拒绝)。
 func safeWorkDir(tempDir, taskKey string) (string, error) {
 	if taskKey == "" {
-		return "", errors.Errorf("task_key is empty")
+		return "", fmt.Errorf("task_key is empty")
 	}
 	// task_key 是单段名（拼进 workdir 文件名），不是路径——用上游
 	// pathx.IsSafeFileName 判定：拒绝路径分隔符（"/" 与 "\"）、"." / ".." 段、
 	// 绝对路径与 Windows 盘符。此前是子串判定 Contains("..")，会误杀
 	// "foo..bar" 这类合法名字。
 	if !pathx.IsSafeFileName(taskKey) {
-		return "", errors.Errorf("task_key contains path separators")
+		return "", fmt.Errorf("task_key contains path separators")
 	}
 	dir := filepath.Join(tempDir, taskKey)
 	// 双保险:结果必须仍在 tempDir 之下
@@ -81,7 +81,7 @@ func safeWorkDir(tempDir, taskKey string) (string, error) {
 		return "", err
 	}
 	if !strings.HasPrefix(absDir, absTemp+string(filepath.Separator)) {
-		return "", errors.Errorf("task_key escapes temp dir")
+		return "", fmt.Errorf("task_key escapes temp dir")
 	}
 	return absDir, nil
 }

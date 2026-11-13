@@ -3,6 +3,7 @@ package schema
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/oekit/pkg/errors"
 	"sort"
 	"strings"
@@ -59,7 +60,7 @@ func Load() ([]Domain, error) {
 
 func parse(raw []byte) ([]Domain, error) {
 	if len(raw) == 0 {
-		return nil, errors.Errorf("openapi spec is empty")
+		return nil, fmt.Errorf("openapi spec is empty")
 	}
 	var doc openapiDoc
 	if err := json.Unmarshal(raw, &doc); err != nil {
@@ -153,7 +154,7 @@ func Show(name string) ([]Endpoint, error) {
 		}
 	}
 	if len(hits) == 0 {
-		return nil, errors.Errorf("no API matched %q (try `gitferry schema list`)", name)
+		return nil, fmt.Errorf("no API matched %q (try `gitferry schema list`)", name)
 	}
 	return hits, nil
 }

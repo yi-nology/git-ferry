@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"github.com/oekit/pkg/errors"
 	"os"
 	"sort"
@@ -123,10 +124,10 @@ func rejectUnusedFlags(cmd *cobra.Command, allowed []string) error {
 	sort.Strings(bad)
 	// 「--force」在 push 上是 sync 的语义(忽略阻塞项)—— 指路比只说「不接受」有用。
 	if len(bad) == 1 && bad[0] == "--force" && ok["force-push"] {
-		return errors.Errorf("%s 不接受 --force(它的语义是 sync 的「忽略阻塞项继续」);"+
+		return fmt.Errorf("%s 不接受 --force(它的语义是 sync 的「忽略阻塞项继续」);"+
 			"覆盖远端已有提交请用 --force-push", cmd.Name())
 	}
-	return errors.Errorf("%s 不接受这些参数:%s(传了也不会生效,已拒绝;本命令支持的参数见 --help)",
+	return fmt.Errorf("%s 不接受这些参数:%s(传了也不会生效,已拒绝;本命令支持的参数见 --help)",
 		cmd.Name(), strings.Join(bad, ", "))
 }
 
@@ -209,7 +210,7 @@ func histsyncChannelBody(cmd *cobra.Command) (map[string]any, error) {
 		}
 	}
 	if flagBool(cmd, "disabled") && flagBool(cmd, "enable") {
-		return nil, errors.Errorf("--disabled 与 --enable 不能同时给")
+		return nil, fmt.Errorf("--disabled 与 --enable 不能同时给")
 	}
 	if flagBool(cmd, "disabled") {
 		body["enabled"] = false
@@ -246,7 +247,7 @@ func histsyncChannelBody(cmd *cobra.Command) (map[string]any, error) {
 			}
 			parts := strings.SplitN(item, "=", 2)
 			if len(parts) != 2 {
-				return nil, errors.Errorf("痕迹规则格式应为 name=regex[:auto|mandatory]: %q", item)
+				return nil, fmt.Errorf("痕迹规则格式应为 name=regex[:auto|mandatory]: %q", item)
 			}
 			pattern, severity, _ := strings.Cut(parts[1], ":")
 			if severity == "" {
@@ -288,7 +289,7 @@ func histsyncChannelCreate(c *client.Client, _ *config.Config, cmd *cobra.Comman
 		return nil, err
 	}
 	if name, _ := body["name"].(string); name == "" {
-		return nil, errors.Errorf("缺少必填参数 --name")
+		return nil, fmt.Errorf("缺少必填参数 --name")
 	}
 	return c.Post("/api/v1/histsync/channels", body)
 }

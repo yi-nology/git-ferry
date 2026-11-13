@@ -140,17 +140,21 @@ func TestConvention_错误处理必须用oekit的errors(t *testing.T) {
 		"发现 stdlib \"errors\" 导入:改用 github.com/oekit/pkg/errors(同名同型,Is/As 一个 import 即可)")
 }
 
-// TestConvention_禁止fmtErrorf 错误构造统一走 oekit pkg/errors:
-// Errorf 与 fmt.Errorf 同型(nil-safe 为增益),Wrap 可挂 kv 上下文;
-// 与 stdlib errors 的 Is/As 同一性也靠同一个 import 维系。
-// 存量已于本轮清零(30 文件迁移),此后出现即违规——
-// 与 go-git-platform v0.108.0 的「容忍区取消」同口径。
-func TestConvention_禁止fmtErrorf(t *testing.T) {
+// TestConvention_禁止OekitErrorf 错误构造口径(2026-11-13 翻转,用户授权):
+//   - 纯格式化/包装 → fmt.Errorf(stdlib);
+//   - 需要 kv 结构化上下文 → errors.Wrap(oekit/pkg/errors);
+//   - 两者都要 → 先 fmt.Errorf 再 errors.Wrap。
+//
+// 翻转依据:oekit errors.Errorf 是 #378 删除→#401/#405 恢复的**兼容层**,
+// 上游注释明示「不是回退收敛方向」;全量收敛(壳层 30 文件)后此约定
+// 反向收严——此后出现 oekit errors.Errorf 即违规。
+// (Is/As 仍统一走 oekit errors import,与 stdlib 同型。)
+func TestConvention_禁止OekitErrorf(t *testing.T) {
 	root := repoRoot(t)
 	files := goFiles(t, root)
-	hits := linesWith(files, root, regexp.MustCompile(`fmt\.Errorf\(`))
+	hits := linesWith(files, root, regexp.MustCompile(`errors\.Errorf\(`))
 	assert.Empty(t, hits,
-		"发现 fmt.Errorf:改用 errors.Errorf / errors.Wrap(oekit/pkg/errors)")
+		"发现 oekit errors.Errorf:纯格式化用 fmt.Errorf,kv 上下文用 errors.Wrap(oekit/pkg/errors)——Errorf 兼容层非收敛方向(#401/#405)")
 }
 
 // TestConvention_日志必须走logx门面 直连 slog 打日志 ⇒ 绕过了统一门面:

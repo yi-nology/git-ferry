@@ -1,10 +1,10 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
-	"github.com/oekit/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/yi-nology/git-ferry/internal/cli/client"
@@ -43,7 +43,7 @@ func newAuthLoginCmd() *cobra.Command {
 				cfg.APIKey = os.Getenv("GITFERRY_API_KEY")
 			}
 			if cfg.APIKey == "" {
-				return errors.Errorf("未提供 API Key：用 --token 或设置 GITFERRY_TOKEN")
+				return fmt.Errorf("未提供 API Key：用 --token 或设置 GITFERRY_TOKEN")
 			}
 			if err := config.SaveAPIKey(cfg); err != nil {
 				return err

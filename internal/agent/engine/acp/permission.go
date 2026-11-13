@@ -1,6 +1,7 @@
 package acp
 
 import (
+	"fmt"
 	"github.com/oekit/pkg/errors"
 	"sync"
 
@@ -61,7 +62,7 @@ func (r *permRegistry) get(id string) (*permItem, bool) {
 func (r *permRegistry) respond(requestID, optionID string) error {
 	it, ok := r.get(requestID)
 	if !ok {
-		return errors.Errorf("授权请求 %s 不存在或已过期", requestID)
+		return fmt.Errorf("授权请求 %s 不存在或已过期", requestID)
 	}
 	if optionID == "" {
 		r.remove(requestID)

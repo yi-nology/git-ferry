@@ -298,7 +298,7 @@ func (e *AcpxEngine) ensureSession(ctx context.Context, name string) error {
 	cmd.Dir = e.cfg.Cwd
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Errorf("acpx 建会话失败(%s): %v: %s", acpxBinary, err, strings.TrimSpace(string(out)))
+		return fmt.Errorf("acpx 建会话失败(%s): %v: %s", acpxBinary, err, strings.TrimSpace(string(out)))
 	}
 	e.mu.Lock()
 	e.created[name] = true
@@ -411,7 +411,7 @@ func (e *AcpxEngine) execPrompt(ctx context.Context, sessionName, prompt string,
 		return "", streamErr
 	}
 	if waitErr != nil {
-		return "", errors.Errorf("acpx 执行失败: %v: %s", waitErr, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("acpx 执行失败: %v: %s", waitErr, strings.TrimSpace(stderr.String()))
 	}
 	return text.String(), nil
 }
@@ -562,7 +562,7 @@ func RunOnce(ctx context.Context, cfg *Config, prompt string) (string, error) {
 		return "", streamErr
 	}
 	if waitErr != nil {
-		return "", errors.Errorf("acpx 执行失败: %v: %s", waitErr, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("acpx 执行失败: %v: %s", waitErr, strings.TrimSpace(stderr.String()))
 	}
 	if strings.TrimSpace(text.String()) == "" {
 		return "", errors.New("acpx 没有返回任何文本")
@@ -588,7 +588,7 @@ func Probe(ctx context.Context, cfg *Config) (string, error) {
 	cmd := exec.CommandContext(ctx, bin, "--version") //nolint:gosec // G204:路径来自配置
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", errors.Errorf("acpx --version 失败: %v: %s", err, strings.TrimSpace(string(out)))
+		return "", fmt.Errorf("acpx --version 失败: %v: %s", err, strings.TrimSpace(string(out)))
 	}
 	return strings.TrimSpace(string(out)), nil
 }

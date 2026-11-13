@@ -227,7 +227,7 @@ func ValidateExternalProfile(p *ExternalAgentConfig, backend string) error {
 		return err
 	}
 	if ProfileUsesACPX(p, backend) && NormalizePermission(p.Permission) == PermissionAsk {
-		return errors.Errorf("%s 用的是 acpx(非交互),无法逐次弹授权卡(写操作会按拒绝处理):"+
+		return fmt.Errorf("%s 用的是 acpx(非交互),无法逐次弹授权卡(写操作会按拒绝处理):"+
 			"授权档请选 approve_reads | approve_all | deny;要逐次确认请用 stdio 后端", label)
 	}
 	return nil
@@ -238,11 +238,11 @@ func CheckExternalProfileParams(p *ExternalAgentConfig, transport, label string)
 	switch transport {
 	case BackendACPX:
 		if p.Agent == "" && p.Command == "" {
-			return errors.Errorf("%s 名为空(填 agent 如 mcode,或填自定义 command)", label)
+			return fmt.Errorf("%s 名为空(填 agent 如 mcode,或填自定义 command)", label)
 		}
 	case BackendStdio:
 		if p.Command == "" {
-			return errors.Errorf("%s 命令为空(如 \"mcode acp\")", label)
+			return fmt.Errorf("%s 命令为空(如 \"mcode acp\")", label)
 		}
 	}
 	return nil
@@ -508,7 +508,7 @@ func (c *Config) Validate(apiKey string) error {
 			return errors.New("ai.backend=internal 需要 ai.model")
 		}
 		if apiKey == "" {
-			return errors.Errorf("ai.backend=internal 需要环境变量 %s", APIKeyEnvVar)
+			return fmt.Errorf("ai.backend=internal 需要环境变量 %s", APIKeyEnvVar)
 		}
 	case BackendACPX, BackendStdio:
 		c.applyExternalDefaults()
@@ -534,10 +534,10 @@ func (c *Config) Validate(apiKey string) error {
 				return errors.New("ai.backend=stdio 需要 ai.external.command(如 \"mcode acp\")")
 			}
 		default:
-			return errors.Errorf("未知外部传输方式: %s(可选 acpx|stdio)", transport)
+			return fmt.Errorf("未知外部传输方式: %s(可选 acpx|stdio)", transport)
 		}
 	default:
-		return errors.Errorf("未知 ai.backend: %s(可选 internal|acpx|stdio)", c.Backend)
+		return fmt.Errorf("未知 ai.backend: %s(可选 internal|acpx|stdio)", c.Backend)
 	}
 	return nil
 }

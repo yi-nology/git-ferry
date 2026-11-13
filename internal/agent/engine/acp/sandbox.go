@@ -60,13 +60,13 @@ func newSandbox(root string) (*sandbox, error) {
 func (s *sandbox) inside(path string) error {
 	rel, err := filepath.Rel(s.root, path)
 	if err != nil {
-		return errors.Errorf("路径越界: %s", path)
+		return fmt.Errorf("路径越界: %s", path)
 	}
 	if rel == "." {
 		return nil
 	}
 	if _, ok := pathx.SanitizeRelStrict(rel); !ok {
-		return errors.Errorf("路径越界(只允许访问 %s 内的文件): %s", s.root, path)
+		return fmt.Errorf("路径越界(只允许访问 %s 内的文件): %s", s.root, path)
 	}
 	return nil
 }
@@ -85,7 +85,7 @@ func (s *sandbox) resolve(path string) (string, error) {
 		// filepath.Join 会把 "a/../b" 在**文本上**抵消掉,而抵消是纯文本语义、
 		// 看不见符号链接("a" 若是软链,真实落点可能落在根外)⇒ 抵消之前就拒。
 		if _, ok := pathx.SanitizeRelStrict(path); !ok {
-			return "", errors.Errorf("路径越界(只允许访问 %s 内的文件): %s", s.root, path)
+			return "", fmt.Errorf("路径越界(只允许访问 %s 内的文件): %s", s.root, path)
 		}
 		path = filepath.Join(s.root, path)
 	}
@@ -126,7 +126,7 @@ func (s *sandbox) resolveCwd(cwd string) (string, error) {
 	if !filepath.IsAbs(abs) {
 		// 同 resolve:相对路径先过严格档(显式 ".." 一律拒)。
 		if _, ok := pathx.SanitizeRelStrict(abs); !ok {
-			return "", errors.Errorf("路径越界(只允许访问 %s 内的文件): %s", s.root, cwd)
+			return "", fmt.Errorf("路径越界(只允许访问 %s 内的文件): %s", s.root, cwd)
 		}
 		abs = filepath.Join(s.root, abs)
 	}

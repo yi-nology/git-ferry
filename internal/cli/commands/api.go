@@ -1,10 +1,10 @@
 package commands
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
-	"github.com/oekit/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/yi-nology/git-ferry/internal/cli/client"
@@ -32,7 +32,7 @@ func newAPICmd() *cobra.Command {
 			for _, kv := range query {
 				k, v, ok := strings.Cut(kv, "=")
 				if !ok {
-					return nil, errors.Errorf("无效 query 参数 %q（应为 k=v）", kv)
+					return nil, fmt.Errorf("无效 query 参数 %q（应为 k=v）", kv)
 				}
 				q.Add(k, v)
 			}

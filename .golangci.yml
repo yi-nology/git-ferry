@@ -18,20 +18,6 @@ linters:
       excludes:
         - G304
         - G115
-    staticcheck:
-      # oekit errors.Errorf 是 #378 删除→#401/#405 恢复的兼容层;本仓硬规则
-      # (统一走 oekit 门面,见 internal/convention)优先于上游 deprecation。
-      checks:
-        # golangci v2 默认集(all + 关闭 stylecheck 试金石系列),追加关 SA1019
-        - "all"
-        - "-ST1000"
-        - "-ST1003"
-        - "-ST1016"
-        - "-ST1020"
-        - "-ST1021"
-        - "-ST1022"
-        - "-ST1023"
-        - "-SA1019"
     gocritic:
       enabled-tags:
         - diagnostic

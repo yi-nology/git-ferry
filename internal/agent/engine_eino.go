@@ -240,7 +240,7 @@ func (e *einoEngine) Run(ctx context.Context, sess engine.Session, in engine.Inp
 func (e *einoEngine) ExecuteConfirmed(ctx context.Context, sess engine.Session, toolName, token string) (string, error) {
 	tl := e.reg.ByName(toolName)
 	if tl == nil {
-		return "", errors.Errorf("未知工具 %q", toolName)
+		return "", fmt.Errorf("未知工具 %q", toolName)
 	}
 	args, err := sess.ConsumePending(toolName, token)
 	if err != nil {

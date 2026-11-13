@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed（错误构造全量收敛——用户授权翻转约定）
+
+- **oekit errors.Errorf → fmt.Errorf 全量迁移(30 文件 69 处)**:
+  纯格式化走 stdlib fmt.Errorf,kv 结构化上下文继续 errors.Wrap(oekit)
+  ——上游 #401/#405 注释明示 Errorf 兼容层「不是回退收敛方向」。
+- **internal/convention 约定翻转**:原「禁止 fmt.Errorf,统一 oekit
+  门面」→ 新「禁止 oekit errors.Errorf」(纯格式化 fmt.Errorf /
+  kv 用 errors.Wrap;Is/As 仍统一 oekit import)。测试
+  TestConvention_禁止OekitErrorf 钉住新方向。
+- golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
+
 ## [v2.9.0] - 2026-11-13
 
 ### Changed（三方依赖全量升级）
@@ -10,9 +23,9 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   升级/Errorf 收敛)、oekit pkg v0.40→**v0.47.1**、go-git-platform
   v0.121→**v0.131.0**(清零战役 Y4 六单)、concurrency/guardx/hertz/
   bootstrap/logx/metrics/kitx 等全套 `go get -u`。
-- **三个 breaking 依赖按 SDK 权威钉回**(MVS 对齐,等 SDK 适配后随版):
+- **三个 API 签名已变更的依赖按 SDK 权威钉回**(MVS 对齐,等 SDK 适配后随版):
   go-gitcode v0.17→**v0.16**、go-gongfeng v0.5→**v0.4**(SubscribeMR
-  3值→2值 breaking)、apache/thrift v0.25→**v0.13**(thriftgo 生成代码
+  3值→2值签名变更)、apache/thrift v0.25→**v0.13**(thriftgo 生成代码
   无 ctx 参数,既定钉版约束)。
 - **golangci 配置**:staticcheck 关闭 SA1019(oekit errors.Errorf 的
   deprecation)——本仓硬规则「统一走 oekit 门面」(internal/convention
