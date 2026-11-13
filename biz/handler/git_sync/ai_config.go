@@ -12,6 +12,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/ptrx"
 
 	"github.com/yi-nology/git-ferry/biz/model/ai"
@@ -246,7 +247,7 @@ func SetAIRebuildRunner(fn func(*agent.Settings) error) {
 
 func rebuildAgentRunner(st *agent.Settings) error {
 	if rebuildAgentRunnerFn == nil {
-		return fmt.Errorf("runner rebuild not wired")
+		return errors.New("runner rebuild not wired")
 	}
 	return rebuildAgentRunnerFn(st)
 }

@@ -163,7 +163,7 @@ func (n *Notifier) do(req *http.Request) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("notify status %d", resp.StatusCode)
+		return errors.New(fmt.Sprintf("notify status %d", resp.StatusCode))
 	}
 	return nil
 }

@@ -3,7 +3,6 @@ package git_sync
 import (
 	"github.com/oekit/pkg/errors"
 
-	"fmt"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
@@ -14,7 +13,7 @@ import (
 func newIssueProvider(plat *corebridge.Platform, repoToken string) (sdkprov.Provider, error) {
 	svc := GetSyncService()
 	if svc == nil {
-		return nil, fmt.Errorf("create provider: sync service unavailable")
+		return nil, errors.New("create provider: sync service unavailable")
 	}
 	p, err := svc.ProviderForPlatform(plat, repoToken)
 	if err != nil {

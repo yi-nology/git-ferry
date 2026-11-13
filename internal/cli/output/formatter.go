@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/stringx"
 	"gopkg.in/yaml.v3"
 )
@@ -28,7 +29,7 @@ func Print(w io.Writer, env *Envelope, format string) error {
 	case "table":
 		return printTable(w, env)
 	default:
-		return fmt.Errorf("unsupported format %q (use json|table|yaml)", format)
+		return errors.New(fmt.Sprintf("unsupported format %q (use json|table|yaml)", format))
 	}
 }
 

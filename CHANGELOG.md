@@ -4,7 +4,19 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
-### Changed（错误构造全量收敛——用户授权翻转约定）
+### Changed（错误构造全量收敛——oekit 统一口径,用户裁定）
+
+- **fmt.Errorf 全量消除(30 文件 68 处)——错误对象统一 oekit**:
+  纯文本 → `errors.New`;带插值 → `errors.New(fmt.Sprintf(...))`
+  (错误对象仍是 oekit,fmt 仅做字符串格式化);多行拼接/复合形态
+  同口径转换。**不再出现 fmt.Errorf 产出的 error**。
+- **internal/convention 口径定稿**(2026-11-13 用户裁定,推翻一度
+  翻转的方向):禁止 fmt.Errorf——纯文本 New / 插值 New(Sprintf) /
+  "前缀: %w" 形态 Wrap(err, "前缀") / 复杂 %w 形态用 oekit
+  errors.Errorf(上游 #401/#405 指引:兼容层服务「两者都需要」场景)。
+- 上一版 Unreleased 段的「禁止 oekit Errorf」方向作废。
+
+
 
 - **oekit errors.Errorf → fmt.Errorf 全量迁移(30 文件 69 处)**:
   纯格式化走 stdlib fmt.Errorf,kv 结构化上下文继续 errors.Wrap(oekit)

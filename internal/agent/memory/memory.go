@@ -66,7 +66,7 @@ func Open(path string) (*Store, error) {
 func (s *Store) Remember(kind Kind, content string, tags []string) (*Entry, error) {
 	content = strings.TrimSpace(content)
 	if content == "" {
-		return nil, fmt.Errorf("empty memory content")
+		return nil, errors.New("empty memory content")
 	}
 	now := time.Now()
 	s.mu.Lock()

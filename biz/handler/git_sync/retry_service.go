@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -130,7 +131,7 @@ func findRunByID(ctx context.Context, svc *corebridge.Service, runID uint) (*cor
 			break
 		}
 	}
-	return nil, "", fmt.Errorf("run %d not found", runID)
+	return nil, "", errors.New(fmt.Sprintf("run %d not found", runID))
 }
 
 func collectRecentFailedRuns(ctx context.Context, svc *corebridge.Service, taskKey string, limit int) ([]failedRun, error) {

@@ -109,10 +109,10 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 		switch in.Backend {
 		case BackendInternal:
 			if in.BaseURL == "" {
-				return nil, fmt.Errorf("base_url 不能为空")
+				return nil, errors.New("base_url 不能为空")
 			}
 			if in.Model == "" {
-				return nil, fmt.Errorf("model 不能为空")
+				return nil, errors.New("model 不能为空")
 			}
 			// 模型密钥只对**内置后端**有意义:外部后端根本不走
 			// OpenAI 兼容端点,拿不到这个 key。放在分支外会让
@@ -125,7 +125,7 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 				in.APIKey = prevKey
 			}
 			if in.APIKey == "" {
-				return nil, fmt.Errorf("api_key 不能为空(或保留已保存的密钥)")
+				return nil, errors.New("api_key 不能为空(或保留已保存的密钥)")
 			}
 		case BackendACPX, BackendStdio:
 			// **逐个 profile 校验**:具名列表里的每个 profile 都可能被选中;
@@ -140,14 +140,14 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 			for i := range in.External.Agents {
 				p := in.External.Agents[i]
 				if strings.TrimSpace(p.Name) == "" {
-					return nil, fmt.Errorf("profile 缺 name(名字是委派时选它的关键字)")
+					return nil, errors.New("profile 缺 name(名字是委派时选它的关键字)")
 				}
 				if err := ValidateExternalProfile(&p, in.Backend); err != nil {
 					return nil, err
 				}
 			}
 		default:
-			return nil, fmt.Errorf("未知后端: %s(可选 internal|acpx|stdio)", in.Backend)
+			return nil, errors.New(fmt.Sprintf("未知后端: %s(可选 internal|acpx|stdio)", in.Backend))
 		}
 	}
 	in.applyDefaults()
@@ -165,7 +165,7 @@ func (s *SettingsStore) Save(in *Settings) (*Settings, error) {
 
 func (s *SettingsStore) persist(st *Settings) error {
 	if s.path == "" {
-		return fmt.Errorf("ai settings path empty")
+		return errors.New("ai settings path empty")
 	}
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o750); err != nil {
 		return errors.Wrap(err, "mkdir ai settings")

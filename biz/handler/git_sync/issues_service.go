@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/oekit/hertz/render"
+	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -104,7 +105,7 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 	// 平台不一定实现 IssueManager
 	im, ok := p.(sdkprov.IssueManager)
 	if !ok {
-		return nil, fmt.Errorf("platform %s does not support issue export", repo.Platform)
+		return nil, errors.New(fmt.Sprintf("platform %s does not support issue export", repo.Platform))
 	}
 	// 空 state 交平台默认(通常 open+closed 或 open)
 	st := sdkprov.IssueState(state)

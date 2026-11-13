@@ -140,21 +140,22 @@ func TestConvention_错误处理必须用oekit的errors(t *testing.T) {
 		"发现 stdlib \"errors\" 导入:改用 github.com/oekit/pkg/errors(同名同型,Is/As 一个 import 即可)")
 }
 
-// TestConvention_禁止OekitErrorf 错误构造口径(2026-11-13 翻转,用户授权):
-//   - 纯格式化/包装 → fmt.Errorf(stdlib);
-//   - 需要 kv 结构化上下文 → errors.Wrap(oekit/pkg/errors);
-//   - 两者都要 → 先 fmt.Errorf 再 errors.Wrap。
+// TestConvention_禁止fmtErrorf 错误构造统一走 oekit pkg/errors(2026-11-13
+// 用户裁定,推翻一度翻转的方向):fmt.Errorf 不用——
+//   - 纯文本 → errors.New;
+//   - 带插值 → errors.New(fmt.Sprintf(...))(错误对象仍是 oekit,
+//     fmt 仅做字符串格式化);
+//   - 有底层错误且形态为 "前缀: %w" → errors.Wrap(err, "前缀");
+//   - 复杂形态(%w 开头/中间带后缀)→ oekit errors.Errorf
+//     (上游 #401/#405 指引:兼容层服务「两者都需要」的场景)。
 //
-// 翻转依据:oekit errors.Errorf 是 #378 删除→#401/#405 恢复的**兼容层**,
-// 上游注释明示「不是回退收敛方向」;全量收敛(壳层 30 文件)后此约定
-// 反向收严——此后出现 oekit errors.Errorf 即违规。
-// (Is/As 仍统一走 oekit errors import,与 stdlib 同型。)
-func TestConvention_禁止OekitErrorf(t *testing.T) {
+// Is/As/Wrap 统一走 oekit errors import,与 stdlib 同型。
+func TestConvention_禁止fmtErrorf(t *testing.T) {
 	root := repoRoot(t)
 	files := goFiles(t, root)
-	hits := linesWith(files, root, regexp.MustCompile(`errors\.Errorf\(`))
+	hits := linesWith(files, root, regexp.MustCompile(`fmt\.Errorf\(`))
 	assert.Empty(t, hits,
-		"发现 oekit errors.Errorf:纯格式化用 fmt.Errorf,kv 上下文用 errors.Wrap(oekit/pkg/errors)——Errorf 兼容层非收敛方向(#401/#405)")
+		"发现 fmt.Errorf:错误构造用 oekit errors.New/Wrap/Errorf(见 internal/convention 口径)")
 }
 
 // TestConvention_日志必须走logx门面 直连 slog 打日志 ⇒ 绕过了统一门面:

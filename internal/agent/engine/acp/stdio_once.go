@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
 )
 
@@ -24,8 +25,8 @@ func RunOnceStdio(ctx context.Context, cfg *Config, prompt string) (string, erro
 	c := *cfg
 	c.Transport = TransportStdio
 	if c.Permission == PermissionAsk {
-		return "", fmt.Errorf("stdio 一次性执行是非交互的,无法逐次弹授权卡:" +
-			"授权档请选 approve_reads | approve_all | deny")
+		return "", errors.New(fmt.Sprintf("stdio 一次性执行是非交互的,无法逐次弹授权卡:" +
+			"授权档请选 approve_reads | approve_all | deny"))
 	}
 	eng, err := NewEngine(&c)
 	if err != nil {

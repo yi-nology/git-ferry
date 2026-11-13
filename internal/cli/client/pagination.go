@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/oekit/pkg/errors"
 	"github.com/yi-nology/git-ferry/internal/cli/output"
 )
 
@@ -53,7 +54,7 @@ func (c *Client) PaginateAll(path string, params url.Values) ([]json.RawMessage,
 			return nil, nil, err
 		}
 		if !env.OK {
-			return nil, nil, fmt.Errorf("page %d: %s", page, env.Error.Message)
+			return nil, nil, errors.New(fmt.Sprintf("page %d: %s", page, env.Error.Message))
 		}
 
 		items := extractItems(env.Data)
