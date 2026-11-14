@@ -93,7 +93,7 @@ func (r *Registry) getSyncHealth(ctx context.Context, in healthInput) (string, e
 		items = append(items, row{
 			Key: t.Key, Name: t.Name,
 			Score: res.Score, Level: res.Level,
-			Issues: res.Issues, Actions: res.Actions, Dimensions: dims,
+			Issues: issuesFromDims(res.Dimensions), Actions: actionsFromDims(res.Dimensions), Dimensions: dims,
 			HistoryError: historyErr,
 		})
 	}

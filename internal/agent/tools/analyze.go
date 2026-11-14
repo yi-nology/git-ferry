@@ -83,7 +83,7 @@ func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string
 			"health":        dimRes.Score,
 			"level":         dimRes.Level,
 			"weak_dims":     weakDimensionNames(dimRes.Dimensions),
-			"dim_action":    dimRes.Actions,
+			"dim_action":    actionsFromDims(dimRes.Dimensions),
 			"history_error": historyErr,
 		})
 		if herr == nil && len(runs) > 0 {

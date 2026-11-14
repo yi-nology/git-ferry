@@ -27,6 +27,20 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   TestConvention_禁止OekitErrorf 钉住新方向。
 - golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
 
+## [Unreleased]
+
+### Changed（依赖升级红利轮 + v0.46 BREAKING 适配）
+
+- **依赖升级**:core v0.42→**v0.46.0**(Clone Cache v0.43/0.44 + 容量治理
+  v0.45 + EvalResult 投影删除 v0.46)、SDK v0.131→**v0.135.0**、
+  oekit pkg→**v0.48.0**(Errorf 兼容层终局退役,跨 org 同列车)。
+- **v0.46 BREAKING 适配**:`health.EvalResult` 顶层 Issues/Actions 删除
+  ——agent tools 3 处消费点改本地派生 `issuesFromDims/actionsFromDims`
+  (口径与 core 一致:score<60 name:reason / score<70 去重保序 action,
+  归因单源 Dimensions)。
+- 三 breaking 依赖继续按 SDK 权威钉回(gitcode v0.16/gongfeng v0.4/
+  thrift v0.13——SDK v0.135 仍未跟进,随版升)。
+
 ## [v2.9.0] - 2026-11-13
 
 ### Changed（三方依赖全量升级）
