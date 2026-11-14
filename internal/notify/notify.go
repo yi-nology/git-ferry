@@ -73,6 +73,64 @@ func (n *Notifier) NotifyRun(ev *RunEvent) {
 	})
 }
 
+// DriftEvent 对账漂移告警(低频、恒发——不走 Events 生命周期过滤)。
+type DriftEvent struct {
+	TaskKey     string
+	Status      string // drift/source_missing/target_missing
+	Message     string
+	SourceAhead int
+	TargetAhead int
+	At          time.Time
+}
+
+// NotifyDrift 异步派发对账漂移告警。
+//
+// 与 NotifyRun 的差异:**恒发**(不按 cfg.Events 过滤)——漂移是低频
+// 运维告警,用户配置 success/failed 生命周期过滤不应把它静默掉;
+// 渠道级 Enabled 仍是总开关。
+func (n *Notifier) NotifyDrift(ev *DriftEvent) {
+	if n == nil || ev == nil || !n.cfg.Enabled() {
+		return
+	}
+	// 映射成 RunEvent 走既有 send* 通道(消息格式复用,Status=drift)。
+	runEv := &RunEvent{
+		TaskKey: ev.TaskKey,
+		Status:  "drift",
+		Trigger: "reconcile",
+		Error:   fmt.Sprintf("[%s] %s (source ahead=%d, target ahead=%d)", ev.Status, ev.Message, ev.SourceAhead, ev.TargetAhead),
+		EndAt:   ev.At,
+	}
+	if runEv.EndAt.IsZero() {
+		runEv.EndAt = time.Now()
+	}
+	async.GoSafe(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		n.pushDriftAll(ctx, runEv)
+	})
+}
+
+// pushDriftAll 漂移专用推送:与 pushAll 同渠道,但不做 wantEvent 过滤。
+func (n *Notifier) pushDriftAll(ctx context.Context, ev *RunEvent) {
+	for i := range n.cfg.Ntfy {
+		cfg := &n.cfg.Ntfy[i]
+		if err := n.sendNtfy(ctx, cfg, ev); err != nil {
+			logger.Warn("notify ntfy drift failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
+		}
+	}
+	for i := range n.cfg.Gotify {
+		cfg := &n.cfg.Gotify[i]
+		if err := n.sendGotify(ctx, cfg, ev); err != nil {
+			logger.Warn("notify gotify drift failed", "error", redactError(err), "url", redactSecretURL(cfg.URL))
+		}
+	}
+	if n.cfg.Webhook != nil {
+		if err := n.sendWebhook(ctx, n.cfg.Webhook, ev); err != nil {
+			logger.Warn("notify webhook drift failed", "error", redactError(err), "url", redactSecretURL(n.cfg.Webhook.FailURL))
+		}
+	}
+}
+
 func (n *Notifier) pushAll(ctx context.Context, ev *RunEvent) {
 	for i := range n.cfg.Ntfy {
 		cfg := &n.cfg.Ntfy[i]

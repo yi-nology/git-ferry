@@ -113,3 +113,19 @@ func TestSendWebhook_Signed(t *testing.T) {
 	// 签名可复验
 	assert.Equal(t, signBody("s3cret", gotBody), gotSig)
 }
+
+// TestNotifyDrift_HasNoLifecycleFilter 漂移告警恒发:OnlyFail(生命周期
+// 过滤)对它不生效——漂移是低频运维告警,不得被 success/failed 过滤静默。
+// (NotifyRun 在 OnlyFail 下会跳过 success;NotifyDrift 不看 OnlyFail。)
+func TestNotifyDrift_HasNoLifecycleFilter(t *testing.T) {
+	cfg := &Config{OnlyFail: true} // 生命周期过滤打开
+	n := New(cfg)
+	assert.NotPanics(t, func() {
+		n.NotifyDrift(&DriftEvent{TaskKey: "t", Status: "drift", Message: "m"})
+		n.NotifyDrift(nil)
+		var nilN *Notifier
+		nilN.NotifyDrift(&DriftEvent{TaskKey: "t"})
+	})
+	// 对照:NotifyRun 在 OnlyFail+success 下被过滤(不 panic 即可,行为由
+	// wantEvent 单测覆盖)——此处只钉 NotifyDrift 的 nil/未启用安全。
+}

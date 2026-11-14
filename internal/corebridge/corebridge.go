@@ -70,6 +70,7 @@ const TriggerAutoRetry = model.TriggerAutoRetry
 // ===== P3 治理能力的类型透出(对账/恢复点/策略回放) =====
 type (
 	ReconcileResult         = model.ReconcileResult
+	ReconcileDrift          = coreservice.ReconcileDrift
 	ReconcileRecord         = model.ReconcileRecord
 	RecoveryPoint           = model.RecoveryPoint
 	ApplyTaskPoliciesResult = coreservice.ApplyTaskPoliciesResult

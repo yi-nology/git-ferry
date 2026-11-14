@@ -36,7 +36,8 @@ func (f *fakeSvc) RunTaskAsync(taskKey, trigger string, _ *uint) error {
 	return nil
 }
 
-func (f *fakeSvc) SubscribeRuns(func(corebridge.RunEvent)) func() { return func() {} }
+func (f *fakeSvc) SubscribeRuns(func(corebridge.RunEvent)) func()                 { return func() {} }
+func (f *fakeSvc) SubscribeReconcileDrift(func(corebridge.ReconcileDrift)) func() { return func() {} }
 
 func (f *fakeSvc) AutoRetry() *corebridge.RetryTracker {
 	if f.retry == nil {

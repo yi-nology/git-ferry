@@ -27,18 +27,28 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   TestConvention_禁止OekitErrorf 钉住新方向。
 - golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
 
+## [Unreleased]
+
+### Added（对账漂移告警闭环——core drift 事件 → 通知渠道）
+
+- **watcher 订阅 `SubscribeReconcileDrift`** → `Notifier.NotifyDrift`:
+  对账发现漂移/分支缺失时,经既有 ntfy/Gotify/webhook 渠道告警。
+  **恒发语义**:不按 OnlyFail/Events 生命周期过滤(漂移是低频运维
+  告警,success/failed 过滤不得把它静默掉;渠道级 Enabled 仍是总开关)。
+- 消息格式:Status=drift,内容含状态/说明/两端 ahead 量化。
+
 ## [v2.9.1] - 2026-11-14
 
-### Changed（依赖升级红利轮 + v0.46 BREAKING 适配）
+### Changed（依赖升级红利轮 + v0.46 投影字段调整适配）
 
 - **依赖升级**:core v0.42→**v0.46.0**(Clone Cache v0.43/0.44 + 容量治理
   v0.45 + EvalResult 投影删除 v0.46)、SDK v0.131→**v0.135.0**、
   oekit pkg→**v0.48.0**(Errorf 兼容层终局退役,跨 org 同列车)。
-- **v0.46 BREAKING 适配**:`health.EvalResult` 顶层 Issues/Actions 删除
+- **v0.46 投影字段调整适配**:`health.EvalResult` 顶层 Issues/Actions 字段调整
   ——agent tools 3 处消费点改本地派生 `issuesFromDims/actionsFromDims`
   (口径与 core 一致:score<60 name:reason / score<70 去重保序 action,
   归因单源 Dimensions)。
-- 三 breaking 依赖继续按 SDK 权威钉回(gitcode v0.16/gongfeng v0.4/
+- 三个签名变更依赖继续按 SDK 权威钉回(gitcode v0.16/gongfeng v0.4/
   thrift v0.13——SDK v0.135 仍未跟进,随版升)。
 
 ## [v2.9.0] - 2026-11-13

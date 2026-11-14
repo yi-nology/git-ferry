@@ -47,6 +47,8 @@ type SyncService interface {
 	RunTaskAsync(taskKey, trigger string, webhookEventID *uint) error
 	// SubscribeRuns 订阅 core 运行完成事件，返回取消函数。
 	SubscribeRuns(fn func(corebridge.RunEvent)) func()
+	// SubscribeReconcileDrift 订阅对账漂移事件(P3 告警闭环),返回取消函数。
+	SubscribeReconcileDrift(fn func(corebridge.ReconcileDrift)) func()
 	// AutoRetry 失败自动补偿的策略计数器。
 	AutoRetry() *corebridge.RetryTracker
 }
@@ -118,9 +120,14 @@ func (w *Watcher) Start(ctx context.Context) {
 		cancel := w.svc.SubscribeRuns(func(ev corebridge.RunEvent) {
 			w.onRunEvent(ctx, &ev)
 		})
+		// 对账漂移告警(P3 闭环):core outbox reconcile.drift → 通知渠道。
+		cancelDrift := w.svc.SubscribeReconcileDrift(func(d corebridge.ReconcileDrift) {
+			w.onDriftEvent(&d)
+		})
 		async.GoSafe(func() {
 			<-ctx.Done()
 			cancel()
+			cancelDrift()
 		})
 		logger.Info("run watcher started",
 			"mode", ModeEvent, "max_auto_retries", w.cfg.Retry.MaxAutoRetries)
@@ -149,6 +156,18 @@ func (w *Watcher) onRunEvent(ctx context.Context, ev *corebridge.RunEvent) {
 		return
 	}
 	w.emit(ctx, run)
+}
+
+// onDriftEvent 对账漂移 → 通知渠道(恒发,见 NotifyDrift)。
+func (w *Watcher) onDriftEvent(d *corebridge.ReconcileDrift) {
+	w.notifier.NotifyDrift(&notify.DriftEvent{
+		TaskKey:     d.TaskKey,
+		Status:      d.Status,
+		Message:     d.Message,
+		SourceAhead: d.SourceAhead,
+		TargetAhead: d.TargetAhead,
+		At:          d.At,
+	})
 }
 
 // emit 播报一次已完成的运行（事件/轮询两条路径共用）。
