@@ -27,7 +27,7 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   TestConvention_禁止OekitErrorf 钉住新方向。
 - golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
 
-## [Unreleased]
+## [v2.9.2] - 2026-11-15
 
 ### Added（对账漂移告警闭环——core drift 事件 → 通知渠道）
 
