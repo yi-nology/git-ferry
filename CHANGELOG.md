@@ -27,6 +27,18 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   TestConvention_禁止OekitErrorf 钉住新方向。
 - golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
 
+## [Unreleased]
+
+### Added（治理对账前端面板——P3 能力用户可触达）
+
+- **运维中心新增「治理对账」tab**(GovernancePanel):三区块——
+  ① 跨平台对账:单任务查询(状态/两端 SHA/ahead 量化)+ 漂移列表;
+  ② 恢复点索引:按任务列冷备恢复点(文件/格式/源 HEAD/大小/时间,
+    轮转清理语义由后端惰性处理);③ 策略即代码:导出确定性 JSON/
+    从文件回放/应用当前文档(新建/更新/失败完整报告)。
+- `api/ops.ts` 治理三端点封装(ReconcileResult/RecoveryPoint/
+  ApplyPoliciesResult 类型)。
+
 ## [v2.9.2] - 2026-11-15
 
 ### Added（对账漂移告警闭环——core drift 事件 → 通知渠道）

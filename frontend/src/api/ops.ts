@@ -365,3 +365,80 @@ export interface DriftReport {
   items: DriftItem[]
   warnings?: string[]
 }
+
+
+// ===== P3 治理:对账 / 恢复点 / 策略即代码 =====
+
+/** 对账结果(单任务查询) */
+export interface ReconcileResult {
+  task_key: string
+  source_branch: string
+  target_branch: string
+  source_sha: string
+  target_sha: string
+  status: 'in_sync' | 'drift' | 'source_missing' | 'target_missing' | string
+  source_ahead: number
+  target_ahead: number
+  message: string
+  checked_at: string
+}
+
+/** 对账结果记录(列表,每任务最新) */
+export interface ReconcileRecord {
+  task_key: string
+  status: string
+  source_sha: string
+  target_sha: string
+  source_ahead: number
+  target_ahead: number
+  message: string
+  checked_at: string
+}
+
+/** 恢复点(冷备可检索条目) */
+export interface RecoveryPoint {
+  id: number
+  task_key: string
+  file_name: string
+  format: string
+  source_sha: string
+  size_bytes: number
+  created_at: string
+}
+
+/** 策略回放结果 */
+export interface ApplyPoliciesResult {
+  created: number
+  updated: number
+  errors?: string[]
+}
+
+export const governanceApi = {
+  /** 单任务跨平台对账(纯平台 API 只读) */
+  reconcile: (taskKey: string) =>
+    http.get<unknown, ReconcileResult>('/ops/reconcile', { params: { task_key: taskKey } }),
+
+  /** 对账结果列表(默认只列漂移;all=true 列全部) */
+  reconcileResults: (all = false) =>
+    http.get<unknown, { items: ReconcileRecord[]; total: number }>('/ops/reconcile/results', {
+      params: all ? { all: '1' } : {},
+    }),
+
+  /** 恢复点索引(最新优先,文件已轮转的惰性清理) */
+  recoveryPoints: (taskKey: string, limit = 20) =>
+    http.get<unknown, { items: RecoveryPoint[]; total: number }>('/ops/recovery-points', {
+      params: { task_key: taskKey, limit },
+    }),
+
+  /** 任务策略导出(确定性 JSON,可进 git 走 PR) */
+  exportPolicies: async (): Promise<string> => {
+    const resp = await http.get('/ops/policies/export', { responseType: 'text' })
+    return typeof resp === 'string' ? resp : JSON.stringify(resp, null, 2)
+  },
+
+  /** 策略回放(单任务失败不中断,完整报告) */
+  applyPolicies: (doc: string) =>
+    http.post<unknown, ApplyPoliciesResult>('/ops/policies/apply', doc, {
+      headers: { 'Content-Type': 'application/json' },
+    }),
+}

@@ -25,6 +25,9 @@
         <a-tab-pane key="dr" tab="灾备演练">
           <DRPanel />
         </a-tab-pane>
+        <a-tab-pane key="governance" tab="治理对账">
+          <GovernancePanel />
+        </a-tab-pane>
       </a-tabs>
     </div>
   </div>
@@ -40,6 +43,7 @@ import TemplatesPanel from './TemplatesPanel.vue'
 import DeployKeyPanel from './DeployKeyPanel.vue'
 import BackupPanel from './BackupPanel.vue'
 import DRPanel from './DRPanel.vue'
+import GovernancePanel from './GovernancePanel.vue'
 
 defineOptions({ name: 'OpsCenter' })
 
