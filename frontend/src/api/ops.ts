@@ -453,6 +453,8 @@ export interface MetadataMigrateReport {
   createdPrs: number
   updatedIssues?: number
   unchangedIssues?: number
+  /** 目标平台无 draft 写面而降级创建的 PR 数(SDK #160,core v0.49.0+) */
+  draftDegraded?: number
   closedIssues?: number
   closedPrs?: number
   dryRun: boolean

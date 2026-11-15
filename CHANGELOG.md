@@ -2,6 +2,17 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed（SDK v0.138.0——迁移 draft 透传 + 标签收敛批量化）
+
+- **依赖升级**:go-git-platform v0.137→**v0.138.0**——#163
+  `EnsureIssueLabels` 批量单次收敛/#160 `CreateCROptions.Draft` 写侧/
+  #162 `AllOperations` 全集导出/#161 `GetBranchProtection` 契约钉死。
+- **治理面板元数据迁移报告新增 `draftDegraded` 标签**:目标平台创建面
+  表达不了 draft 时降级创建的 PR 数(随 core v0.49.0 的
+  `MetadataMigrateReport.draftDegraded` 透出;旧 core 下自动隐藏)。
+
 ## [v3.0.0] - 2026-11-15
 
 GitFerry **v3**:治理体系成形。

@@ -408,6 +408,8 @@ github.com/yi-nology/git-ferry-core v0.48.0 h1:kkdvznx8p7hh6c2xSC7qB5Ghwtkt4x0pk
 github.com/yi-nology/git-ferry-core v0.48.0/go.mod h1:xehfvBsXS7deW9nb84rSMC4uUgAlGO2/NRMZO6mLkcM=
 github.com/yi-nology/go-git-platform v0.137.0 h1:3AoGOidkfZpeODCft8mLpK8BEsU0cdV/LlkIhNl4WDo=
 github.com/yi-nology/go-git-platform v0.137.0/go.mod h1:2ylekbM99XRR9S3tULVUHagefRsVLCzrFE/8uOruNo8=
+github.com/yi-nology/go-git-platform v0.138.0 h1:wGmwdg1pf4Z5HTL59b5i+Q/ubgHkFWWEITMCy+6j5RI=
+github.com/yi-nology/go-git-platform v0.138.0/go.mod h1:2ylekbM99XRR9S3tULVUHagefRsVLCzrFE/8uOruNo8=
 github.com/yi-nology/go-gitcode v0.17.0 h1:2yvR05ubJB6ThVN/wr8lJhq3Onds+KhDcJoi9eWfScs=
 github.com/yi-nology/go-gitcode v0.17.0/go.mod h1:7WUskajsH/fvcIA9wqoQVLeOL+E7pL/8SbBOhDgxFkc=
 github.com/yi-nology/go-gongfeng v0.5.0 h1:VtyZxPlKakW+46E78NLENJrYZdDOsJ7LXrICmkIhlXE=

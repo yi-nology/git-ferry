@@ -168,6 +168,9 @@
         <a-tag color="green">新建 Issue {{ migReport.createdIssues }}</a-tag>
         <a-tag v-if="migReport.updatedIssues" color="orange">收敛更新 {{ migReport.updatedIssues }}</a-tag>
         <a-tag v-if="migReport.unchangedIssues" color="default">已达标 {{ migReport.unchangedIssues }}</a-tag>
+        <a-tag v-if="migReport.draftDegraded" color="orange">
+          降级非 draft {{ migReport.draftDegraded }}
+        </a-tag>
         <a-tag v-if="migReport.createdComments">评论 {{ migReport.createdComments }}</a-tag>
         <a-tag v-if="migReport.createdPrs">PR {{ migReport.createdPrs }}</a-tag>
         <a-tag v-if="migReport.errors?.length" color="red">失败 {{ migReport.errors.length }}</a-tag>
