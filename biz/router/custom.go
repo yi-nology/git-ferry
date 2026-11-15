@@ -98,6 +98,7 @@ func CustomizedRegister(r *server.Hertz) {
 	ops.GET("/recovery-points", git_sync.RecoveryPoints)
 	ops.GET("/policies/export", git_sync.ExportPolicies)
 	ops.POST("/policies/apply", git_sync.WriteGuard(), git_sync.ApplyPolicies)
+	ops.POST("/metadata-migrate", git_sync.WriteGuard(), git_sync.MetadataMigrate)
 	ops.GET("/bundles/verify", git_sync.VerifyBundle)
 	ops.POST("/bundles/restore", git_sync.AdminGuard(), git_sync.RestoreBundle)
 	ops.GET("/diagnose", git_sync.DiagnoseRun)

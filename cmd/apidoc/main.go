@@ -681,6 +681,7 @@ func addCustomPaths(paths, schemas map[string]any) {
 	}
 	opsPOST := []struct{ path, summary string }{
 		{"/api/v1/ops/policies/apply", "策略回放(单任务失败不中断)"},
+		{"/api/v1/ops/metadata-migrate", "元数据迁移(Issue/PR,dry-run 盘点)"},
 		{"/api/v1/ops/dr-drill", "灾备演练(单/批)"},
 		{"/api/v1/ops/backup-manifest", "生成 Merkle 完整性清单"},
 		{"/api/v1/ops/metadata-backup", "元数据/资产快照"},

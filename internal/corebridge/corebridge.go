@@ -71,6 +71,8 @@ const TriggerAutoRetry = model.TriggerAutoRetry
 type (
 	ReconcileResult         = model.ReconcileResult
 	ReconcileDrift          = coreservice.ReconcileDrift
+	MetadataMigrateOptions  = coreservice.MetadataMigrateOptions
+	MetadataMigrateReport   = coreservice.MetadataMigrateReport
 	ReconcileRecord         = model.ReconcileRecord
 	RecoveryPoint           = model.RecoveryPoint
 	ApplyTaskPoliciesResult = coreservice.ApplyTaskPoliciesResult

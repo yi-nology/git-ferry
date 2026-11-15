@@ -4,6 +4,17 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 
 ## [Unreleased]
 
+### Added（元数据迁移端点 + 前端区块——2B 收敛式迁移可触达）
+
+- **`POST /api/v1/ops/metadata-migrate`**(WriteGuard):Issue/PR 元数据
+  迁移 HTTP 面——dry_run 盘点/执行,幂等收敛(目标已有同标题不重复创建,
+  Ensure* 收敛),报告含 updated/unchanged 分类。
+- **治理面板新增「元数据迁移」区块**:类别勾选(Issue/评论/PR)+
+  dry-run 盘点/执行迁移 + 报告展示(新建/收敛/已达标/失败/dry-run 清单)。
+- corebridge re-export MetadataMigrateOptions/Report;apidoc 清单同步
+  (make apidoc 重生成,契约测试钉住)。
+
+
 ### Changed（错误构造全量收敛——oekit 统一口径,用户裁定）
 
 - **fmt.Errorf 全量消除(30 文件 68 处)——错误对象统一 oekit**:

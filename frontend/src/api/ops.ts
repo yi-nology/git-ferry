@@ -442,3 +442,36 @@ export const governanceApi = {
       headers: { 'Content-Type': 'application/json' },
     }),
 }
+
+
+/** 元数据迁移报告(SDK 2B Ensure* 幂等收敛) */
+export interface MetadataMigrateReport {
+  sourceIssues: number
+  sourcePrs: number
+  createdIssues: number
+  createdComments: number
+  createdPrs: number
+  updatedIssues?: number
+  unchangedIssues?: number
+  closedIssues?: number
+  closedPrs?: number
+  dryRun: boolean
+  dryRunPlanned?: string[]
+  errors?: string[]
+  notes?: string[]
+}
+
+export const metadataApi = {
+  /**
+   * 元数据迁移(Issue/PR 抽取+写入)。
+   * dry_run=true 只盘点不写;幂等收敛:目标已有同标题不重复创建。
+   */
+  migrate: (body: {
+    task_key: string
+    issues?: boolean
+    comments?: boolean
+    prs?: boolean
+    dry_run?: boolean
+    limit?: number
+  }) => http.post<unknown, MetadataMigrateReport>('/ops/metadata-migrate', body),
+}

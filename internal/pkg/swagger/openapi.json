@@ -6464,6 +6464,28 @@
         ]
       }
     },
+    "/api/v1/ops/metadata-migrate": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "元数据迁移(Issue/PR,dry-run 盘点)",
+        "tags": [
+          "Ops"
+        ]
+      }
+    },
     "/api/v1/ops/metadata-restore": {
       "post": {
         "requestBody": {

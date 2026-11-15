@@ -144,6 +144,41 @@
         </template>
       </div>
     </a-card>
+
+    <!-- ===== 元数据迁移 ===== -->
+    <a-card size="small" class="gov-card">
+      <template #title>
+        <span>元数据迁移(Issue/PR)</span>
+        <a-typography-text type="secondary" class="card-hint">
+          幂等收敛:目标已有同标题不重复创建;dry-run 先盘点再执行;评论仅对新建重放
+        </a-typography-text>
+      </template>
+      <a-space wrap>
+        <a-input v-model:value="migTaskKey" placeholder="任务 key" style="width: 260px" />
+        <a-checkbox v-model:checked="migIssues">Issue</a-checkbox>
+        <a-checkbox v-model:checked="migComments">评论</a-checkbox>
+        <a-checkbox v-model:checked="migPRs">PR/MR</a-checkbox>
+        <a-button :loading="migLoading" @click="doMigrate(true)">dry-run 盘点</a-button>
+        <a-button type="primary" danger :loading="migLoading" @click="doMigrate(false)">
+          执行迁移
+        </a-button>
+      </a-space>
+      <div v-if="migReport" class="result-block">
+        <a-tag v-if="migReport.dryRun" color="blue">dry-run</a-tag>
+        <a-tag color="green">新建 Issue {{ migReport.createdIssues }}</a-tag>
+        <a-tag v-if="migReport.updatedIssues" color="orange">收敛更新 {{ migReport.updatedIssues }}</a-tag>
+        <a-tag v-if="migReport.unchangedIssues" color="default">已达标 {{ migReport.unchangedIssues }}</a-tag>
+        <a-tag v-if="migReport.createdComments">评论 {{ migReport.createdComments }}</a-tag>
+        <a-tag v-if="migReport.createdPrs">PR {{ migReport.createdPrs }}</a-tag>
+        <a-tag v-if="migReport.errors?.length" color="red">失败 {{ migReport.errors.length }}</a-tag>
+        <ul v-if="migReport.errors?.length" class="err-list">
+          <li v-for="(e, i) in migReport.errors" :key="i">{{ e }}</li>
+        </ul>
+        <ul v-if="migReport.dryRunPlanned?.length" class="plan-list">
+          <li v-for="(pl, i) in migReport.dryRunPlanned" :key="i">{{ pl }}</li>
+        </ul>
+      </div>
+    </a-card>
   </div>
 </template>
 
@@ -152,10 +187,12 @@ import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   governanceApi,
+  metadataApi,
   type ReconcileResult,
   type ReconcileRecord,
   type RecoveryPoint,
   type ApplyPoliciesResult,
+  type MetadataMigrateReport,
 } from '@/api/ops'
 
 // ===== 对账 =====
@@ -280,6 +317,51 @@ async function doApply() {
     message.error(e instanceof Error ? e.message : '回放失败')
   } finally {
     applyLoading.value = false
+  }
+}
+
+// ===== 元数据迁移 =====
+const migTaskKey = ref('')
+const migIssues = ref(true)
+const migComments = ref(true)
+const migPRs = ref(false)
+const migLoading = ref(false)
+const migReport = ref<MetadataMigrateReport | null>(null)
+
+async function doMigrate(dryRun: boolean) {
+  const key = migTaskKey.value.trim()
+  if (!key) {
+    message.warning('请输入任务 key')
+    return
+  }
+  if (!migIssues.value && !migPRs.value) {
+    message.warning('至少选择 Issue 或 PR')
+    return
+  }
+  if (!dryRun) {
+    migReport.value = null
+  }
+  migLoading.value = true
+  try {
+    migReport.value = await metadataApi.migrate({
+      task_key: key,
+      issues: migIssues.value,
+      comments: migComments.value,
+      prs: migPRs.value,
+      dry_run: dryRun,
+    })
+    const r = migReport.value
+    if (dryRun) {
+      message.success(`盘点完成:源 Issue ${r.sourceIssues} / PR ${r.sourcePrs}`)
+    } else if (r.errors?.length) {
+      message.warning(`迁移完成,失败 ${r.errors.length} 条(见下方)`)
+    } else {
+      message.success('迁移完成')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '迁移失败')
+  } finally {
+    migLoading.value = false
   }
 }
 
