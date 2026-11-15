@@ -2,7 +2,31 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v3.0.0] - 2026-11-15
+
+GitFerry **v3**:治理体系成形。
+
+对账 / 恢复点 / 策略即代码 / 元数据迁移四块治理能力在运维中心
+「治理对账」tab 全量可触达,依赖面随 go-git-platform v0.137.0
+Phase 2B 换新。
+
+### 迁移指引
+
+**从 v2.9.x 升到 v3.0.0**:本版对既有调用方全为增量——HTTP API、CLI、
+MCP 工具与配置的行为保持原样,直接升级即可。
+
+升级后在运维中心 →「治理对账」tab 可用四块治理能力:
+
+1. **跨平台对账**:按任务 key 查询分支一致性(状态/两端 SHA/ahead 量化),
+   漂移列表 + 周期对账事件(`reconcile.drift`)驱动通知渠道告警。
+2. **恢复点索引**:每次成功冷备 = 一个可检索恢复点(文件 + 源 HEAD 状态锚)。
+3. **策略即代码**:导出确定性策略 JSON 进 git 走 PR 审阅;回放即批量
+   新建/更新任务策略(部分失败完整报告)。
+4. **元数据迁移**:`POST /api/v1/ops/metadata-migrate`(WriteGuard),
+   dry-run 先盘点;目标已有同标题条目走幂等收敛,不重复创建。
+
+构建侧:go.mod 的 git-ferry-core 基线随本次发版抬升(v0.46 → v0.48),
+从源码构建的集成同步抬依赖即可。
 
 ### Added（元数据迁移端点 + 前端区块——2B 收敛式迁移可触达）
 
@@ -14,32 +38,6 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 - corebridge re-export MetadataMigrateOptions/Report;apidoc 清单同步
   (make apidoc 重生成,契约测试钉住)。
 
-
-### Changed（错误构造全量收敛——oekit 统一口径,用户裁定）
-
-- **fmt.Errorf 全量消除(30 文件 68 处)——错误对象统一 oekit**:
-  纯文本 → `errors.New`;带插值 → `errors.New(fmt.Sprintf(...))`
-  (错误对象仍是 oekit,fmt 仅做字符串格式化);多行拼接/复合形态
-  同口径转换。**不再出现 fmt.Errorf 产出的 error**。
-- **internal/convention 口径定稿**(2026-11-13 用户裁定,推翻一度
-  翻转的方向):禁止 fmt.Errorf——纯文本 New / 插值 New(Sprintf) /
-  "前缀: %w" 形态 Wrap(err, "前缀") / 复杂 %w 形态用 oekit
-  errors.Errorf(上游 #401/#405 指引:兼容层服务「两者都需要」场景)。
-- 上一版 Unreleased 段的「禁止 oekit Errorf」方向作废。
-
-
-
-- **oekit errors.Errorf → fmt.Errorf 全量迁移(30 文件 69 处)**:
-  纯格式化走 stdlib fmt.Errorf,kv 结构化上下文继续 errors.Wrap(oekit)
-  ——上游 #401/#405 注释明示 Errorf 兼容层「不是回退收敛方向」。
-- **internal/convention 约定翻转**:原「禁止 fmt.Errorf,统一 oekit
-  门面」→ 新「禁止 oekit errors.Errorf」(纯格式化 fmt.Errorf /
-  kv 用 errors.Wrap;Is/As 仍统一 oekit import)。测试
-  TestConvention_禁止OekitErrorf 钉住新方向。
-- golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
-
-## [Unreleased]
-
 ### Added（治理对账前端面板——P3 能力用户可触达）
 
 - **运维中心新增「治理对账」tab**(GovernancePanel):三区块——
@@ -50,9 +48,7 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 - `api/ops.ts` 治理三端点封装(ReconcileResult/RecoveryPoint/
   ApplyPoliciesResult 类型)。
 
-## [Unreleased]
-
-### Changed（SDK v0.137.0 红利——三 breaking 解锁两个）
+### Changed（SDK v0.137.0 红利——三处签名变更依赖解锁两个）
 
 - **依赖升级**:go-git-platform v0.135→**v0.137.0**(Phase 2B Capability
   + Mutation Result)、**go-gitcode v0.16→v0.17.0、go-gongfeng v0.4→v0.5.0**
@@ -82,6 +78,27 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   归因单源 Dimensions)。
 - 三个签名变更依赖继续按 SDK 权威钉回(gitcode v0.16/gongfeng v0.4/
   thrift v0.13——SDK v0.135 仍未跟进,随版升)。
+
+### Changed（错误构造全量收敛——oekit 统一口径,用户裁定）
+
+- **fmt.Errorf 全量消除(30 文件 68 处)——错误对象统一 oekit**:
+  纯文本 → `errors.New`;带插值 → `errors.New(fmt.Sprintf(...))`
+  (错误对象仍是 oekit,fmt 仅做字符串格式化);多行拼接/复合形态
+  同口径转换。**不再出现 fmt.Errorf 产出的 error**。
+- **internal/convention 口径定稿**(2026-11-13 用户裁定,推翻一度
+  翻转的方向):禁止 fmt.Errorf——纯文本 New / 插值 New(Sprintf) /
+  "前缀: %w" 形态 Wrap(err, "前缀") / 复杂 %w 形态用 oekit
+  errors.Errorf(上游 #401/#405 指引:兼容层服务「两者都需要」场景)。
+- 上一版 Unreleased 段的「禁止 oekit Errorf」方向作废。
+
+- **oekit errors.Errorf → fmt.Errorf 全量迁移(30 文件 69 处)**:
+  纯格式化走 stdlib fmt.Errorf,kv 结构化上下文继续 errors.Wrap(oekit)
+  ——上游 #401/#405 注释明示 Errorf 兼容层「不是回退收敛方向」。
+- **internal/convention 约定翻转**:原「禁止 fmt.Errorf,统一 oekit
+  门面」→ 新「禁止 oekit errors.Errorf」(纯格式化 fmt.Errorf /
+  kv 用 errors.Wrap;Is/As 仍统一 oekit import)。测试
+  TestConvention_禁止OekitErrorf 钉住新方向。
+- golangci 撤销 SA1019 排除(迁移后无 deprecated 调用,无需豁免)。
 
 ## [v2.9.0] - 2026-11-13
 
