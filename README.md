@@ -7,7 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/yi-nology/git-ferry)](https://goreportcard.com/report/github.com/yi-nology/git-ferry)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/yi-nology/git-ferry)](https://go.dev/)
 [![License](https://img.shields.io/github/license/yi-nology/git-ferry)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases/tag/v2.9.2)
+[![Latest Release](https://img.shields.io/github/v/release/yi-nology/git-ferry)](https://github.com/yi-nology/git-ferry/releases/tag/v3.0.0)
 
 **[中文文档](./README.zh-CN.md)**
 
@@ -661,5 +661,5 @@ MIT — see [LICENSE](LICENSE).
 | Metric | Value |
 |--------|-------|
 | Test Files | 84 |
-| Total Tests | 434 |
+| Total Tests | 435 |
 <!-- STATS_END -->
