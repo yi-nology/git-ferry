@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - 'v*'
+  # 补发通道:给既有 release 补产物(如某次发布的 tag 被挪动导致 build job
+  # 校验失败、release 缺二进制时,dispatch 一次即可补齐)。
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '已存在的 tag(如 v3.0.0)——给它的 release 补发产物'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +30,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          # 固定检出目标:push 触发 = tag 当时的提交 SHA;dispatch 补发 = 指定 tag。
+          # 不按 ref 名 checkout —— 发版后「merge README + 挪 tag」是常规操作,
+          # tag 挪动后启动的 job 会被 checkout 的 ref 校验判死
+          # (v2.9.0~v3.0.0 裸二进制流水线连续红的根因)。
+          ref: ${{ inputs.tag || github.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -45,6 +58,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          # 固定检出目标:push 触发 = tag 当时的提交 SHA;dispatch 补发 = 指定 tag。
+          # 不按 ref 名 checkout —— 发版后「merge README + 挪 tag」是常规操作,
+          # tag 挪动后启动的 job 会被 checkout 的 ref 校验判死
+          # (v2.9.0~v3.0.0 裸二进制流水线连续红的根因)。
+          ref: ${{ inputs.tag || github.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -55,6 +73,8 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          # 版本号来源:push 触发 = tag 名;dispatch 补发 = 输入的 tag。
+          RELEASE_REF: ${{ inputs.tag || github.ref_name }}
           # SQLite 驱动已改用纯 Go 的 glebarez/sqlite(modernc 内核),
           # 全平台交叉编译无需 C 工具链,统一关闭 CGO。
           CGO_ENABLED: 0
@@ -64,16 +84,17 @@ jobs:
           if [ "$GOOS" = "windows" ]; then
             binary_name="${binary_name}.exe"
           fi
-          # 版本号编译注入(tag 触发时 GITHUB_REF_NAME 即 v1.7.x 形式的 tag)
-          go build -ldflags "-X github.com/yi-nology/git-ferry/internal/version.Version=${GITHUB_REF_NAME}" -o "./dist/${binary_name}" .
+          # 版本号编译注入(RELEASE_REF 即 v1.7.x 形式的 tag)
+          go build -ldflags "-X github.com/yi-nology/git-ferry/internal/version.Version=${RELEASE_REF}" -o "./dist/${binary_name}" .
 
       - name: Build CLI
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          RELEASE_REF: ${{ inputs.tag || github.ref_name }}
           CGO_ENABLED: 0
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_REF#v}"
           CLI_BIN="gitferry"
           ARCHIVE_EXT=".tar.gz"
           if [ "$GOOS" = "windows" ]; then
@@ -106,6 +127,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          # 固定检出目标:push 触发 = tag 当时的提交 SHA;dispatch 补发 = 指定 tag。
+          # 不按 ref 名 checkout —— 发版后「merge README + 挪 tag」是常规操作,
+          # tag 挪动后启动的 job 会被 checkout 的 ref 校验判死
+          # (v2.9.0~v3.0.0 裸二进制流水线连续红的根因)。
+          ref: ${{ inputs.tag || github.sha }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -156,7 +182,9 @@ jobs:
             - npm: `npm install -g gitferry-cli` then `gitferry-install-skills`
           files: ./artifacts/**/*
           draft: false
-          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          # dispatch 补发时 github.ref_name 是分支名 —— 必须显式指定目标 tag。
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          prerelease: ${{ contains(inputs.tag || github.ref_name, '-rc') || contains(inputs.tag || github.ref_name, '-beta') || contains(inputs.tag || github.ref_name, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -164,9 +192,12 @@ jobs:
     name: Publish npm (optional)
     runs-on: ubuntu-latest
     needs: publish
-    if: ${{ !contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha') }}
+    # 仅 tag push 发版时走 npm —— dispatch 补发产物不得重复发布 npm 包。
+    if: ${{ github.event_name == 'push' && !contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:

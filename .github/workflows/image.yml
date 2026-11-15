@@ -45,6 +45,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          # 固定到触发时的 SHA:发版后「merge README + 挪 tag」是常规操作,
+          # 按 ref 名 checkout 的 job 会在 tag 被挪后校验失败(同 release.yml)。
+          ref: ${{ github.sha }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
