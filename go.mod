@@ -26,7 +26,7 @@ require (
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.46.0
-	github.com/yi-nology/go-git-platform v0.135.0
+	github.com/yi-nology/go-git-platform v0.137.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -134,8 +134,8 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
-	github.com/yi-nology/go-gitcode v0.16.0 // indirect
-	github.com/yi-nology/go-gongfeng v0.4.0 // indirect
+	github.com/yi-nology/go-gitcode v0.17.0 // indirect
+	github.com/yi-nology/go-gongfeng v0.5.0 // indirect
 	gitlab.com/gitlab-org/api/client-go/v3 v3.48.0 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect

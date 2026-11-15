@@ -39,6 +39,15 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 - `api/ops.ts` 治理三端点封装(ReconcileResult/RecoveryPoint/
   ApplyPoliciesResult 类型)。
 
+## [Unreleased]
+
+### Changed（SDK v0.137.0 红利——三 breaking 解锁两个）
+
+- **依赖升级**:go-git-platform v0.135→**v0.137.0**(Phase 2B Capability
+  + Mutation Result)、**go-gitcode v0.16→v0.17.0、go-gongfeng v0.4→v0.5.0**
+  ——SDK #156 适配落地,解除钉回;thrift 仍钉 v0.13(壳层 thriftgo
+  生成代码约束,与 SDK 无关)。
+
 ## [v2.9.2] - 2026-11-15
 
 ### Added（对账漂移告警闭环——core drift 事件 → 通知渠道）
