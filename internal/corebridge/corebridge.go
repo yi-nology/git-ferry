@@ -7,7 +7,7 @@ import (
 	"github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry-core/pkg/deploykey"
 	coreservice "github.com/yi-nology/git-ferry-core/service"
-	"github.com/yi-nology/go-git-platform/pkg/credential"
+	"github.com/yi-nology/go-git-platform/auth/credential"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 	"gorm.io/gorm"
 )

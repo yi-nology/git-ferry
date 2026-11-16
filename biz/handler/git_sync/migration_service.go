@@ -12,6 +12,7 @@ import (
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkmodel "github.com/yi-nology/go-git-platform/model"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
 )
 
@@ -115,7 +116,7 @@ func migrationCreateErrText(err error) string {
 }
 
 // pollMigration 查一次迁移状态;exported/failed 终态才返回(否则 nil 继续轮询)。
-func pollMigration(ctx context.Context, mm sdkprov.MigrationManager, org string, id int64) *sdkprov.MigrationInfo {
+func pollMigration(ctx context.Context, mm sdkprov.MigrationManager, org string, id int64) *sdkmodel.MigrationInfo {
 	mi, err := mm.GetMigration(ctx, org, id)
 	if err != nil {
 		return nil

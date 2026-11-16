@@ -10,7 +10,7 @@ import (
 
 	coremodel "github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/go-git-platform/provider"
+	sdkmodel "github.com/yi-nology/go-git-platform/model"
 )
 
 // pageLimit 工具返回列表的单页上限。
@@ -30,7 +30,7 @@ type SyncService interface {
 	ListHistory(ctx context.Context, taskKey string, offset, limit int) ([]*corebridge.SyncRun, int64, error)
 
 	ListPlatforms(ctx context.Context) ([]*corebridge.Platform, error)
-	TestPlatformConnection(ctx context.Context, key string) (*provider.TestConnectionResult, error)
+	TestPlatformConnection(ctx context.Context, key string) (*sdkmodel.TestConnectionResult, error)
 
 	ListRules(ctx context.Context, repoKey string) ([]*corebridge.WebhookRule, error)
 

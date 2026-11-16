@@ -9,7 +9,7 @@ import (
 
 	// 注册平台后端：测试里构造 provider 时 registry 不能为空
 	// （生产入口 main.go 已有同样的 blank import）。
-	_ "github.com/yi-nology/go-git-platform/backends/all"
+	_ "github.com/yi-nology/go-git-platform/adapter/all"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )

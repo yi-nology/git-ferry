@@ -2,6 +2,22 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed（go-git-platform v0.143.0 + core v0.50.0——四层重构迁移）
+
+- **依赖升级**:go-git-platform v0.138.0 → **v0.143.0**、core v0.49.0 →
+  **v0.50.0**。SDK v0.141.0 为 BREAKING 布局重构（`provider` 拆
+  `model`/`provider`/`runtime`/`adapter` 四层），壳层按 `docs/MIGRATION.md`
+  迁移 8 文件:
+  - 实体 → `model`:Issue/IssueComment/IssueState/MigrationInfo/
+    TestConnectionResult;
+  - 机器与哨兵 → `runtime`:EachBounded/ErrStopIteration;
+  - 契约留守 `provider`:MigrationManager/IssueManager/Hooks/ProviderError/
+    ResponseHook/IsWebhookValidation/IsInvalidInput 及 `XxxOptions`;
+  - 路径:`backends/all`→`adapter/all`、`pkg/credential`→`auth/credential`。
+- **零行为变化**:仅 import 路径与类型归属调整;build/vet/test/lint 全绿。
+
 ## [v3.1.0] - 2026-11-15
 
 ### Changed（SDK v0.138.0——迁移 draft 透传 + 标签收敛批量化）

@@ -16,7 +16,7 @@ import (
 
 	// Register all platform backends (GitHub, GitLab, Gitea, etc.)
 
-	_ "github.com/yi-nology/go-git-platform/backends/all"
+	_ "github.com/yi-nology/go-git-platform/adapter/all"
 )
 
 // logger 是本包的日志出口(经 logx 门面)。

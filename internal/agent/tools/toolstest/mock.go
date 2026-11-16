@@ -7,7 +7,7 @@ import (
 
 	coremodel "github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
-	"github.com/yi-nology/go-git-platform/provider"
+	sdkmodel "github.com/yi-nology/go-git-platform/model"
 )
 
 // Mock 可配置的 SyncService 假实现。
@@ -33,7 +33,7 @@ type Mock struct {
 	Health     map[string]string
 
 	ConnResult  *coremodel.TestConnectionResult
-	PlatConnRes *provider.TestConnectionResult
+	PlatConnRes *sdkmodel.TestConnectionResult
 
 	RunTaskErr error
 
@@ -122,9 +122,9 @@ func (m *Mock) ListPlatforms(context.Context) ([]*corebridge.Platform, error) {
 	return m.Platforms, nil
 }
 
-func (m *Mock) TestPlatformConnection(context.Context, string) (*provider.TestConnectionResult, error) {
+func (m *Mock) TestPlatformConnection(context.Context, string) (*sdkmodel.TestConnectionResult, error) {
 	if m.PlatConnRes == nil {
-		return &provider.TestConnectionResult{Connected: true, Message: "ok"}, nil
+		return &sdkmodel.TestConnectionResult{Connected: true, Message: "ok"}, nil
 	}
 	return m.PlatConnRes, nil
 }

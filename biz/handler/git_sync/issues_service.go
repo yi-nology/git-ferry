@@ -14,7 +14,9 @@ import (
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
+	sdkmodel "github.com/yi-nology/go-git-platform/model"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"
+	sdkrt "github.com/yi-nology/go-git-platform/runtime"
 )
 
 // ExportIssues GET /api/v1/ops/issues-export
@@ -88,17 +90,17 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 
 // issueRow 导出用 issue 视图。
 type issueRow struct {
-	Number      string                  `json:"number"`
-	Title       string                  `json:"title"`
-	State       string                  `json:"state"`
-	Author      string                  `json:"author,omitempty"`
-	Labels      []string                `json:"labels,omitempty"`
-	Assignees   []string                `json:"assignees,omitempty"`
-	Body        string                  `json:"body,omitempty"`
-	WebURL      string                  `json:"web_url,omitempty"`
-	CreatedAt   string                  `json:"created_at"`
-	UpdatedAt   string                  `json:"updated_at"`
-	CommentList []*sdkprov.IssueComment `json:"comments,omitempty"`
+	Number      string                   `json:"number"`
+	Title       string                   `json:"title"`
+	State       string                   `json:"state"`
+	Author      string                   `json:"author,omitempty"`
+	Labels      []string                 `json:"labels,omitempty"`
+	Assignees   []string                 `json:"assignees,omitempty"`
+	Body        string                   `json:"body,omitempty"`
+	WebURL      string                   `json:"web_url,omitempty"`
+	CreatedAt   string                   `json:"created_at"`
+	UpdatedAt   string                   `json:"updated_at"`
+	CommentList []*sdkmodel.IssueComment `json:"comments,omitempty"`
 }
 
 func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, state string, max int) ([]*issueRow, error) {
@@ -108,7 +110,7 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 		return nil, errors.New(fmt.Sprintf("platform %s does not support issue export", repo.Platform))
 	}
 	// 空 state 交平台默认(通常 open+closed 或 open)
-	st := sdkprov.IssueState(state)
+	st := sdkmodel.IssueState(state)
 	const perPage = 50
 	// 页预算 = 拉满 max 所需页 +1 页空页观测(空页终止语义,v0.73 分页面);
 	// fn 内到 max 即 ErrStopIteration 提前收束,预算实际用不到。
@@ -116,9 +118,9 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 	if maxPages < 1 {
 		maxPages = 1
 	}
-	var batch []*sdkprov.Issue
-	err := sdkprov.EachBounded(ctx,
-		func(ctx context.Context, page int) ([]*sdkprov.Issue, error) {
+	var batch []*sdkmodel.Issue
+	err := sdkrt.EachBounded(ctx,
+		func(ctx context.Context, page int) ([]*sdkmodel.Issue, error) {
 			items, _, lerr := im.ListIssues(ctx, sdkprov.ListIssuesOptions{
 				Owner:   repo.PlatformOwner,
 				Repo:    repo.PlatformRepo,
@@ -128,9 +130,9 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 			})
 			return items, lerr
 		}, maxPages+1,
-		func(iss *sdkprov.Issue) error {
+		func(iss *sdkmodel.Issue) error {
 			if len(batch) >= max {
-				return sdkprov.ErrStopIteration
+				return sdkrt.ErrStopIteration
 			}
 			batch = append(batch, iss)
 			return nil
@@ -145,7 +147,7 @@ func listIssues(ctx context.Context, p sdkprov.Provider, repo *corebridge.Repo, 
 	return out, nil
 }
 
-func toIssueRow(iss *sdkprov.Issue) *issueRow {
+func toIssueRow(iss *sdkmodel.Issue) *issueRow {
 	author := ""
 	if iss.Author != nil {
 		author = iss.Author.Username
