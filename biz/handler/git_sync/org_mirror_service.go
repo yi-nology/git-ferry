@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -40,14 +41,21 @@ func OrgMirror(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	srcPlat, err := svc.GetPlatform(ctx, req.SourcePlatform)
-	if err != nil || srcPlat == nil {
-		response.NotFound(c, "source platform not found")
+	if _, err := svc.GetPlatform(ctx, req.SourcePlatform); err != nil {
+		if errors.Is(err, corebridge.ErrPlatformNotFound) {
+			response.NotFound(c, "source platform not found")
+		} else {
+			response.FromError(c, err)
+		}
 		return
 	}
 	dstPlat, err := svc.GetPlatform(ctx, req.TargetPlatform)
-	if err != nil || dstPlat == nil {
-		response.NotFound(c, "target platform not found")
+	if err != nil {
+		if errors.Is(err, corebridge.ErrPlatformNotFound) {
+			response.NotFound(c, "target platform not found")
+		} else {
+			response.FromError(c, err)
+		}
 		return
 	}
 

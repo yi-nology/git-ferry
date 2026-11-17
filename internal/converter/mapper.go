@@ -3,6 +3,7 @@ package converter
 import (
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -87,8 +88,15 @@ func mapFields(dst, src any, spec fieldSpec) {
 	}
 }
 
+// fieldIndexCache 按类型缓存字段索引:列表接口每次转换都重建 map
+// 是纯浪费(类型集合有限且不可变),缓存后只做一次。
+var fieldIndexCache sync.Map // map[reflect.Type]map[string]int
+
 // indexFields 建立「归一化字段名 → 字段下标」索引;同名时先出现的赢。
 func indexFields(t reflect.Type) map[string]int {
+	if cached, ok := fieldIndexCache.Load(t); ok {
+		return cached.(map[string]int)
+	}
 	idx := make(map[string]int, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -100,6 +108,7 @@ func indexFields(t reflect.Type) map[string]int {
 			idx[n] = i
 		}
 	}
+	fieldIndexCache.Store(t, idx)
 	return idx
 }
 

@@ -85,11 +85,7 @@ func GetPlatform(ctx context.Context, c *app.RequestContext) {
 
 	p, err := GetSyncService().GetPlatform(ctx, req.Key)
 	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-	if p == nil {
-		response.NotFound(c, "platform not found")
+		response.FromError(c, err)
 		return
 	}
 
@@ -126,19 +122,17 @@ func UpdatePlatform(ctx context.Context, c *app.RequestContext) {
 
 	p, err := GetSyncService().GetPlatform(ctx, req.Key)
 	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-	if p == nil {
-		response.NotFound(c, "platform not found")
+		response.FromError(c, err)
 		return
 	}
 
 	// 更新字段（空值表示不更新）
 	converter.ApplyPlatformUpdate(p, &req)
-	// env 覆盖:未在请求体给 token 时允许用 GIT_SYNC_TOKEN_<KEY> 注入
+	// env 覆盖:未在请求体给 token 时允许用 GIT_SYNC_TOKEN_<NAME> 注入。
+	// 必须与创建路径用同一个标识(Name),不能用 UUID Key —— 部署方的
+	// env 变量按平台名配置,按 Key 解析永远取不到。
 	if p.AccessToken == "" {
-		p.AccessToken = corebridge.ResolveTokenFromEnv(p.Key, "")
+		p.AccessToken = corebridge.ResolveTokenFromEnv(p.Name, "")
 	}
 
 	if err := GetSyncService().UpdatePlatform(ctx, p); err != nil {

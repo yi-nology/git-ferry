@@ -44,13 +44,13 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	repo, err := svc.GetRepo(ctx, req.RepoKey)
-	if err != nil || repo == nil {
-		response.NotFound(c, "repo not found")
+	if err != nil {
+		response.FromError(c, err)
 		return
 	}
 	plat, err := svc.GetPlatformByID(ctx, repo.PlatformID)
-	if err != nil || plat == nil {
-		response.NotFound(c, "platform not found")
+	if err != nil {
+		response.FromError(c, err)
 		return
 	}
 

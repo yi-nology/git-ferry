@@ -26,6 +26,9 @@ import (
 // 自动跟随 main() 里装好的后端。
 var logger = logx.Delegating("notify")
 
+// notifyChannelTimeout 单个通知渠道的发送上限(渠道之间互不占用预算)。
+const notifyChannelTimeout = 8 * time.Second
+
 // RunEvent 一次同步运行的结束事件。
 type RunEvent struct {
 	TaskKey   string
@@ -67,9 +70,9 @@ func (n *Notifier) NotifyRun(ev *RunEvent) {
 		return
 	}
 	async.GoSafe(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-		n.pushAll(ctx, ev)
+		// 每个渠道各自限时(见 send*),不再共用一个总超时 ——
+		// 否则前一个渠道慢就把后面渠道的预算吃光。
+		n.pushAll(context.Background(), ev)
 	})
 }
 
@@ -104,9 +107,7 @@ func (n *Notifier) NotifyDrift(ev *DriftEvent) {
 		runEv.EndAt = time.Now()
 	}
 	async.GoSafe(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-		n.pushDriftAll(ctx, runEv)
+		n.pushDriftAll(context.Background(), runEv)
 	})
 }
 
@@ -171,6 +172,8 @@ func wantEvent(events []string, status string) bool {
 }
 
 func (n *Notifier) sendNtfy(ctx context.Context, cfg *NtfyConfig, ev *RunEvent) error {
+	ctx, cancel := context.WithTimeout(ctx, notifyChannelTimeout)
+	defer cancel()
 	// 局部变量别叫 url:它遮蔽了 net/url 包(importShadow)。
 	endpoint := cfg.URL
 	if cfg.Topic != "" {
@@ -194,6 +197,8 @@ func (n *Notifier) sendNtfy(ctx context.Context, cfg *NtfyConfig, ev *RunEvent) 
 }
 
 func (n *Notifier) sendGotify(ctx context.Context, cfg *GotifyConfig, ev *RunEvent) error {
+	ctx, cancel := context.WithTimeout(ctx, notifyChannelTimeout)
+	defer cancel()
 	payload := map[string]any{
 		"title":    fmt.Sprintf("GitFerry %s: %s", ev.Status, ev.TaskName),
 		"message":  formatBody(ev),
@@ -264,6 +269,8 @@ func (n *Notifier) sendWebhook(ctx context.Context, cfg *WebhookConfig, ev *RunE
 	if cfg == nil {
 		return nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, notifyChannelTimeout)
+	defer cancel()
 	endpoint := cfg.FailURL
 	if ev.Status != "failed" && cfg.SuccessURL != "" {
 		endpoint = cfg.SuccessURL

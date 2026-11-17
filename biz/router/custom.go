@@ -38,10 +38,12 @@ func CustomizedRegister(r *server.Hertz) {
 	ai.POST("/chat", git_sync.AIChat)
 	ai.GET("/config", git_sync.AIGetConfig)
 	ai.POST("/config", git_sync.AIUpdateConfig)
-	ai.POST("/config/test", git_sync.AITestConfig)
+	// 探测/列模型是**危险操作**:外部 backend 会执行请求体里的命令,
+	// 且可能把已保存的模型密钥带到请求体给的 base_url ⇒ 仅 admin。
+	ai.POST("/config/test", git_sync.AdminGuard(), git_sync.AITestConfig)
 	// POST(不是 GET):api_key 走 **body** 而不是 query ——
 	// query 会进浏览器历史 / Referer / 反向代理 access log ⇒ 密钥泄漏。
-	ai.POST("/models", git_sync.AIListModels)
+	ai.POST("/models", git_sync.AdminGuard(), git_sync.AIListModels)
 	// 外部 agent 委派是异步的(确认后立刻返回任务 ID)⇒ 前端轮询取结果
 	ai.GET("/delegate/:task_id", git_sync.AIDelegateStatus)
 

@@ -30,8 +30,8 @@ func BackupGists(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	plat, err := svc.GetPlatform(ctx, req.PlatformKey)
-	if err != nil || plat == nil {
-		response.NotFound(c, "platform not found")
+	if err != nil {
+		response.FromError(c, err)
 		return
 	}
 	if plat.Type != corebridge.PlatformTypeGitHub {

@@ -2,6 +2,44 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Security
+
+- **AI 探测端点提权到 admin**：`POST /api/v1/ai/config/test` 与
+  `POST /api/v1/ai/models` 挂 `AdminGuard` 并在 handler 内二次校验——
+  外部 backend 会执行请求体命令，models 探测可能把已保存密钥带给
+  请求体指定的 base_url。
+- **已保存模型密钥只发给同源端点**：新增 `savedAIKeyFor`/`sameOrigin`，
+  探测地址与保存的 base_url 不同源时不附带密钥（防模型密钥外带）。
+- `AIUpdateConfig` 未提交 `external` 时保留现有外部 agent 配置，不再
+  零值覆盖 profile/授权档/命令。
+
+### Fixed
+
+- `findRunByID` 改用 core `GetSyncRunByID` 单条查询：删除「最多 500 任务
+  × 50 条历史」的扫描（老 run 被误报 404），诊断/重试共用。
+- 批量重试的 `task_key` 过滤修正：此前把 task key 当 repo key 传给
+  `ListTasks`，指定任务时永远匹配不到。
+- 核心服务边界统一走 `response.FromError`：TaskGet/GetPlatform/RuleGet
+  等不再把 not-found 报 500，repo/platform/issue 等不再把 DB 故障报 404；
+  `TaskRun` 的 disabled/running 映射为 400/409。
+- 平台 token 的 env 注入统一按平台 **Name** 解析（更新路径此前用 UUID
+  Key，部署方配置的 `GIT_SYNC_TOKEN_<NAME>` 永远取不到）；token_cmd
+  非零退出/超时不再返回半截 stdout。
+- 心跳检查识别 HTTP >=400（此前 404/500 也当绿灯），消费响应体以复用
+  连接；`lastFailUnix` 改原子量消除 data race。
+
+### Changed
+
+- 通知渠道不再共用一个 15s 总超时：每个渠道独立 8s 预算，前一个慢渠道
+  不再饿死后续渠道。
+- `internal/converter` 字段索引按类型缓存，列表转换不再逐条重建反射 map。
+- CLI HTTP 客户端响应体限 32 MiB，`Debug` 输出改到 stderr（此前写
+  `io.Discard`，等于静默）。
+- 备份形态文档/schema 对齐 core：`bundle|zip` → `bundle|tar`；删除壳层
+  重复的 `validateSyncConfig`（core 已校验并归一化大小写/负值）。
+
 ## [v3.2.0] - 2026-11-17
 
 ### Changed（go-git-platform v0.143.0 + core v0.50.0——四层重构迁移）

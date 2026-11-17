@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/ptrx"
 	"github.com/yi-nology/git-ferry/biz/model/ops"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -33,7 +32,7 @@ func RetryRun(ctx context.Context, c *app.RequestContext) {
 	}
 	run, taskKey, err := findRunByID(ctx, svc, uint(req.RunId))
 	if err != nil {
-		response.NotFound(c, "run not found")
+		response.FromError(c, err)
 		return
 	}
 	if run.Status != "failed" {
@@ -107,62 +106,49 @@ type failedRun struct {
 	endAt    time.Time
 }
 
+// findRunByID 按 run_id 精确查询(core 已提供单条查询)。
+// 之前靠「最多 500 个任务 × 每任务 50 条历史」扫描:老 run/任务排在
+// 500 名之后会被误报 404,且每个任务都要一次列表查询。
 func findRunByID(ctx context.Context, svc *corebridge.Service, runID uint) (*corebridge.SyncRun, string, error) {
-	const pageSize = 50
-	offset := 0
-	for page := 0; page < 10; page++ {
-		tasks, total, err := svc.ListTasks(ctx, "", offset, pageSize)
-		if err != nil {
-			return nil, "", err
-		}
-		for _, t := range tasks {
-			runs, _, err := svc.ListHistory(ctx, t.Key, 0, 50)
-			if err != nil {
-				continue
-			}
-			for _, r := range runs {
-				if r.ID == runID {
-					return r, t.Key, nil
-				}
-			}
-		}
-		offset += len(tasks)
-		if len(tasks) == 0 || int64(offset) >= total {
-			break
-		}
+	run, err := svc.GetSyncRunByID(ctx, "", runID)
+	if err != nil {
+		return nil, "", err
 	}
-	return nil, "", errors.New(fmt.Sprintf("run %d not found", runID))
+	return run, run.TaskKey, nil
 }
 
 func collectRecentFailedRuns(ctx context.Context, svc *corebridge.Service, taskKey string, limit int) ([]failedRun, error) {
+	// taskKey 分支必须按任务查 —— 旧实现把它当 repoKey 传给 ListTasks,
+	// 用任务 key 过滤仓库永远匹配不到,批量重试恒为空。
+	if taskKey != "" {
+		t, err := svc.GetTask(ctx, taskKey)
+		if err != nil {
+			return nil, err
+		}
+		runs, _, err := svc.ListHistory(ctx, t.Key, 0, limit)
+		if err != nil {
+			return nil, err
+		}
+		return appendFailedRuns(nil, t.Key, runs, limit), nil
+	}
+
 	var out []failedRun
 	const pageSize = 50
 	offset := 0
 	for page := 0; page < 10 && len(out) < limit; page++ {
-		tasks, total, err := svc.ListTasks(ctx, taskKey, offset, pageSize)
+		tasks, total, err := svc.ListTasks(ctx, "", offset, pageSize)
 		if err != nil {
 			return out, err
 		}
 		for _, t := range tasks {
 			runs, _, err := svc.ListHistory(ctx, t.Key, 0, 10)
 			if err != nil {
+				logger.Warn("collect failed runs: list history failed", "task", t.Key, "error", err)
 				continue
 			}
-			for _, r := range runs {
-				if r.Status != "failed" {
-					continue
-				}
-				end := time.Now()
-				if r.EndTime != nil {
-					end = *r.EndTime
-				}
-				out = append(out, failedRun{
-					runID: r.ID, taskKey: t.Key,
-					errorMsg: r.ErrorMessage, errType: r.ErrorType, endAt: end,
-				})
-				if len(out) >= limit {
-					return out, nil
-				}
+			out = appendFailedRuns(out, t.Key, runs, limit)
+			if len(out) >= limit {
+				return out, nil
 			}
 		}
 		offset += len(tasks)
@@ -171,4 +157,24 @@ func collectRecentFailedRuns(ctx context.Context, svc *corebridge.Service, taskK
 		}
 	}
 	return out, nil
+}
+
+func appendFailedRuns(out []failedRun, taskKey string, runs []*corebridge.SyncRun, limit int) []failedRun {
+	for _, r := range runs {
+		if len(out) >= limit {
+			return out
+		}
+		if r.Status != "failed" {
+			continue
+		}
+		end := time.Now()
+		if r.EndTime != nil {
+			end = *r.EndTime
+		}
+		out = append(out, failedRun{
+			runID: r.ID, taskKey: taskKey,
+			errorMsg: r.ErrorMessage, errType: r.ErrorType, endAt: end,
+		})
+	}
+	return out
 }

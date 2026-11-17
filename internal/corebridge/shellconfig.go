@@ -1,10 +1,8 @@
 package corebridge
 
 import (
-	"github.com/oekit/pkg/errors"
 	"os"
 
-	"github.com/yi-nology/git-ferry-core/model"
 	"gopkg.in/yaml.v3"
 
 	"github.com/yi-nology/git-ferry/internal/notify"
@@ -99,12 +97,6 @@ func LoadShellConfig(path string) (*ShellConfig, error) {
 	if apiKeyRole == "" {
 		apiKeyRole = overlay.Server.APIKeyRole
 	}
-	// 轻量校验：对齐 conf/config.schema.json 的关键枚举/范围
-	if cfg != nil {
-		if err := validateSyncConfig(&cfg.Sync); err != nil {
-			return nil, err
-		}
-	}
 	return &ShellConfig{
 		Config:     cfg,
 		APIKey:     apiKey,
@@ -114,23 +106,6 @@ func LoadShellConfig(path string) (*ShellConfig, error) {
 		RunWatch:   overlay.RunWatch,
 		GitServe:   overlay.GitServe,
 	}, nil
-}
-
-// validateSyncConfig 启动时校验 sync 段（schema 子集）。
-func validateSyncConfig(s *model.SyncConfig) error {
-	if s == nil {
-		return nil
-	}
-	if s.BackupFormat != "" && s.BackupFormat != "bundle" && s.BackupFormat != "tar" {
-		return errors.New("sync.backup_format must be bundle|tar, got " + s.BackupFormat)
-	}
-	if s.BackupKeep < 0 {
-		return errors.New("sync.backup_keep must be >= 0")
-	}
-	if s.MaxConcurrent < 0 {
-		return errors.New("sync.max_concurrent must be >= 0")
-	}
-	return nil
 }
 
 func readShellOverlay(path string) (*shellOverlay, error) {

@@ -31,7 +31,7 @@ func DiagnoseRun(ctx context.Context, c *app.RequestContext) {
 	}
 	run, taskKey, err := findRunByID(ctx, svc, uint(req.RunId))
 	if err != nil {
-		response.NotFound(c, "run not found")
+		response.FromError(c, err)
 		return
 	}
 

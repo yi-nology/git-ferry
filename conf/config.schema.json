@@ -15,7 +15,7 @@
       "properties": {
         "backup_dir": { "type": "string" },
         "backup_keep": { "type": "integer", "minimum": 0 },
-        "backup_format": { "type": "string", "enum": ["bundle", "zip"] },
+        "backup_format": { "type": "string", "enum": ["bundle", "tar"] },
         "backup_encrypt_key": { "type": "string" },
         "backup_retention_days": { "type": "integer", "minimum": 0 },
         "legal_hold": { "type": "boolean" },

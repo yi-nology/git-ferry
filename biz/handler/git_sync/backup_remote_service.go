@@ -38,8 +38,8 @@ func PushBackup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	task, err := svc.GetTask(ctx, req.TaskKey)
-	if err != nil || task == nil {
-		response.NotFound(c, "task not found")
+	if err != nil {
+		response.FromError(c, err)
 		return
 	}
 

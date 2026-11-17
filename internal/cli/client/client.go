@@ -93,12 +93,16 @@ func (c *Client) Do(method, path string, body interface{}, query url.Values) (*o
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	raw, err := io.ReadAll(resp.Body)
+	const maxResponseBytes = 32 << 20 // 32 MiB
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil {
 		return nil, errors.Wrap(err, "read response")
 	}
+	if len(raw) > maxResponseBytes {
+		return nil, errors.New("response exceeds 32 MiB limit")
+	}
 	if c.Debug {
-		_, _ = fmt.Fprintf(io.Discard, "%s %s -> %d\n", method, path, resp.StatusCode)
+		_, _ = fmt.Fprintf(os.Stderr, "%s %s -> %d\n", method, path, resp.StatusCode)
 	}
 
 	env := output.FromServer(resp.StatusCode, raw)

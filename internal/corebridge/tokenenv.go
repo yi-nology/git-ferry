@@ -10,8 +10,8 @@ import (
 
 // ResolveTokenFromEnv 用环境变量覆盖平台访问令牌。
 //
-//	INTEGRATION: GIT_SYNC_TOKEN_<PLATFORM_KEY 大写并把 - 换成 _>
-//	例:platform key=my-github → GIT_SYNC_TOKEN_MY_GITHUB
+//	INTEGRATION: GIT_SYNC_TOKEN_<PLATFORM_NAME 大写并把非字母数字换成 _>
+//	例:platform name=my-github → GIT_SYNC_TOKEN_MY_GITHUB
 //
 // 密钥来源优先级(借鉴 ghorg token_cmd / 1Password 集成):
 //  1. GIT_SYNC_TOKEN_CMD_<KEY> —— 执行命令,stdout 第一行作为 token
@@ -50,8 +50,12 @@ func runTokenCmd(cmdStr string, timeout time.Duration) string {
 	// 与密钥注入同等信任级（ghorg token_cmd 同模型），非用户请求参数
 	cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr) //nolint:gosec // 见上
 	cmd.Env = os.Environ()
-	// 超时/失败时 b 为空 → 解析出空串 → 调用方回退到 env/原值,与迁移前一致
-	b, _ := cmd.Output()
+	// 命令失败(非零退出/超时被杀)时 stdout 可能是**半截输出**,
+	// 不能当 token 用 —— 直接返回空串,让调用方回退。
+	b, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
 
 	s := strings.TrimSpace(string(b))
 	if i := strings.IndexByte(s, '\n'); i >= 0 {

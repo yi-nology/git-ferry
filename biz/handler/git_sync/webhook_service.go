@@ -44,11 +44,7 @@ func RuleGet(ctx context.Context, c *app.RequestContext) {
 	}
 	r, err := GetSyncService().GetRule(ctx, uint(req.ID))
 	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-	if r == nil {
-		response.NotFound(c, "rule not found")
+		response.FromError(c, err)
 		return
 	}
 	response.Success(c, &webhook.GetRuleResp{Rule: converter.ToRuleInfo(r)})

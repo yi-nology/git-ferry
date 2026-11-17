@@ -535,7 +535,7 @@ database:
 sync:
   backup_dir: "var/backup"
   backup_keep: 5           # 每任务保留最近 N 份
-  backup_format: bundle    # bundle | zip
+  backup_format: bundle    # bundle | tar
   post_exec_script: ""     # 同步结束回调
   max_concurrent: 2
 

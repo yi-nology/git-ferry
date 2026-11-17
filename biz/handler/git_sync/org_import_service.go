@@ -88,9 +88,8 @@ func ImportPublicOrg(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	plat, perr := svc.GetPlatform(ctx, req.PlatformKey)
-	if perr != nil || plat == nil {
-		response.NotFound(c, "platform not found")
+	if _, perr := svc.GetPlatform(ctx, req.PlatformKey); perr != nil {
+		response.FromError(c, perr)
 		return
 	}
 

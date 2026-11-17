@@ -456,7 +456,7 @@ sync:
   max_concurrent: 2
   backup_dir: var/backup
   backup_keep: 5
-  backup_format: bundle    # bundle | zip
+  backup_format: bundle    # bundle | tar
   backup_encrypt_key: ""   # AES-256-GCM；空 = 不加密
   backup_retention_days: 90
   legal_hold: false

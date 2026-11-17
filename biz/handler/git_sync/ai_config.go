@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -99,6 +100,7 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 			"forbidden: 角色 "+string(GetAuthRole(c))+" 不能修改 AI 配置"))
 		return
 	}
+	cur := effectiveAISettings(st)
 	var req ai.AIConfigRequest
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -113,7 +115,9 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	if backend == "" {
 		backend = agent.BackendInternal
 	}
-	ext := agent.ExternalSettings{}
+	// 未提交 external 时保留现有外部 agent 配置:部分客户端只改 model/base_url,
+	// 零值覆盖会把已保存的 profile/授权档/命令全部抹掉。
+	ext := cur.External
 	if req.External != nil {
 		ext = agent.ExternalSettings{
 			Agent:          req.External.Agent,
@@ -197,7 +201,6 @@ func AIUpdateConfig(ctx context.Context, c *app.RequestContext) {
 	//
 	// 授权档要**连 profile 一起比**:profile 列表模式下改某个 profile 的授权档
 	// 同样是治理动作,只比单字段会把它漏过去。
-	cur := effectiveAISettings(st)
 	curBackend := cur.Backend
 	if curBackend == "" {
 		curBackend = agent.BackendInternal
@@ -264,6 +267,10 @@ type aiListModelsReq struct {
 // **必须是 POST**:api_key 放 query 会进浏览器历史 / Referer / 反向代理 access log
 // ⇒ 密钥泄漏(之前就是 GET+query)。
 func AIListModels(ctx context.Context, c *app.RequestContext) {
+	// 会把已保存密钥带给请求体指定的 base_url ⇒ 仅 admin。
+	if !requireAdminRole(c) {
+		return
+	}
 	var in aiListModelsReq
 	if err := c.BindAndValidate(&in); err != nil {
 		response.BadRequest(c, "请求体不合法: "+err.Error())
@@ -279,9 +286,7 @@ func AIListModels(ctx context.Context, c *app.RequestContext) {
 		key = ""
 	}
 	if key == "" {
-		if st := getAISettingsStore(); st != nil {
-			key = st.Get().APIKey
-		}
+		key = savedAIKeyFor(base)
 	}
 
 	client := &http.Client{Timeout: 8 * time.Second}
@@ -330,6 +335,10 @@ func AIListModels(ctx context.Context, c *app.RequestContext) {
 
 // AITestConfig POST /api/v1/ai/config/test —— 探测 OpenAI 兼容端点(不落盘)。
 func AITestConfig(ctx context.Context, c *app.RequestContext) {
+	// 外部 backend 会按请求体命令起进程 ⇒ 仅 admin。
+	if !requireAdminRole(c) {
+		return
+	}
 	var req ai.AITestRequest
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -345,9 +354,7 @@ func AITestConfig(ctx context.Context, c *app.RequestContext) {
 		key = ""
 	}
 	if key == "" {
-		if st := getAISettingsStore(); st != nil {
-			key = st.Get().APIKey
-		}
+		key = savedAIKeyFor(base)
 	}
 
 	backend := ptrx.Deref(req.Backend, "")
@@ -458,4 +465,33 @@ func probeOpenAICompat(ctx context.Context, client *http.Client, base, key, mode
 		}
 	}
 	return resp.StatusCode, true, "端点连接正常"
+}
+
+// savedAIKeyFor 取已保存的模型密钥——仅当探测地址与保存的 base_url 同源。
+//
+// 否则任意调用方都能把 "base_url = 自己的收集端" 传进来，让服务端把
+// 已保存的模型密钥当 Authorization 头发出去（模型密钥外带）。
+func savedAIKeyFor(base string) string {
+	st := getAISettingsStore()
+	if st == nil {
+		return ""
+	}
+	s := st.Get()
+	if s.APIKey == "" || !sameOrigin(base, s.BaseURL) {
+		return ""
+	}
+	return s.APIKey
+}
+
+// sameOrigin 比较 scheme + host（忽略路径大小写差异）。
+func sameOrigin(a, b string) bool {
+	ua, err := url.Parse(strings.TrimSpace(a))
+	if err != nil || ua.Host == "" {
+		return false
+	}
+	ub, err := url.Parse(strings.TrimSpace(b))
+	if err != nil || ub.Host == "" {
+		return false
+	}
+	return strings.EqualFold(ua.Scheme, ub.Scheme) && strings.EqualFold(ua.Host, ub.Host)
 }

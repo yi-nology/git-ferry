@@ -3,7 +3,6 @@ package git_sync
 import (
 	"context"
 	"fmt"
-	"github.com/oekit/pkg/errors"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -13,7 +12,6 @@ import (
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
-	"gorm.io/gorm"
 )
 
 func TaskList(ctx context.Context, c *app.RequestContext) {
@@ -51,11 +49,7 @@ func TaskGet(ctx context.Context, c *app.RequestContext) {
 
 	t, err := GetSyncService().GetTask(ctx, req.Key)
 	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-	if t == nil {
-		response.NotFound(c, "task not found")
+		response.FromError(c, err)
 		return
 	}
 	response.Success(c, &sync_task.GetTaskResp{Task: converter.ToTaskInfo(t)})
@@ -155,7 +149,7 @@ func TaskRun(ctx context.Context, c *app.RequestContext) {
 	// 异步受理:同步执行可能分钟级,HTTP 不等它跑完;校验(存在/启用/并发快速失败)仍同步返回。
 	// 真实结果落执行历史,前端靠列表/历史刷新观察。
 	if err := GetSyncService().RunTaskAsync(req.Key, corebridge.TriggerManual, nil); err != nil {
-		response.InternalError(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 	recordAudit(ctx, c, "run", "task", req.Key, "手动触发同步 "+req.Key)
@@ -205,11 +199,7 @@ func TaskHistory(ctx context.Context, c *app.RequestContext) {
 	if req.RunID > 0 {
 		run, err := GetSyncService().GetSyncRunByID(ctx, req.TaskKey, uint(req.RunID))
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				response.NotFound(c, "sync run not found")
-				return
-			}
-			response.InternalError(c, err.Error())
+			response.FromError(c, err)
 			return
 		}
 		response.Success(c, &sync_task.ListHistoryResp{

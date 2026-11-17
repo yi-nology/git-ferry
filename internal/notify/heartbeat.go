@@ -2,11 +2,14 @@ package notify
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/oekit/concurrency/loop"
+	"github.com/oekit/pkg/errors"
 )
 
 // Heartbeat 按「最近是否有失败」分路打点。
@@ -14,8 +17,9 @@ import (
 type Heartbeat struct {
 	cfg    *HeartbeatConfig
 	client *http.Client
-	// lastFailUnix 最近一次观察到失败的时间(0=尚未失败)
-	lastFailUnix int64
+	// lastFailUnix 最近一次观察到失败的时间(0=尚未失败)。
+	// MarkResult 与 Start 循环并发读写,用原子量避免 data race。
+	lastFailUnix atomic.Int64
 }
 
 // NewHeartbeat 创建心跳器。
@@ -35,14 +39,14 @@ func (h *Heartbeat) MarkResult(failed bool) {
 		return
 	}
 	if failed {
-		h.lastFailUnix = time.Now().Unix()
+		h.lastFailUnix.Store(time.Now().Unix())
 		h.pingAll(h.cfg.FailURLs, "fail")
 		// 失败也 ping 成功通道,让监视方知道进程仍存活
 		h.pingAll(h.cfg.SuccessURLs, "")
 		return
 	}
 	// 成功:仅当没有悬挂失败时 ping 成功通道
-	if h.lastFailUnix == 0 {
+	if h.lastFailUnix.Load() == 0 {
 		h.pingAll(h.cfg.SuccessURLs, "")
 	}
 }
@@ -57,11 +61,11 @@ func (h *Heartbeat) Start(ctx context.Context) {
 	// FirstDelay=interval 保持旧 ticker 语义(首跳在间隔后,不立即打点)
 	loop.Run(ctx, loop.Config{Interval: interval, FirstDelay: interval, Name: "notify-heartbeat"},
 		func(_ context.Context) {
-			if h.lastFailUnix != 0 && time.Since(time.Unix(h.lastFailUnix, 0)) > 24*time.Hour {
+			if last := h.lastFailUnix.Load(); last != 0 && time.Since(time.Unix(last, 0)) > 24*time.Hour {
 				// 失败悬挂超 24h,重新允许成功分路
-				h.lastFailUnix = 0
+				h.lastFailUnix.Store(0)
 			}
-			if h.lastFailUnix == 0 {
+			if h.lastFailUnix.Load() == 0 {
 				h.pingAll(h.cfg.SuccessURLs, "")
 			}
 		})
@@ -92,6 +96,12 @@ func (h *Heartbeat) ping(url string) error {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	// 必须消费响应体(限容,防异常大响应)才能复用连接;
+	// 非 2xx 不能当成功 —— 否则 healthchecks.io 404/500 也显示绿灯。
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4<<10))
+	if resp.StatusCode >= 400 {
+		return errors.Newf("heartbeat status %d", resp.StatusCode)
+	}
 	return nil
 }
 

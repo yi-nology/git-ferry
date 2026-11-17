@@ -25,7 +25,7 @@ GitFerry folds those jobs into one self-hosted hub:
 |----------|------|----------|
 | Cross-platform sync | Scripts + cron + manual reconciliation | Task-based sync: cron / webhook / manual, with auto-compensation |
 | Open-source publish | Module path rewrite, dual-repo identity clashes | Mirror hub: identity-rewrite snapshots + pre-check / build gate / divergence confirm |
-| Repo backup | Git objects only; metadata lost | Cold backup (bundle/zip) + issues/PR/releases snapshots that are **restorable** |
+| Repo backup | Git objects only; metadata lost | Cold backup (bundle/tar) + issues/PR/releases snapshots that are **restorable** |
 | Dual-repo round-trip | Two trees diverge; changes can't travel back | History sync: plan → conflict adjudication → transplant → push, fully audited |
 | Ops & audit | Black box, no health signal | Health score / RPO / drift / audit hash chain / DR drills |
 | Automation | Web UI only | CLI + MCP + Agent Skills — humans *and* agents |
@@ -543,7 +543,7 @@ database:
 sync:
   backup_dir: "var/backup"
   backup_keep: 5
-  backup_format: bundle    # bundle | zip
+  backup_format: bundle    # bundle | tar
   post_exec_script: ""
   max_concurrent: 2
 
