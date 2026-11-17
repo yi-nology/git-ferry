@@ -2,7 +2,7 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v3.3.0] - 2026-11-17
 
 ### Security
 
@@ -39,6 +39,9 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   `io.Discard`，等于静默）。
 - 备份形态文档/schema 对齐 core：`bundle|zip` → `bundle|tar`；删除壳层
   重复的 `validateSyncConfig`（core 已校验并归一化大小写/负值）。
+- **core v0.52.0 → v0.53.0**：数据路径收敛（outbox 瞬断不闭环、审批刷新
+  CAS、队列 not-before）、热路径索引 v14、task key 宽度 v15、健康/盘点
+  批量化、Clone Cache 淘汰 O(N)。
 
 ## [v3.2.0] - 2026-11-17
 
