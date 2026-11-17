@@ -121,8 +121,8 @@ func validateSyncConfig(s *model.SyncConfig) error {
 	if s == nil {
 		return nil
 	}
-	if s.BackupFormat != "" && s.BackupFormat != "bundle" && s.BackupFormat != "zip" {
-		return errors.New("sync.backup_format must be bundle|zip, got " + s.BackupFormat)
+	if s.BackupFormat != "" && s.BackupFormat != "bundle" && s.BackupFormat != "tar" {
+		return errors.New("sync.backup_format must be bundle|tar, got " + s.BackupFormat)
 	}
 	if s.BackupKeep < 0 {
 		return errors.New("sync.backup_keep must be >= 0")

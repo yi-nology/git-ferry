@@ -2,7 +2,7 @@ package corebridge
 
 import (
 	synccore "github.com/yi-nology/git-ferry-core"
-	"github.com/yi-nology/git-ferry-core/dao"
+	"github.com/yi-nology/git-ferry-core/repository"
 	"github.com/yi-nology/git-ferry-core/executor"
 	"github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry-core/pkg/deploykey"
@@ -97,12 +97,12 @@ func GetAPIURL(platformType, instanceURL string) string {
 	return model.GetAPIURL(platformType, instanceURL)
 }
 
-// ===== DAO 过滤器 / 分页 =====
+// ===== Repository 过滤器 / 分页 =====
 
 type (
-	RepoFilter           = dao.RepoFilter
+	RepoFilter           = repository.RepoFilter
 	RepoImportFilter     = coreservice.RepoImportFilter
-	OperationLogFilter   = dao.OperationLogFilter
+	OperationLogFilter   = repository.OperationLogFilter
 	AutoDiscoverOptions  = coreservice.AutoDiscoverOptions
 	DiscoveryReport      = coreservice.DiscoveryReport
 	DriftReport          = coreservice.DriftReport
@@ -116,8 +116,8 @@ type (
 	DrillReport          = coreservice.DrillReport
 )
 
-func DefaultPagination(offset, limit int) dao.Pagination {
-	return dao.DefaultPagination(offset, limit)
+func DefaultPagination(offset, limit int) repository.Pagination {
+	return repository.DefaultPagination(offset, limit)
 }
 
 // ===== 业务错误 =====

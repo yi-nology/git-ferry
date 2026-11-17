@@ -13,19 +13,19 @@ require (
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oagentkit/guardx v0.24.6
 	github.com/oekit/bootstrap v0.7.10
-	github.com/oekit/concurrency v0.35.0
-	github.com/oekit/core v0.15.2
+	github.com/oekit/concurrency v0.36.0
+	github.com/oekit/core v0.15.3
 	github.com/oekit/hertz v0.11.6
 	github.com/oekit/kitx v0.9.2
-	github.com/oekit/logx v0.10.0
-	github.com/oekit/metrics v0.3.1
-	github.com/oekit/pkg v0.48.0
+	github.com/oekit/logx v0.11.0
+	github.com/oekit/metrics v0.4.1
+	github.com/oekit/pkg v0.52.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.74.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.50.0
+	github.com/yi-nology/git-ferry-core v0.52.0
 	github.com/yi-nology/go-git-platform v1.0.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -64,6 +64,8 @@ require (
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.2 // indirect
+	github.com/go-logr/logr v1.4.4 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/errors v0.22.9 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
 	github.com/go-openapi/strfmt v0.27.4 // indirect
@@ -106,10 +108,11 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
+	github.com/oekit/gormx v0.12.1 // indirect
 	github.com/oekit/middleware v0.18.1 // indirect
-	github.com/oekit/redisx v0.15.0 // indirect
+	github.com/oekit/redisx v0.16.0 // indirect
 	github.com/oekit/registry v0.5.17 // indirect
-	github.com/oekit/tracing v0.4.4 // indirect
+	github.com/oekit/tracing v0.4.7 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pandatix/go-abnf v0.5.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
@@ -117,11 +120,11 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/procfs v0.23.0 // indirect
+	github.com/redis/go-redis/extra/rediscmd/v9 v9.23.0 // indirect
+	github.com/redis/go-redis/extra/redisotel/v9 v9.23.0 // indirect
 	github.com/redis/go-redis/v9 v9.23.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
-	github.com/sethvargo/go-envconfig v1.4.3 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
@@ -137,7 +140,10 @@ require (
 	github.com/yi-nology/go-gitcode v0.17.0 // indirect
 	github.com/yi-nology/go-gongfeng v0.5.0 // indirect
 	gitlab.com/gitlab-org/api/client-go/v3 v3.48.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.uber.org/atomic v1.12.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect

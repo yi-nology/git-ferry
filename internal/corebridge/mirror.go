@@ -1,14 +1,14 @@
 package corebridge
 
 import (
-	"github.com/yi-nology/git-ferry-core/dao"
+	"github.com/yi-nology/git-ferry-core/repository"
 	"github.com/yi-nology/git-ferry-core/model"
 	coreservice "github.com/yi-nology/git-ferry-core/service"
 )
 
 // ===== 镜像中心(开源发布 / 仓库备份) =====
 
-type Pagination = dao.Pagination
+type Pagination = repository.Pagination
 
 // ===== 镜像中心(开源发布 / 仓库备份) =====
 

@@ -112,12 +112,12 @@ func ToSyncRunStepInfoList(steps []*model.SyncRunStep) []*taskmodel.SyncRunStepI
 
 // PageToOffset 把 page/pageSize 换算成 offset/limit。
 //
-// 页大小的缺省与上限由 core dao 的口径决定（dao.DefaultPagination）——
+// 页大小的缺省与上限由 core repository 的口径决定（repository.DefaultPagination）——
 // 本包不自己写死 50/200，避免与 core 各留一份。这里先用 DefaultPagination
 // 把 pageSize 钳好，**再**用钳后的值算 offset：顺序反了的话
 // 「页大小超上限」时 offset 会算在未钳的页大小上。
 //
-// 只依赖 corebridge 的转发入口（core 的 dao 口径），不直接引用 core 的
+// 只依赖 corebridge 的转发入口（core 的 repository 口径），不直接引用 core 的
 // 新增常量——core 尚未发版时壳层仍能编译。
 func PageToOffset(page, pageSize int32) (int, int) {
 	p := corebridge.DefaultPagination(0, int(pageSize))
