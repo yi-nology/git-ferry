@@ -37,10 +37,10 @@ func RebuildRepo(ctx context.Context, c *app.RequestContext) {
 	}
 	task, err := svc.GetTask(ctx, req.TaskKey)
 	if err != nil {
-		response.InternalError(c, err.Error())
+		// 查无此条 = core ErrTaskNotFound,统一走错误分类映射 404。
+		response.FromError(c, err)
 		return
 	}
-	// core FindByKey 未命中返回 (nil, nil),不是 error
 	if task == nil {
 		response.NotFound(c, "task not found")
 		return
