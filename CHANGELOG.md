@@ -12,7 +12,7 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   请求体指定的 base_url。
 - **已保存模型密钥只发给同源端点**：新增 `savedAIKeyFor`/`sameOrigin`，
   探测地址与保存的 base_url 不同源时不附带密钥（防模型密钥外带）。
-- `AIUpdateConfig` 未提交 `external` 时保留现有外部 agent 配置，不再
+- `AIUpdateConfig` 未提交 `external` 时保留现有外部 agent 配置，避免
   零值覆盖 profile/授权档/命令。
 
 ### Fixed
@@ -22,19 +22,20 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
 - 批量重试的 `task_key` 过滤修正：此前把 task key 当 repo key 传给
   `ListTasks`，指定任务时永远匹配不到。
 - 核心服务边界统一走 `response.FromError`：TaskGet/GetPlatform/RuleGet
-  等不再把 not-found 报 500，repo/platform/issue 等不再把 DB 故障报 404；
-  `TaskRun` 的 disabled/running 映射为 400/409。
+  等将 not-found 映射为 404（而不是 500）；repo/platform/issue 等将
+  DB 故障保留为 5xx（而不是伪装 404）；`TaskRun` 的 disabled/running
+  映射为 400/409。
 - 平台 token 的 env 注入统一按平台 **Name** 解析（更新路径此前用 UUID
   Key，部署方配置的 `GIT_SYNC_TOKEN_<NAME>` 永远取不到）；token_cmd
-  非零退出/超时不再返回半截 stdout。
+  非零退出/超时返回空串，只接受完整成功输出。
 - 心跳检查识别 HTTP >=400（此前 404/500 也当绿灯），消费响应体以复用
   连接；`lastFailUnix` 改原子量消除 data race。
 
 ### Changed
 
-- 通知渠道不再共用一个 15s 总超时：每个渠道独立 8s 预算，前一个慢渠道
-  不再饿死后续渠道。
-- `internal/converter` 字段索引按类型缓存，列表转换不再逐条重建反射 map。
+- 通知渠道改为各自独立 8s 预算（原实现共用一个 15s 总超时），
+  前一个慢渠道不会耗尽后续渠道的时间。
+- `internal/converter` 字段索引按类型缓存，列表转换复用缓存索引。
 - CLI HTTP 客户端响应体限 32 MiB，`Debug` 输出改到 stderr（此前写
   `io.Discard`，等于静默）。
 - 备份形态文档/schema 对齐 core：`bundle|zip` → `bundle|tar`；删除壳层
