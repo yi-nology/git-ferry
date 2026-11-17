@@ -104,11 +104,11 @@ my_project/
 ├── git-ferry-core/                   # 同步引擎库（独立仓）
 │   ├── go.mod                       # github.com/yi-nology/git-ferry-core
 │   ├── sync.go                      # 库入口 (package sync)
-│   ├── model/                       # GORM 模型 + AutoMigrate 注册
+│   ├── model/                       # GORM 模型 + 版本化迁移
 │   ├── service/                     # 业务服务层
 │   ├── executor/                    # 同步/备份/DR 执行引擎
 │   ├── mirror/                      # 镜像通道 + history/ 双仓内容同步
-│   ├── dao/                         # GORM 数据访问层
+│   ├── repository/                  # GORM 数据访问层
 │   ├── health/  lock/  tpl/  pkg/   # 健康聚合 / 锁 / 模板 / 公共件
 │
 ├── git-ferry/                       # 本仓：公网壳
@@ -187,8 +187,8 @@ core 导出 `(*Service)` 方法约 135 个，**零 HTTP 渗入**（`net/http` �
 | `service` | 业务服务层入口与各领域服务 |
 | `executor` | 同步/备份/DR 演练执行引擎、pipeline、bundle 与远端备份 |
 | `mirror` | 镜像通道门禁、身份改写、语义校验、跨实例互斥；`mirror/history` 为双仓内容同步 |
-| `dao` | GORM 数据访问层 |
-| `model` | GORM 模型与 `AutoMigrate` 注册 |
+| `repository` | GORM 数据访问层 |
+| `model` | GORM 模型 + 版本化迁移 |
 | `health` | 健康检查聚合 |
 | `lock` | 进程内互斥与 redis 跨实例锁（抖动时降级为进程内互斥） |
 | `tpl` | 模板存储（文件实现，可由 `service.TemplateStore` 注入替换） |
