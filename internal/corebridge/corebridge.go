@@ -2,10 +2,10 @@ package corebridge
 
 import (
 	synccore "github.com/yi-nology/git-ferry-core"
-	"github.com/yi-nology/git-ferry-core/repository"
 	"github.com/yi-nology/git-ferry-core/executor"
 	"github.com/yi-nology/git-ferry-core/model"
 	"github.com/yi-nology/git-ferry-core/pkg/deploykey"
+	"github.com/yi-nology/git-ferry-core/repository"
 	coreservice "github.com/yi-nology/git-ferry-core/service"
 	"github.com/yi-nology/go-git-platform/auth/credential"
 	sdkprov "github.com/yi-nology/go-git-platform/provider"

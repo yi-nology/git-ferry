@@ -1,8 +1,8 @@
 package corebridge
 
 import (
-	"github.com/yi-nology/git-ferry-core/repository"
 	"github.com/yi-nology/git-ferry-core/model"
+	"github.com/yi-nology/git-ferry-core/repository"
 	coreservice "github.com/yi-nology/git-ferry-core/service"
 )
 
