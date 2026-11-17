@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/oekit/concurrency/async"
 	"github.com/oekit/hertz/render"
 	"github.com/oekit/pkg/errors"
 	"github.com/oekit/pkg/ptrx"
@@ -67,12 +69,27 @@ func ExportIssues(ctx context.Context, c *app.RequestContext) {
 
 	if ptrx.Deref(req.WithComments, false) && ptrx.Deref(req.Format, "") != "csv" {
 		if im, ok := prov.(sdkprov.IssueManager); ok {
+			// 逐 issue 串行拉评论是 N+1 且最长可跑分钟级;改为有界并发
+			// (上限 8),每个 issue 写自己的 CommentList,无共享写。
+			const commentWorkers = 8
+			sem := make(chan struct{}, commentWorkers)
+			var wg sync.WaitGroup
 			for _, iss := range issues {
-				comments, cerr := im.ListIssueComments(ctx, repo.PlatformOwner, repo.PlatformRepo, iss.Number)
-				if cerr == nil {
-					iss.CommentList = comments
+				if ctx.Err() != nil {
+					break
 				}
+				sem <- struct{}{}
+				wg.Add(1)
+				async.GoSafe(func() {
+					defer wg.Done()
+					defer func() { <-sem }()
+					comments, cerr := im.ListIssueComments(ctx, repo.PlatformOwner, repo.PlatformRepo, iss.Number)
+					if cerr == nil {
+						iss.CommentList = comments
+					}
+				})
 			}
+			wg.Wait()
 		}
 	}
 

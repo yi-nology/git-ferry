@@ -9,6 +9,7 @@ import (
 
 	"github.com/yi-nology/git-ferry-core/health"
 	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // deepAnalyzeInput 深度分析(子代理风格:一次多步,减少来回)。
@@ -31,9 +32,24 @@ type analyzeHit struct {
 // 借鉴 zcode subagent(general-purpose):把多步查询压成一次工具调用,
 // 降低模型轮次与上下文消耗。
 func (r *Registry) deepAnalyze(ctx context.Context, in deepAnalyzeInput) (string, error) {
-	tasks, _, err := r.svc.ListTasks(ctx, in.TaskKey, 0, pageLimit)
-	if err != nil {
-		return errJSON("查询任务失败", err), nil
+	// 聚焦单任务时必须按任务 key 查 —— ListTasks 的首参是 repoKey，
+	// 旧实现把 task_key 传进去，聚焦分析通常什么都查不到。
+	var tasks []*corebridge.SyncTask
+	if in.TaskKey != "" {
+		t, err := r.svc.GetTask(ctx, in.TaskKey)
+		if err != nil {
+			if corebridge.Classify(err) == corebridge.ErrorClassNotFound {
+				return msgJSON(map[string]any{"found": false, "message": "未找到任务 " + in.TaskKey}), nil
+			}
+			return errJSON("查询任务失败", err), nil
+		}
+		tasks = append(tasks, t)
+	} else {
+		var err error
+		tasks, _, err = r.svc.ListTasks(ctx, "", 0, pageLimit)
+		if err != nil {
+			return errJSON("查询任务失败", err), nil
+		}
 	}
 
 	failures := []analyzeHit{}

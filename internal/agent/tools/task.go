@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
+
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // ===== 任务 =====
@@ -43,8 +45,11 @@ func (r *Registry) listTasks(ctx context.Context, in listTasksInput) (string, er
 
 func (r *Registry) getTask(ctx context.Context, in keyInput) (string, error) {
 	tk, err := r.svc.GetTask(ctx, in.Key)
-	if err != nil || tk == nil {
-		return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到任务 %q", in.Key)}), nil
+	if err != nil {
+		if corebridge.Classify(err) == corebridge.ErrorClassNotFound {
+			return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到任务 %q", in.Key)}), nil
+		}
+		return errJSON("查询任务失败", err), nil
 	}
 	return marshalJSON(taskSummary{
 		Key: tk.Key, Name: tk.Name,

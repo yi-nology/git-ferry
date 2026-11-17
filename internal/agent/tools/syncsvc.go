@@ -28,6 +28,8 @@ type SyncService interface {
 	ListTasks(ctx context.Context, repoKey string, offset, limit int) ([]*corebridge.SyncTask, int64, error)
 	GetTask(ctx context.Context, key string) (*corebridge.SyncTask, error)
 	ListHistory(ctx context.Context, taskKey string, offset, limit int) ([]*corebridge.SyncRun, int64, error)
+	// GetSyncRunByID 按 run_id 精确取一条（taskKey 为空 = 全局）。
+	GetSyncRunByID(ctx context.Context, taskKey string, runID uint) (*corebridge.SyncRun, error)
 
 	ListPlatforms(ctx context.Context) ([]*corebridge.Platform, error)
 	TestPlatformConnection(ctx context.Context, key string) (*sdkmodel.TestConnectionResult, error)

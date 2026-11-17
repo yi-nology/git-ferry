@@ -123,6 +123,9 @@ func DefaultPagination(offset, limit int) repository.Pagination {
 // ===== 业务错误 =====
 
 var (
+	// ErrNotFound Repository 层「查无此条」哨兵（run/审批/恢复点等无领域
+	// 包装的实体）；有领域哨兵的类型优先用对应 ErrXxxNotFound。
+	ErrNotFound               = repository.ErrNotFound
 	ErrRepoNotFound           = coreservice.ErrRepoNotFound
 	ErrTaskNotFound           = coreservice.ErrTaskNotFound
 	ErrRuleNotFound           = coreservice.ErrRuleNotFound

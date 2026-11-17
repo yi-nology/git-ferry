@@ -118,6 +118,18 @@ func (m *Mock) ListHistory(context.Context, string, int, int) ([]*corebridge.Syn
 	return m.Runs, m.RunTotal, nil
 }
 
+func (m *Mock) GetSyncRunByID(_ context.Context, _ string, runID uint) (*corebridge.SyncRun, error) {
+	if m.HistoryErr != nil {
+		return nil, m.HistoryErr
+	}
+	for _, r := range m.Runs {
+		if r.ID == runID {
+			return r, nil
+		}
+	}
+	return nil, corebridge.ErrNotFound
+}
+
 func (m *Mock) ListPlatforms(context.Context) ([]*corebridge.Platform, error) {
 	return m.Platforms, nil
 }

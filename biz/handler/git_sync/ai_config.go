@@ -290,37 +290,20 @@ func AIListModels(ctx context.Context, c *app.RequestContext) {
 	}
 
 	client := &http.Client{Timeout: 8 * time.Second}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models", http.NoBody)
+	entries, status, err := fetchOpenAIModels(ctx, client, base, key)
 	if err != nil {
-		response.BadRequest(c, err.Error())
+		switch {
+		case status >= 400:
+			response.Error(c, status, err.Error())
+		case status == 0:
+			response.BadRequest(c, "无法连接端点: "+err.Error())
+		default:
+			response.BadRequest(c, err.Error())
+		}
 		return
 	}
-	if key != "" {
-		req.Header.Set("Authorization", "Bearer "+key)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		response.BadRequest(c, "无法连接端点: "+err.Error())
-		return
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
-	if resp.StatusCode >= 400 {
-		response.Error(c, resp.StatusCode, fmt.Sprintf("端点返回 HTTP %d", resp.StatusCode))
-		return
-	}
-	var parsed struct {
-		Data []struct {
-			ID      string `json:"id"`
-			OwnedBy string `json:"owned_by"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		response.BadRequest(c, "端点响应不是合法 models 列表")
-		return
-	}
-	models := make([]map[string]string, 0, len(parsed.Data))
-	for _, m := range parsed.Data {
+	models := make([]map[string]string, 0, len(entries))
+	for _, m := range entries {
 		if m.ID == "" {
 			continue
 		}
@@ -427,44 +410,69 @@ func probeExternalAgent(ctx context.Context, backend string, ext *ai.AIExternalC
 }
 
 func probeOpenAICompat(ctx context.Context, client *http.Client, base, key, model string) (int, bool, string) {
-	// 1) GET /models
+	entries, status, err := fetchOpenAIModels(ctx, client, base, key)
+	if err != nil {
+		switch {
+		case status >= 400:
+			return status, false, err.Error()
+		case status == 0:
+			return 0, false, "无法连接端点: " + err.Error()
+		default:
+			// 端点可达但响应不是合法 models 列表:不能报 model_ok=true。
+			return status, false, err.Error()
+		}
+	}
+	modelOK := false
+	if model != "" {
+		for _, m := range entries {
+			if m.ID == model {
+				modelOK = true
+				break
+			}
+		}
+		// 列表空或未列出目标模型:仍算端点可用,仅提示
+		if !modelOK && len(entries) > 0 {
+			return status, false, fmt.Sprintf("端点可用,但模型列表中未找到 %s", model)
+		}
+	}
+	return status, true, "端点连接正常"
+}
+
+// openAIModelEntry OpenAI 兼容 /models 响应项。
+type openAIModelEntry struct {
+	ID      string `json:"id"`
+	OwnedBy string `json:"owned_by"`
+}
+
+// fetchOpenAIModels GET {base}/models —— 列模型与连通性探测共用同一实现,
+// 统一 8s 客户端、256 KiB 限容与读错误处理。
+func fetchOpenAIModels(ctx context.Context, client *http.Client, base, key string) ([]openAIModelEntry, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models", http.NoBody)
 	if err != nil {
-		return 0, false, err.Error()
+		return nil, 0, err
 	}
 	if key != "" {
 		req.Header.Set("Authorization", "Bearer "+key)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, false, "无法连接端点: " + err.Error()
+		return nil, 0, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
+	if err != nil {
+		return nil, resp.StatusCode, errors.Wrap(err, "读取端点响应失败")
+	}
 	if resp.StatusCode >= 400 {
-		return resp.StatusCode, false, fmt.Sprintf("端点返回 HTTP %d", resp.StatusCode)
+		return nil, resp.StatusCode, errors.New(fmt.Sprintf("端点返回 HTTP %d", resp.StatusCode))
 	}
-	modelOK := false
-	if model != "" {
-		var parsed struct {
-			Data []struct {
-				ID string `json:"id"`
-			} `json:"data"`
-		}
-		if err := json.Unmarshal(body, &parsed); err == nil {
-			for _, m := range parsed.Data {
-				if m.ID == model {
-					modelOK = true
-					break
-				}
-			}
-			// 列表空或未列出目标模型:仍算端点可用,仅提示
-			if !modelOK && len(parsed.Data) > 0 {
-				return resp.StatusCode, false, fmt.Sprintf("端点可用,但模型列表中未找到 %s", model)
-			}
-		}
+	var parsed struct {
+		Data []openAIModelEntry `json:"data"`
 	}
-	return resp.StatusCode, true, "端点连接正常"
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return nil, resp.StatusCode, errors.New("端点响应不是合法 models 列表")
+	}
+	return parsed.Data, resp.StatusCode, nil
 }
 
 // savedAIKeyFor 取已保存的模型密钥——仅当探测地址与保存的 base_url 同源。

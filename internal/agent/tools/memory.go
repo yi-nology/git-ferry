@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/oekit/pkg/errors"
 	"strings"
+
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // MemStore 记忆库接口(tools 不直接依赖 agent/memory 包,保持依赖方向)。
@@ -135,49 +137,24 @@ func (r *Registry) diagnoseRunIn(ctx context.Context, in diagnoseInput) (string,
 	return marshalJSON(d), nil
 }
 
-// findRunView 在最近历史中定位 run。
+// findRunView 按 run_id 精确取一条（core 单条查询）。
 //
-// **历史查询失败不能被当成"这个任务没有这条 run"**:以前是 `continue` 直接跳过
-// ⇒ 搜完全部任务找不到就报 "run N not found"
-// ⇒ 真相是"查不到",报告却说"没有" ⇒ 事实被说反了。
-// 现在会累计查询失败,搜完仍找不到时明确报"查不到,无法断言不存在"。
+// **查询失败不能被当成"不存在"**：not-found 才是"没有"，其余错误必须
+// 记录为 query_failed —— 否则会把"查不到"说成"记录被删了"。
 func findRunView(svc SyncService, ctx context.Context, runID uint) (*runView, string, error) {
-	const pageSize = 50
-	offset := 0
-	var historyErrs []string
-	for page := 0; page < 10; page++ {
-		tasks, total, err := svc.ListTasks(ctx, "", offset, pageSize)
-		if err != nil {
-			return nil, "", err
+	rs, err := svc.GetSyncRunByID(ctx, "", runID)
+	if err != nil {
+		if corebridge.Classify(err) == corebridge.ErrorClassNotFound {
+			return nil, "", errors.New(fmt.Sprintf("run %d not found", runID))
 		}
-		for _, t := range tasks {
-			runs, _, err := svc.ListHistory(ctx, t.Key, 0, pageSize)
-			if err != nil {
-				historyErrs = append(historyErrs, fmt.Sprintf("%s: %v", t.Key, err))
-				continue
-			}
-			for _, rs := range runs {
-				if rs.ID != runID {
-					continue
-				}
-				return &runView{
-					ID: rs.ID, TaskKey: t.Key, Status: rs.Status,
-					ErrorType: rs.ErrorType, ErrorMessage: rs.ErrorMessage,
-					Details: rs.Details,
-				}, t.Key, nil
-			}
-		}
-		offset += len(tasks)
-		if len(tasks) == 0 || int64(offset) >= total {
-			break
-		}
-	}
-	if len(historyErrs) > 0 {
 		return nil, "", &historyQueryError{msg: fmt.Sprintf(
-			"run %d 未找到,但有 %d 个任务的历史查询失败,**无法断言它不存在**:%s",
-			runID, len(historyErrs), strings.Join(historyErrs, "; "))}
+			"查询 run %d 失败,**无法断言它不存在**: %v", runID, err)}
 	}
-	return nil, "", errors.New(fmt.Sprintf("run %d not found", runID))
+	return &runView{
+		ID: rs.ID, TaskKey: rs.TaskKey, Status: rs.Status,
+		ErrorType: rs.ErrorType, ErrorMessage: rs.ErrorMessage,
+		Details: rs.Details,
+	}, rs.TaskKey, nil
 }
 
 // diagnoseRunView 规则化诊断(与壳层 /ops/diagnose 同源逻辑)。

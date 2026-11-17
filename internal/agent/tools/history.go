@@ -2,9 +2,9 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	coremodel "github.com/yi-nology/git-ferry-core/model"
+	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
 
 // ===== 执行历史 =====
@@ -53,32 +53,24 @@ type runDetailInput struct {
 	RunID   uint   `json:"run_id" jsonschema:"执行记录 ID(来自 list_sync_history)"`
 }
 
-// getRunDetail 在任务最近历史上(最多翻 5 页)定位 run,返回完整执行日志。
-// core Service 未暴露 run+steps 查询(不改 core),而 executor 会把步骤链
-// 写进 SyncRun.Details 文本,足以支撑问答与诊断。
+// getRunDetail 按 run_id 精确取一条（core 已提供单条查询），返回完整执行日志。
+// executor 会把步骤链写进 SyncRun.Details 文本，足以支撑问答与诊断。
 func (r *Registry) getRunDetail(ctx context.Context, in runDetailInput) (string, error) {
-	const maxScanPages = 5
-	for page := 1; page <= maxScanPages; page++ {
-		list, _, err := r.svc.ListHistory(ctx, in.TaskKey, pageBounds(page), pageLimit)
-		if err != nil {
-			return errJSON("查询历史失败", err), nil
+	run, err := r.svc.GetSyncRunByID(ctx, in.TaskKey, in.RunID)
+	if err != nil {
+		// 查不到 ≠ 查询失败：前者 found=false，后者必须报错。
+		if corebridge.Classify(err) == corebridge.ErrorClassNotFound {
+			return msgJSON(map[string]any{"found": false,
+				"message": "未找到该执行记录"}), nil
 		}
-		for _, run := range list {
-			if run.ID != in.RunID {
-				continue
-			}
-			details := run.Details
-			if len(details) > 4000 {
-				details = details[:4000] + "\n...(已截断)"
-			}
-			return marshalJSON(map[string]any{
-				"run":     toRunSummary(run),
-				"details": details,
-			}), nil
-		}
-		if len(list) < pageLimit {
-			break
-		}
+		return errJSON("查询执行记录失败", err), nil
 	}
-	return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("最近 %d 条历史中未找到 run_id=%d", maxScanPages*pageLimit, in.RunID)}), nil
+	details := run.Details
+	if len(details) > 4000 {
+		details = details[:4000] + "\n...(已截断)"
+	}
+	return marshalJSON(map[string]any{
+		"run":     toRunSummary(run),
+		"details": details,
+	}), nil
 }

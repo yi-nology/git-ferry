@@ -220,8 +220,11 @@ type keyInput struct {
 
 func (r *Registry) getRepo(ctx context.Context, in keyInput) (string, error) {
 	rp, err := r.svc.GetRepo(ctx, in.Key)
-	if err != nil || rp == nil {
-		return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到仓库 %q", in.Key)}), nil
+	if err != nil {
+		if corebridge.Classify(err) == corebridge.ErrorClassNotFound {
+			return msgJSON(map[string]any{"found": false, "message": fmt.Sprintf("未找到仓库 %q", in.Key)}), nil
+		}
+		return errJSON("查询仓库失败", err), nil
 	}
 	return marshalJSON(repoSummary{
 		Key: rp.Key, Name: rp.Name, Platform: rp.Platform,

@@ -2,6 +2,28 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Fixed
+
+- **Agent 工具按 run_id 精确查询**：`get_run_detail` / `diagnose_run` 改用
+  `GetSyncRunByID`，以单条精确查询替代「最多 10×50 个任务、每任务 50 条」扫描；查询失败
+  与 not-found 分开报告（前者返回 error，后者 found=false）。
+- **Agent `deep_analyze` 聚焦任务修正**：聚焦单任务改用 `GetTask`
+  （原实现把 `task_key` 误传成 `ListTasks` 的 repoKey）。
+- **Agent `get_task` / `get_repo` 错误分类**：not-found 才返回 found=false，
+  DB/查询故障返回 error，避免把故障说成「不存在」。
+- **Issue 带评论导出改有界并发（8）**：逐 issue 串行拉评论的 N+1 改为
+  并发 fan-out，尊重 ctx 取消。
+
+### Changed
+
+- `/models` 列表与连通性探测共用 `fetchOpenAIModels`：统一 8s 客户端、
+  256 KiB 限容与读错误处理；响应不是合法 models 列表时 `model_ok=false`
+  （此前解析失败仍报连接正常）。
+- `corebridge` 暴露 `ErrNotFound`（repository 哨兵别名），工具层统一
+  `Classify` 判 not-found。
+
 ## [v3.3.0] - 2026-11-17
 
 ### Security
