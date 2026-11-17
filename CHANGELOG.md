@@ -2,7 +2,7 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
-## [Unreleased]
+## [v3.4.0] - 2026-11-18
 
 ### Fixed
 
@@ -23,6 +23,9 @@ GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发
   （此前解析失败仍报连接正常）。
 - `corebridge` 暴露 `ErrNotFound`（repository 哨兵别名），工具层统一
   `Classify` 判 not-found。
+- **core v0.53.0 → v0.54.0**：审计哈希链并发串行化、历史链锚点同事务、
+  outbox 重投轻量查询、通道目标批量加载、本地 git 回落正向白名单、
+  Webhook 规则关联按需重建、清单 TaskKey 归属改为最长前缀匹配。
 
 ## [v3.3.0] - 2026-11-17
 
