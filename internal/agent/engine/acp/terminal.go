@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/oekit/pkg/errors"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -201,7 +200,10 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 	// **必须显式设置 cmd.Env**:为 nil 时子进程会继承父进程全部环境,
 	// 包括 ENCRYPTION_KEY / GIT_SYNC_* / GITFERRY_*。与外部 agent 主进程
 	// 一致地先 scrub,再叠加 agent 显式声明的环境变量。
-	env := scrubEnv(os.Environ())
+	env := scrubbedEnv()
+	if env == nil {
+		return nil, errors.New("外联代理策略配置失败,拒绝启动终端")
+	}
 	for _, kv := range p.Env {
 		env = append(env, kv["name"]+"="+kv["value"])
 	}

@@ -2,6 +2,21 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v3.8.0] - 2026-11-18
+
+### Security
+
+- **外部 agent / terminal 可选外联代理**：设置
+  `GITFERRY_EGRESS_ALLOW_HOSTS=api.anthropic.com,*.openai.com` 后，进程内启动
+  guardx `egressproxy` 只监听 127.0.0.1，并向 agent 子进程与 terminal 注入
+  `HTTP_PROXY/HTTPS_PROXY/ALL_PROXY/NO_PROXY`；`GITFERRY_EGRESS_ALLOW_PORTS`
+  可覆盖默认端口（443/80）。代理带 DNS 围栏（解析结果逐个过私网/元数据 IP
+  检查）与 host/port 白名单。
+- **fail-closed**：配置了白名单但代理策略非法或监听失败时，子进程环境返回
+  空集，agent/terminal 启动失败，而不是无围栏直连。
+- **边界声明**：代理只约束遵守代理环境变量的 HTTP 客户端，挡不住绕开代理的
+  原始 socket；真正网络隔离仍需容器/网络命名空间。
+
 ## [v3.7.0] - 2026-11-18
 
 ### Changed（最后一批升级红利）

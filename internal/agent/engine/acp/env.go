@@ -56,5 +56,13 @@ func scrubEnv(env []string) []string {
 	return out
 }
 
-// scrubbedEnv 当前进程环境经摘除后的结果(给子进程用)。
-func scrubbedEnv() []string { return scrubEnv(os.Environ()) }
+// scrubbedEnv 当前进程环境经摘除后的结果(给子进程用),并按需注入
+// 外联代理环境变量。代理策略配置了但启动失败时返回 nil(fail-closed:
+// 子进程拿不到可用环境,启动即失败,而不是无围栏裸奔)。
+func scrubbedEnv() []string {
+	proxyEnv, err := egressProxyEnv()
+	if err != nil {
+		return nil
+	}
+	return append(scrubEnv(os.Environ()), proxyEnv...)
+}
