@@ -218,16 +218,16 @@ func BatchRepos(ctx context.Context, c *app.RequestContext) {
 	}
 
 	total := len(req.Keys)
-	success := 0
-	failed := 0
-	var errs []string
-	for _, key := range req.Keys {
-		if err := GetSyncService().DeleteRepo(ctx, key); err != nil {
-			failed++
-			errs = append(errs, fmt.Sprintf("%s: %v", key, err))
-		} else {
-			success++
-		}
+	deleted, missing, err := GetSyncService().DeleteRepos(ctx, req.Keys)
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+	success := deleted
+	failed := len(missing)
+	errs := make([]string, 0, len(missing))
+	for _, key := range missing {
+		errs = append(errs, fmt.Sprintf("%s: repo not found", key))
 	}
 	resp := &repo.BatchReposResp{
 		Total:   converter.SafeIntToInt32(total),

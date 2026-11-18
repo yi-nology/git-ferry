@@ -2,6 +2,17 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v3.10.0] - 2026-11-19
+
+### Changed
+
+- **批量删除仓库走 core 批量入口**：`BatchRepos` 由逐 key 调 `DeleteRepo`
+  （每 key 查/删/刷计数）改为一次 `DeleteRepos`（一次查询 + 一次 DELETE +
+  每个平台只刷一次计数）；响应仍保留 total/success/failed/errors 与
+  200/207/400 语义。
+- **core v0.58.0 → v0.59.0**：卡死恢复批量 UPDATE、版本矩阵瘦查询、
+  漂移检测解析复用、批量删仓 API、零引用导出方法清理。
+
 ## [v3.9.0] - 2026-11-19
 
 ### Changed
