@@ -18,6 +18,7 @@ package authz
 import (
 	"context"
 
+	"github.com/oagentkit/guardx/rbac"
 	"github.com/oekit/pkg/ctxscope"
 )
 
@@ -45,14 +46,36 @@ func ParseRole(s string) Role {
 	}
 }
 
-// CanWrite 判断角色能否执行写操作。
-func CanWrite(r Role) bool {
-	return r == RoleAdmin || r == RoleOperator
+// roleMatrix 权限矩阵(guardx/rbac 单源):新增角色/能力只改这里。
+//
+// 能力词:
+//   - read  只读
+//   - write 写操作(含发布)
+//   - manage 治理(强推/governance/切授权档)
+var roleMatrix = rbac.Matrix{
+	string(RoleAdmin):    {"read", "write", "manage"},
+	string(RoleOperator): {"read", "write"},
+	string(RoleReadonly): {"read"},
 }
 
-// IsAdmin 判断角色是否为管理员。
+// Can 判断角色是否具备某能力。
+func Can(r Role, perm string) bool {
+	return roleMatrix.Can(string(r), perm)
+}
+
+// CanWrite 判断角色能否执行写操作。
+func CanWrite(r Role) bool {
+	return Can(r, "write")
+}
+
+// IsAdmin 判断角色是否为管理员(治理能力)。
 func IsAdmin(r Role) bool {
-	return r == RoleAdmin
+	return Can(r, "manage")
+}
+
+// MatrixSnapshot 返回权限矩阵的确定性快照(审计/诊断用)。
+func MatrixSnapshot() string {
+	return roleMatrix.Snapshot()
 }
 
 // roleKey 角色的作用域 key(oekit ctxscope,命名空间治理标识防跨包撞键;

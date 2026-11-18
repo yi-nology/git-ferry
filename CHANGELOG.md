@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v3.7.0] - 2026-11-18
+
+### Changed（最后一批升级红利）
+
+- **RBAC 权限矩阵单源**：`internal/pkg/authz` 改用 guardx
+  `rbac.Matrix`（admin=read/write/manage、operator=read/write、
+  readonly=read），`CanWrite`/`IsAdmin` 委托矩阵；新增
+  `MatrixSnapshot()` 供审计/诊断，附矩阵单调性与快照稳定性测试。
+- **外部 agent 输出双重围栏**：>4 KiB 的委派结果先经 `fence.Data` 圈数据区，
+  再套 `injectband.Wrap` 来源围栏，降低长文伪造指令穿透。
+- **core v0.56.0 → v0.57.0**：provider 缓存指标、pathx.JoinURL、
+  GetCommitsBetween 排序契约标注。
+
 ## [v3.6.0] - 2026-11-18
 
 ### Security
