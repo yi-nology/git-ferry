@@ -2,6 +2,23 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [Unreleased]
+
+### Changed（依赖全量升级）
+
+- **core v0.54.0 → v0.55.0**。
+- **oekit**：core v0.15.3 → v0.17.0、pkg v0.52.0 → v0.54.0、
+  hertz v0.11.6 → v0.12.7、bootstrap v0.7.10 → v0.7.14、
+  kitx v0.9.2 → v0.11.1、middleware v0.18.1 → v0.20.1、
+  registry v0.5.17 → v0.8.0、gormx v0.13.1、redisx v0.16.4、
+  logx v0.12.0、concurrency v0.39.1、metrics v0.4.2、tracing v0.4.8。
+- **其它**：guardx v0.24.6 → v0.28.0、go-git-platform v1.0.0 → v1.0.3、
+  gitlab api client v3.48 → v3.52。
+- **thrift**：上游依赖被抬到 v0.25.0，但现有 thriftgo 生成代码仍按
+  v0.13 API（`ReadStructBegin()` 无 context）⇒ 用
+  `replace github.com/apache/thrift => v0.13.0` 钉住，生成代码无需重写。
+- 全量 test + golangci-lint 绿。
+
 ## [v3.4.0] - 2026-11-18
 
 ### Fixed
