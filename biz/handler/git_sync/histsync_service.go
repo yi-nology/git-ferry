@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oagentkit/guardx/logredact"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 	"github.com/yi-nology/git-ferry/internal/pkg/response"
@@ -680,7 +681,7 @@ func redactRepoURL(raw string) string {
 		}
 		u.RawQuery = q.Encode()
 	}
-	return u.String()
+	return logredact.Redact(u.String())
 }
 
 // approverID 取当前操作人标识(用于记录「谁批准了强制推送」)。

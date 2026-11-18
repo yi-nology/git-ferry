@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/oekit/concurrency/async"
+	"github.com/oekit/pkg/pagination"
 	operation_log "github.com/yi-nology/git-ferry/biz/model/operation_log"
 	"github.com/yi-nology/git-ferry/internal/converter"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
@@ -83,10 +84,9 @@ func ListOperationLogs(ctx context.Context, c *app.RequestContext) {
 	}
 	today, week, statsTotal := sr.today, sr.week, sr.total
 
-	totalPages := int32(0)
-	if req.PageSize > 0 && total > 0 {
-		totalPages = converter.SafeInt64ToInt32((total + int64(req.PageSize) - 1) / int64(req.PageSize))
-	}
+	totalPages := converter.SafeInt64ToInt32(
+		int64(pagination.ComputePages(total, int(req.PageSize))),
+	)
 
 	response.Success(c, &operation_log.ListOperationLogsResp{
 		List: converter.ToOperationLogList(list),

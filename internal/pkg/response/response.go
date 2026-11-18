@@ -1,12 +1,11 @@
 package response
 
 import (
-	"math"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/oekit/logx"
 	"github.com/oekit/pkg/errors"
+	"github.com/oekit/pkg/pagination"
 
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
@@ -137,7 +136,8 @@ func FromError(c *app.RequestContext, err error) {
 
 // Paginated sends a 200 OK response with pagination data
 func Paginated(c *app.RequestContext, list interface{}, total int64, page, pageSize int) {
-	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+	totalPages := pagination.ComputePages(total, pageSize)
+	servedPage := pagination.ServedPage(page, pageSize)
 
 	c.JSON(consts.StatusOK, Response{
 		Code:    consts.StatusOK,
@@ -145,7 +145,7 @@ func Paginated(c *app.RequestContext, list interface{}, total int64, page, pageS
 		Data: PaginatedData{
 			List: list,
 			Pagination: Pagination{
-				Page:       page,
+				Page:       servedPage,
 				PageSize:   pageSize,
 				Total:      total,
 				TotalPages: totalPages,

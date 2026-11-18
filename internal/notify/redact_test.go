@@ -19,7 +19,10 @@ func TestRedactSecretURL_URL(t *testing.T) {
 	// query 里的 token
 	got := redactSecretURL("http://gotify.local/message?token=GOTIFY-SECRET&title=x")
 	assert.NotContains(t, got, "GOTIFY-SECRET", "query 里的 token 必须被脱敏")
-	assert.Contains(t, got, "REDACTED")
+	// guardx/logredact 统一用 **** 掩码（旧实现是 REDACTED）；
+	// 只要秘密值不出现、有掩码标记即可。
+	assert.True(t, strings.Contains(got, "****") || strings.Contains(got, "REDACTED"),
+		"query token 必须有掩码标记: %s", got)
 
 	// 路径里的 UUID(healthchecks)
 	got2 := redactSecretURL("https://hc-ping.com/ping/UUID-1234-5678/fail")

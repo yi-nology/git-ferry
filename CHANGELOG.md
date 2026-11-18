@@ -2,6 +2,33 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v3.6.0] - 2026-11-18
+
+### Security
+
+- **ACP `terminal/*` 纳入授权档**：`deny` 全拒；`approve_reads` 只允许保守
+  只读命令白名单（ls/cat/head/tail/wc/grep/rg/pwd/stat/file、git 只读子命令、
+  go version/env），并拒绝绝对路径与 `..` 穿越；`ask`/`approve_all` 维持原行为。
+  此前 terminal 通道完全绕过 `cfg.Permission`。
+- **终端子进程环境变量脱敏**：terminal 命令改为 `scrubEnv(os.Environ())` 后再
+  叠加 agent 显式 env，`ENCRYPTION_KEY` / `GIT_SYNC_*` / `GITFERRY_*` 不会随
+  终端进程泄漏（与外部 agent 主进程同一规则）。
+- **凭据脱敏收编 guardx/logredact**：通知 URL 掩掉 userinfo 并过统一规则；
+  非 `*url.Error` 的错误也经 `Redact` 输出；审计 detail 落库前统一脱敏；
+  histsync 仓库 URL 复用同一规则。
+- **日志字段脱敏启用 logx v0.12 `WithFilter`**：authorization/token/password/
+  private_key 等键在会话/分组场景下也掩码。
+
+### Changed
+
+- 分页页数计算改用 `pkg/pagination.ComputePages/ServedPage`：去掉 float64
+  精度损失、pageSize=0 除零与页偏移溢出。
+- OIDC HS256 支持 `keys`（kid→secret）零停机轮换；kid 为空回退 `secret`，
+  未知 kid fail-closed。
+- 确认令牌/实例 ID 改用 `stringx.RandomToken`。
+- **core v0.55.0 → v0.56.0**：元数据 overwrite、主键列 schema 化、stringx/
+  contextx/timex 收编、日志脱敏。
+
 ## [v3.5.0] - 2026-11-18
 
 ### Changed（依赖全量升级）

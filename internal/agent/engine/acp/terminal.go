@@ -6,6 +6,7 @@ import (
 	"github.com/oekit/pkg/errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,6 +32,9 @@ type terminalHandler struct {
 	seq   atomic.Int64
 	// max 同时存活的终端上限(测试可调小)。
 	max int
+	// permission 外部 agent 授权档:deny 全拒,approve_reads 只允许
+	// 保守只读命令;ask/approve_all 维持原行为。
+	permission string
 }
 
 // maxTerminals 同时存活的终端上限。
@@ -52,7 +56,74 @@ func newTerminalHandler(root string) (*terminalHandler, error) {
 
 // newTerminalHandlerWith 用已建好的沙箱构造处理器(与 fs/* 共用同一份边界)。
 func newTerminalHandlerWith(sb *sandbox) *terminalHandler {
-	return &terminalHandler{sandbox: sb, terms: make(map[string]*termProc), max: maxTerminals}
+	return &terminalHandler{
+		sandbox: sb, terms: make(map[string]*termProc),
+		max: maxTerminals, permission: PermissionAsk,
+	}
+}
+
+// authorizeCommand 按授权档约束 terminal/create。
+//
+// 此前 terminal/* 完全不看 cfg.Permission:deny / approve_reads 档的 agent
+// 仍能通过 terminal/create 执行任意命令,授权档形同虚设。
+func (h *terminalHandler) authorizeCommand(command string, args []string) error {
+	switch h.permission {
+	case PermissionDeny:
+		return errors.New("当前授权档为 deny,terminal 能力不可用")
+	case PermissionApproveReads:
+		if !isReadOnlyTerminalCommand(command, args) {
+			return errors.New("当前授权档为 approve_reads,仅允许只读命令")
+		}
+		if !argsStayInRoot(args) {
+			return errors.New("只读命令不得引用工作目录之外的路径")
+		}
+	}
+	return nil
+}
+
+// isReadOnlyTerminalCommand 保守只读命令白名单。
+//
+// 只放行确定无写入副作用的命令;git branch/tag/remote 仅允许列式参数。
+func isReadOnlyTerminalCommand(command string, args []string) bool {
+	switch filepath.Base(command) {
+	case "ls", "cat", "head", "tail", "wc", "grep", "rg", "pwd", "stat", "file":
+		return true
+	case "git":
+		if len(args) == 0 {
+			return false
+		}
+		switch args[0] {
+		case "status", "diff", "log", "show", "rev-parse", "ls-files", "blame", "grep":
+			return true
+		case "branch", "tag", "remote":
+			if len(args) == 1 {
+				return true
+			}
+			for _, a := range args[1:] {
+				switch a {
+				case "-a", "-r", "-v", "--list", "--verbose":
+				default:
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	case "go":
+		return len(args) == 1 && (args[0] == "version" || args[0] == "env")
+	}
+	return false
+}
+
+// argsStayInRoot 拒绝绝对路径与向上穿越:只读命令也不能读沙箱外的文件。
+func argsStayInRoot(args []string) bool {
+	for _, a := range args {
+		if strings.HasPrefix(a, "/") || a == ".." ||
+			strings.HasPrefix(a, "../") || strings.Contains(a, "/../") {
+			return false
+		}
+	}
+	return true
 }
 
 // termProc 一个终端进程。
@@ -97,6 +168,9 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 	if p.Command == "" {
 		return nil, errors.New("command 不能为空")
 	}
+	if err := h.authorizeCommand(p.Command, p.Args); err != nil {
+		return nil, err
+	}
 	cwd := h.root
 	if p.Cwd != "" {
 		// **工作目录必须过沙箱判定**:agent 给的 cwd 直接用 ⇒
@@ -124,13 +198,14 @@ func (h *terminalHandler) create(raw json.RawMessage) (any, error) {
 
 	cmd := exec.Command(p.Command, p.Args...) //nolint:gosec // 命令由 agent 指定,工作目录受限于 root
 	cmd.Dir = cwd
-	if len(p.Env) > 0 {
-		env := os.Environ()
-		for _, kv := range p.Env {
-			env = append(env, kv["name"]+"="+kv["value"])
-		}
-		cmd.Env = env
+	// **必须显式设置 cmd.Env**:为 nil 时子进程会继承父进程全部环境,
+	// 包括 ENCRYPTION_KEY / GIT_SYNC_* / GITFERRY_*。与外部 agent 主进程
+	// 一致地先 scrub,再叠加 agent 显式声明的环境变量。
+	env := scrubEnv(os.Environ())
+	for _, kv := range p.Env {
+		env = append(env, kv["name"]+"="+kv["value"])
 	}
+	cmd.Env = env
 	buf := newRingBuffer(limit)
 	cmd.Stdout = buf
 	cmd.Stderr = buf

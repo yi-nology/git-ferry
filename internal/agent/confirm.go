@@ -1,10 +1,9 @@
 package agent
 
 import (
-	"crypto/rand"
 	"crypto/subtle"
-	"encoding/hex"
 	"github.com/oekit/pkg/errors"
+	"github.com/oekit/pkg/stringx"
 	"time"
 )
 
@@ -116,10 +115,10 @@ func (s *Session) MarkConsumed(toolName, argsJSON string) {
 // confirmToken 生成不可预测的一次性确认令牌(128 bit 随机)。
 // 确定性哈希会被同会话内已知参数推算,不可用作确认凭证。
 func confirmToken() string {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
+	tok, err := stringx.RandomToken(16, stringx.TokenHex)
+	if err != nil {
 		// crypto/rand 在目标平台失败属致命错误,宁可 panic 也不降级为弱令牌
 		panic("crypto/rand unavailable: " + err.Error())
 	}
-	return hex.EncodeToString(b[:])
+	return tok
 }

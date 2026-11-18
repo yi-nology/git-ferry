@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oagentkit/guardx/logredact"
 	"github.com/oekit/concurrency/async"
 	"github.com/oekit/logx"
 )
@@ -338,6 +339,10 @@ func redactSecretURL(raw string) string {
 	if err != nil {
 		return "<unparsable-url>"
 	}
+	// userinfo 段(https://user:pass@host)同样是凭据,必须掩掉。
+	if u.User != nil {
+		u.User = url.User("***")
+	}
 	q := u.Query()
 	for k := range q {
 		if isSecretParam(k) {
@@ -349,10 +354,20 @@ func redactSecretURL(raw string) string {
 		u.Path = "/***"
 		u.RawPath = ""
 	}
-	return u.String()
+	// 再用 guardx 的统一凭据规则兜底(DSN/裸 userinfo/更多 key 形态)。
+	return logredact.Redact(u.String())
 }
 
-// redactError 把错误里的 URL 脱敏(*url.Error 的消息含完整 URL)。
+// redactedError 保留原始错误链,但 Error() 输出经统一脱敏。
+type redactedError struct {
+	msg string
+	err error
+}
+
+func (e *redactedError) Error() string { return e.msg }
+func (e *redactedError) Unwrap() error { return e.err }
+
+// redactError 把错误里的 URL/DSN 凭据脱敏。
 func redactError(err error) error {
 	if err == nil {
 		return nil
@@ -361,5 +376,6 @@ func redactError(err error) error {
 	if errors.As(err, &ue) {
 		return &url.Error{Op: ue.Op, URL: redactSecretURL(ue.URL), Err: ue.Err}
 	}
-	return err
+	// 非 *url.Error 也可能内嵌 URL/DSN(git stderr、provider 错误等)。
+	return &redactedError{msg: logredact.Redact(err.Error()), err: err}
 }

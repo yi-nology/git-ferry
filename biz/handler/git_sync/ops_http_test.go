@@ -350,14 +350,32 @@ func TestOIDCJWT_ParsesValidToken(t *testing.T) {
 	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 	token := header + "." + payload + "." + sig
 
-	claims, err := parseHS256JWT(token, testSecret32)
+	claims, err := parseHS256JWT(token, testSecret32, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "alice", claims.Sub)
 	assert.Equal(t, "operator", stringClaim(claims.Extra, "role"))
 
 	// 签名不匹配(密钥本身合规)⇒ 拒
-	_, err = parseHS256JWT(token, "other-secret-0123456789abcdef-012345")
+	_, err = parseHS256JWT(token, "other-secret-0123456789abcdef-012345", nil)
 	assert.Error(t, err)
+}
+
+// TestOIDCJWT_KeyIDRotation token header.kid 命中 Keys 时用新密钥验签,
+// 未命中则 fail-closed;kid 为空回退单密钥 Secret。
+func TestOIDCJWT_KeyIDRotation(t *testing.T) {
+	newSecret := "new-secret-0123456789abcdef-0123"
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT","kid":"k2"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"bob","exp":4102444800}`))
+	mac := hmac.New(sha256.New, []byte(newSecret))
+	mac.Write([]byte(header + "." + payload))
+	token := header + "." + payload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	claims, err := parseHS256JWT(token, testSecret32, map[string]string{"k2": newSecret})
+	require.NoError(t, err)
+	assert.Equal(t, "bob", claims.Sub)
+
+	_, err = parseHS256JWT(token, testSecret32, map[string]string{"other": newSecret})
+	assert.Error(t, err, "未知 kid 必须拒绝")
 }
 
 // TestOIDCJWT_RejectsWeakSecret 钉住 kitx HS256 的密钥强度契约:
@@ -370,7 +388,7 @@ func TestOIDCJWT_RejectsWeakSecret(t *testing.T) {
 	mac.Write([]byte(header + "." + payload))
 	token := header + "." + payload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
-	_, err := parseHS256JWT(token, "secret")
+	_, err := parseHS256JWT(token, "secret", nil)
 	assert.Error(t, err, "弱密钥(<32B)应被 kitx 密钥强度校验拒绝")
 }
 

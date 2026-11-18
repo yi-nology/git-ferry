@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	kitxjwt "github.com/oekit/kitx/jwt"
+	oekiterrors "github.com/oekit/pkg/errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
@@ -20,8 +21,11 @@ import (
 // 生产更推荐在反向代理层做 OIDC,再用 SetAuthMiddlewareProvider 注入身份头。
 type OIDCConfig struct {
 	Enabled bool `yaml:"enabled"`
-	// Secret HS256 共享密钥(必填;RS256 请走代理层)
+	// Secret HS256 共享密钥(单密钥模式;RS256 请走代理层)
 	Secret string `yaml:"secret"`
+	// Keys 多密钥轮换表(kid → HS256 secret)。非空时按 token header.kid
+	// 选择密钥,支持零停机轮换;kid 为空时回退 Secret。
+	Keys map[string]string `yaml:"keys"`
 	// Issuer 期望的 iss(空=不校验)
 	Issuer string `yaml:"issuer"`
 	// Audience 期望的 aud(空=不校验)
@@ -44,9 +48,17 @@ var oidcCfg *OIDCConfig
 // 不校验(走 API Key 鉴权的部署不受影响)。
 func SetOIDCConfig(cfg *OIDCConfig) {
 	oidcCfg = cfg
-	if cfg != nil && cfg.Enabled && cfg.Secret != "" {
+	if cfg == nil || !cfg.Enabled {
+		return
+	}
+	if cfg.Secret != "" {
 		if _, err := kitxjwt.NewSymmetric([]byte(cfg.Secret)); err != nil {
 			proclog.ExitOnFail("oidc.secret 不合格(需要 ≥32 字节,RFC 7518 §3.2)", err)
+		}
+	}
+	for kid, secret := range cfg.Keys {
+		if _, err := kitxjwt.NewSymmetric([]byte(secret)); err != nil {
+			proclog.ExitOnFail("oidc.keys["+kid+"] 不合格(需要 ≥32 字节,RFC 7518 §3.2)", err)
 		}
 	}
 }
@@ -54,7 +66,7 @@ func SetOIDCConfig(cfg *OIDCConfig) {
 // OIDCAuthMiddleware 校验 Authorization: Bearer <jwt>(HS256)。
 // 未启用时返回 nil,调用方应回退默认 API Key 鉴权。
 func OIDCAuthMiddleware() app.HandlerFunc {
-	if oidcCfg == nil || !oidcCfg.Enabled || oidcCfg.Secret == "" {
+	if oidcCfg == nil || !oidcCfg.Enabled || (oidcCfg.Secret == "" && len(oidcCfg.Keys) == 0) {
 		return nil
 	}
 	cfg := *oidcCfg
@@ -66,7 +78,7 @@ func OIDCAuthMiddleware() app.HandlerFunc {
 			return
 		}
 		token := strings.TrimSpace(strings.TrimPrefix(authzHeader, "Bearer "))
-		claims, err := parseHS256JWT(token, cfg.Secret)
+		claims, err := parseHS256JWT(token, cfg.Secret, cfg.Keys)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized: " + err.Error()})
 			c.Abort()
@@ -125,8 +137,26 @@ type jwtClaims struct {
 // 行为变化:①过期令牌在 Parse 阶段即拒(原实现在中间件手搓,语义等价、
 // 错误文案变);②弱密钥(<32B)配置的部署所有请求 401 且错误文案带下限说明
 // (原实现照跑不拒)——安全侧收紧。
-func parseHS256JWT(token, secret string) (*jwtClaims, error) {
-	claims, err := kitxjwt.ParseSymmetric(token, []byte(secret))
+func parseHS256JWT(token, secret string, keys map[string]string) (*jwtClaims, error) {
+	var (
+		claims *kitxjwt.Claims
+		err    error
+	)
+	if len(keys) > 0 {
+		claims, err = kitxjwt.ParseSymmetric(token, nil,
+			kitxjwt.WithSymmetricKeyIDResolver(func(kid string) ([]byte, error) {
+				if kid == "" && secret != "" {
+					return []byte(secret), nil
+				}
+				s, ok := keys[kid]
+				if !ok {
+					return nil, oekiterrors.Newf("unknown jwt kid %q", kid)
+				}
+				return []byte(s), nil
+			}))
+	} else {
+		claims, err = kitxjwt.ParseSymmetric(token, []byte(secret))
+	}
 	if err != nil {
 		return nil, err
 	}

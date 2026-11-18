@@ -71,6 +71,7 @@ func NewEngine(cfg *Config) (*Engine, error) {
 		terms: newTerminalHandlerWith(sb),
 		stop:  make(chan struct{}),
 	}
+	e.terms.permission = e.cfg.Permission
 	e.startJanitor()
 	return e, nil
 }

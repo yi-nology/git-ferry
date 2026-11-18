@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/oagentkit/guardx/logredact"
 	"github.com/oekit/logx"
 	"github.com/yi-nology/git-ferry/internal/corebridge"
 )
@@ -51,7 +52,7 @@ func recordAuditDetail(ctx context.Context, c *app.RequestContext, action, resou
 		Actor:        actor,
 		IP:           c.ClientIP(),
 		Status:       corebridge.StatusSuccess,
-		Detail:       detail,
+		Detail:       logredact.Redact(detail),
 	}
 	if svc := GetSyncService(); svc != nil {
 		if err := svc.RecordOperation(ctx, entry); err != nil {

@@ -157,4 +157,6 @@ func SetupLogger(level, format string) {
 		logx.WithHandler(slog.Default().Handler()),
 		logx.WithLevel(logx.ParseLogLevelOr(level, logx.LevelInfo)),
 	)
+	// UseSlog 会覆盖 proclog.Setup 里装的默认 logger,脱敏必须在其后再挂一次。
+	proclog.ApplySecretFilter()
 }
