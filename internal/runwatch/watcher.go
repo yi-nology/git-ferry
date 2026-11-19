@@ -3,7 +3,7 @@
 // 事件源两种模式：
 //   - event（默认）：订阅 core 的 SubscribeRuns 完成事件，不再轮询；
 //     core 在 RunTaskAsync / RunTaskWithTrigger 收尾处广播（cron/webhook/手动全覆盖）。
-//   - poll：轮询 ListHistory 兜底（旧实现，可在 yaml runwatch.mode 切回），
+//   - poll：轮询最近已结束运行兜底（旧实现，可在 yaml runwatch.mode 切回），
 //     首轮只建水位不发通知，避免启动把历史全喷一遍。
 //
 // 失败自动补偿的次数与冷却判定在 core RetryTracker（Service.AutoRetry），
@@ -43,7 +43,9 @@ const (
 // SyncService 观察与补偿所需的最小 Service 面向接口。
 type SyncService interface {
 	ListTasks(ctx context.Context, repoKey string, offset, limit int) ([]*corebridge.SyncTask, int64, error)
-	ListHistory(ctx context.Context, taskKey string, offset, limit int) ([]*corebridge.SyncRun, int64, error)
+	// ListRecentRuns 最近一批已结束 run(轻量列,跨任务)。
+	// 轮询兜底一次取全窗口,替代逐任务 ListHistory 的 N+1。
+	ListRecentRuns(ctx context.Context, limit int) ([]*corebridge.SyncRun, error)
 	RunTaskAsync(taskKey, trigger string, webhookEventID *uint) error
 	// SubscribeRuns 订阅 core 运行完成事件，返回取消函数。
 	SubscribeRuns(fn func(corebridge.RunEvent)) func()
@@ -273,14 +275,18 @@ func (w *Watcher) tick(ctx context.Context) {
 	}
 }
 
+// collectRecent 拉取本轮观察窗口:任务名清单 + 一次跨任务最近运行查询。
+//
+// 以前是「每个任务调一次 ListHistory」——500 个任务就是 500 条查询/轮,
+// 且每次带 COUNT 与 Steps 关联;现在任务列表只用于补任务名,运行数据一次取回。
 func (w *Watcher) collectRecent(ctx context.Context) ([]*corebridge.SyncRun, error) {
 	const pageSize = 50
-	var out []*corebridge.SyncRun
+	taskCount := 0
 	offset := 0
 	for {
 		tasks, total, err := w.svc.ListTasks(ctx, "", offset, pageSize)
 		if err != nil {
-			return out, err
+			return nil, err
 		}
 		for _, t := range tasks {
 			if t.Name != "" {
@@ -288,18 +294,23 @@ func (w *Watcher) collectRecent(ctx context.Context) ([]*corebridge.SyncRun, err
 				w.taskNames[t.Key] = t.Name
 				w.mu.Unlock()
 			}
-			runs, _, err := w.svc.ListHistory(ctx, t.Key, 0, w.cfg.HistoryLimit)
-			if err != nil {
-				continue // 单任务失败不拖垮整轮
-			}
-			out = append(out, runs...)
 		}
+		taskCount += len(tasks)
 		offset += len(tasks)
 		if len(tasks) == 0 || int64(offset) >= total {
 			break
 		}
 	}
-	return out, nil
+	// 窗口按「每任务 HistoryLimit 条」估算,并收敛到 [200, 2000];
+	// 轮询间隔内新增的运行量远小于该窗口,不会漏事件。
+	limit := taskCount * w.cfg.HistoryLimit
+	if limit < 200 {
+		limit = 200
+	}
+	if limit > 2000 {
+		limit = 2000
+	}
+	return w.svc.ListRecentRuns(ctx, limit)
 }
 
 // pruneMaps 防止 seen/taskNames 随 run ID 无限增长。

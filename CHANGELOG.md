@@ -2,6 +2,19 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v3.14.0] - 2026-11-19
+
+### Changed
+
+- **runwatch 轮询兜底改为跨任务一次取窗口**：`collectRecent` 从「逐任务调
+  `ListHistory`」（任务数 × 每轮查询，且带 COUNT/Steps 关联）改为一次
+  `ListRecentRuns`（core v0.63.0 新增，只取通知所需轻量列）；任务列表只用于
+  补任务名，窗口按每任务历史条数估算并收敛到 [200, 2000]。
+- **core v0.62.0 → v0.63.0**：仓库元数据改分块 CASE WHEN 批量 UPDATE；版本
+  矩阵执行历史加 2000 条窗口；新增跨任务最近运行查询。
+- 清理 `corebridge` 两个无调用方转发函数（`IsPersonalOwner` /
+  `ValidOrgMapStrategy`）。
+
 ## [v3.13.0] - 2026-11-19
 
 ### Changed

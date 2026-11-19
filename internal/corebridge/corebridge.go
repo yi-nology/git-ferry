@@ -181,15 +181,9 @@ const (
 
 func ParseOrgMapStrategy(s string) (OrgMapStrategy, error) { return coreservice.ParseStrategy(s) }
 
-func ValidOrgMapStrategy(s string) bool { return coreservice.ValidOrgMapStrategy(s) }
-
 // ResolveOrgTarget 目标 owner/repo 映射（OrgMapOptions 较大，按指针传）。
 func ResolveOrgTarget(sourceOwner, sourceRepo string, o *OrgMapOptions) (OrgMapResult, error) {
 	return coreservice.ResolveOrgTarget(sourceOwner, sourceRepo, *o)
-}
-
-func IsPersonalOwner(owner, targetUser string, orgOwners map[string]bool) bool {
-	return coreservice.IsPersonalOwner(owner, targetUser, orgOwners)
 }
 
 // ===== 运行完成事件 / 失败自动补偿（core events.go + retry_policy.go） =====

@@ -24,9 +24,12 @@ func (f *fakeSvc) ListTasks(context.Context, string, int, int) ([]*corebridge.Sy
 	return f.tasks, int64(len(f.tasks)), nil
 }
 
-func (f *fakeSvc) ListHistory(_ context.Context, key string, _, _ int) ([]*corebridge.SyncRun, int64, error) {
-	rs := f.runs[key]
-	return rs, int64(len(rs)), nil
+func (f *fakeSvc) ListRecentRuns(context.Context, int) ([]*corebridge.SyncRun, error) {
+	var out []*corebridge.SyncRun
+	for _, rs := range f.runs {
+		out = append(out, rs...)
+	}
+	return out, nil
 }
 
 func (f *fakeSvc) RunTaskAsync(taskKey, trigger string, _ *uint) error {
