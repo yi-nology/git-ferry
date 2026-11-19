@@ -2,6 +2,14 @@
 
 GitFerry — 自托管 Git 同步/镜像/备份中枢。本文件记录壳层发版变化。
 
+## [v3.13.0] - 2026-11-19
+
+### Changed
+
+- **core v0.61.0 → v0.62.0**：队列 / outbox / pending / retry / reconcile /
+  recovery 六组 Repository 全面接收 `context.Context`，后台循环统一传
+  `bgCtx`（停机取消会中断进行中的 DB 等待，请求上下文可贯穿到持久层）。
+
 ## [v3.12.0] - 2026-11-19
 
 ### Fixed
