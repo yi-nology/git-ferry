@@ -15,7 +15,7 @@ require (
 	github.com/oekit/bootstrap v0.7.14
 	github.com/oekit/concurrency v0.39.1
 	github.com/oekit/core v0.17.0
-	github.com/oekit/hertz v0.12.7
+	github.com/oekit/hertz v0.12.8
 	github.com/oekit/kitx v0.11.1
 	github.com/oekit/logx v0.12.0
 	github.com/oekit/metrics v0.4.2
@@ -109,7 +109,7 @@ require (
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/oekit/gormx v0.13.1 // indirect
-	github.com/oekit/middleware v0.20.1 // indirect
+	github.com/oekit/middleware v0.21.0 // indirect
 	github.com/oekit/redisx v0.16.4 // indirect
 	github.com/oekit/registry v0.8.0 // indirect
 	github.com/oekit/tracing v0.4.8 // indirect
