@@ -13,20 +13,20 @@ require (
 	github.com/hertz-contrib/sse v0.1.0
 	github.com/oagentkit/guardx v0.28.0
 	github.com/oekit/bootstrap v0.7.14
-	github.com/oekit/concurrency v0.39.1
-	github.com/oekit/core v0.17.0
-	github.com/oekit/hertz v0.12.7
-	github.com/oekit/kitx v0.11.1
-	github.com/oekit/logx v0.12.0
-	github.com/oekit/metrics v0.4.2
-	github.com/oekit/pkg v0.54.0
+	github.com/oekit/concurrency v0.40.0
+	github.com/oekit/core v0.18.0
+	github.com/oekit/hertz v0.14.1
+	github.com/oekit/kitx v0.13.0
+	github.com/oekit/logx v0.12.1
+	github.com/oekit/metrics v0.4.3
+	github.com/oekit/pkg v0.56.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.74.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.63.0
-	github.com/yi-nology/go-git-platform v1.0.3
+	github.com/yi-nology/go-git-platform v1.2.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -36,7 +36,7 @@ require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3 v3.0.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
-	gitea.dev/sdk v1.5.1 // indirect
+	gitea.dev/sdk v1.5.2 // indirect
 	github.com/42wim/httpsig v1.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.4 // indirect
 	github.com/ProtonMail/go-crypto v1.5.2 // indirect
@@ -108,10 +108,10 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
-	github.com/oekit/gormx v0.13.1 // indirect
-	github.com/oekit/middleware v0.20.1 // indirect
-	github.com/oekit/redisx v0.16.4 // indirect
-	github.com/oekit/registry v0.8.0 // indirect
+	github.com/oekit/gormx v0.14.1 // indirect
+	github.com/oekit/middleware v0.23.0 // indirect
+	github.com/oekit/redisx v0.16.7 // indirect
+	github.com/oekit/registry v0.8.3 // indirect
 	github.com/oekit/tracing v0.4.8 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pandatix/go-abnf v0.5.5 // indirect
@@ -128,7 +128,7 @@ require (
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
-	github.com/tidwall/gjson v1.20.4 // indirect
+	github.com/tidwall/gjson v1.20.6 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.3.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
@@ -139,8 +139,8 @@ require (
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	github.com/yi-nology/go-gitcode v0.18.0 // indirect
 	github.com/yi-nology/go-gongfeng v0.6.0 // indirect
-	gitlab.com/gitlab-org/api/client-go/v3 v3.52.0 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	gitlab.com/gitlab-org/api/client-go/v3 v3.55.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
@@ -149,7 +149,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/arch v0.33.0 // indirect
 	golang.org/x/crypto v0.59.0 // indirect
-	golang.org/x/exp v0.0.0-20261117202309-7a49493bfd90 // indirect
+	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5 // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
@@ -157,11 +157,11 @@ require (
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/tools v0.53.0 // indirect
-	google.golang.org/genproto v0.0.0-20261116203732-fd2c7689a808 // indirect
+	google.golang.org/genproto v0.0.0-20261118221215-c8830f628b3f // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gorm.io/driver/mysql v1.6.0 // indirect
-	modernc.org/libc v1.81.2 // indirect
+	modernc.org/libc v1.82.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.13.0 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
