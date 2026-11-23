@@ -90,6 +90,7 @@ log:
 #     max_tokens: 2048        # 可选,默认 2048
 #     timeout_seconds: 60     # 可选,默认 60
 #     max_concurrent_chats: 4 # 可选,默认 4
+#     agent_db: var/agent-sessions.db # 可选;会话检查点库(SQLite WAL),空 = 记忆文件同目录
 #
 # —— 形态二:外部 coding agent(acpx CLI 驱动)——
 #   需要本机装好 acpx(npm i -g acpx)与对应 agent(如 mcode / claude / codex)。

@@ -72,7 +72,13 @@ func buildAIEngine(cfg *agent.Config, apiKey string, svc tools.SyncService,
 		eng, err = acp.NewEngine(&c)
 
 	default:
-		return agent.NewEinoEngine(cfg, apiKey, svc)
+		// 内置后端:goagent-runtime 可恢复回合循环(SQLite 检查点,重启可续跑)。
+		// 路径由入口按数据目录派生(main.go);这里再兜一层底,防直接构造。
+		db := cfg.AgentDB
+		if db == "" {
+			db = "data/agent-sessions.db"
+		}
+		return agent.NewGoagentEngine(cfg, apiKey, svc, db)
 	}
 	if err != nil {
 		return nil, err

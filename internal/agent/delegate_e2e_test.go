@@ -40,7 +40,7 @@ func Test委派链路端到端(t *testing.T) {
 
 	reg := tools.NewRegistry(toolstest.NewMock())
 	reg.SetDelegator(d)
-	eng, err := NewEinoEngineWithModel(&Config{}, fm, reg)
+	eng, err := NewGoagentEngineWithModel(&Config{}, fm, reg)
 	require.NoError(t, err)
 	r := NewRunner(eng, 2)
 	sess := r.Sessions().Create()
@@ -88,7 +88,7 @@ func Test委派链路_参数覆盖(t *testing.T) {
 		ToolArgs: `{"prompt":"p","agent":"codex","cwd":"/tmp/ws"}`})
 	reg := tools.NewRegistry(toolstest.NewMock())
 	reg.SetDelegator(d)
-	eng, err := NewEinoEngineWithModel(&Config{}, fm, reg)
+	eng, err := NewGoagentEngineWithModel(&Config{}, fm, reg)
 	require.NoError(t, err)
 	r := NewRunner(eng, 2)
 	sess := r.Sessions().Create()
@@ -123,7 +123,7 @@ func Test委派链路_未装配执行器时如实报错(t *testing.T) {
 	fm.Append(toolstest.FakeStep{ToolName: "ai_code_delegate", ToolArgs: `{"prompt":"x"}`})
 	reg := tools.NewRegistry(toolstest.NewMock())
 	// **不** SetDelegator
-	eng, err := NewEinoEngineWithModel(&Config{}, fm, reg)
+	eng, err := NewGoagentEngineWithModel(&Config{}, fm, reg)
 	require.NoError(t, err)
 	r := NewRunner(eng, 2)
 	sess := r.Sessions().Create()

@@ -132,7 +132,7 @@ func TestAttachDelegator_默认配置也要装得上(t *testing.T) {
 			Agent: "mcode",
 		},
 	}
-	eng, err := agent.NewEinoEngine(cfg, "key", toolstest.NewMock())
+	eng, err := agent.NewGoagentEngine(cfg, "key", toolstest.NewMock(), t.TempDir()+"/sessions.db")
 	require.NoError(t, err)
 	attachDelegator(cfg, eng, nil)
 

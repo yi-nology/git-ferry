@@ -45,6 +45,9 @@ type Config struct {
 	MaxConcurrentChats int     `yaml:"max_concurrent_chats"`
 	// MemoryPath AI 长期记忆文件(空=data/ai-memory.json)
 	MemoryPath string `yaml:"memory_path"`
+	// AgentDB 会话检查点库(SQLite 单文件,WAL)路径;空 = 入口按
+	// memory_path 同目录派生 agent-sessions.db。历史跨进程重启可恢复。
+	AgentDB string `yaml:"agent_db"`
 	// HistoryMax 会话保留的最大消息轮数,超出后压缩(0=默认 40)
 	HistoryMax int `yaml:"history_max"`
 	// MemoryManifest 运行时注入的记忆摘要(不进 yaml)

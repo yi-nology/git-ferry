@@ -7,6 +7,7 @@ require (
 	github.com/cloudwego/eino v0.9.23
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/cloudwego/hertz v0.10.6
+	github.com/glebarez/go-sqlite v1.23.0
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
@@ -19,7 +20,7 @@ require (
 	github.com/oekit/kitx v0.13.0
 	github.com/oekit/logx v0.12.1
 	github.com/oekit/metrics v0.4.3
-	github.com/oekit/pkg v0.56.0
+	github.com/oekit/pkg v0.57.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.74.0
 	github.com/spf13/cobra v1.10.2
@@ -27,6 +28,8 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.63.0
 	github.com/yi-nology/go-git-platform v1.2.0
+	github.com/yi-nology/goagent-kernel v0.66.1
+	github.com/yi-nology/goagent-runtime v0.4.2
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -59,7 +62,6 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
-	github.com/glebarez/go-sqlite v1.23.0 // indirect
 	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect

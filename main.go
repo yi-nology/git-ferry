@@ -103,6 +103,10 @@ func main() {
 		if memPath == "" {
 			memPath = "data/ai-memory.json"
 		}
+		// 内置后端的会话检查点库:与记忆文件同目录(显式配置优先)。
+		if cfg.AgentDB == "" {
+			cfg.AgentDB = memPath[:max(0, len(memPath)-len("/ai-memory.json"))] + "/agent-sessions.db"
+		}
 		memStore, err := memory.Open(memPath)
 		if err != nil {
 			return nil, err

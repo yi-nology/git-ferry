@@ -20,7 +20,7 @@ func newTestRunner(t *testing.T, m *toolstest.Mock, steps ...toolstest.FakeStep)
 	for _, s := range steps {
 		fm.Append(s)
 	}
-	eng, err := NewEinoEngineWithModel(&Config{}, fm, tools.NewRegistry(m))
+	eng, err := NewGoagentEngineWithModel(&Config{}, fm, tools.NewRegistry(m))
 	require.NoError(t, err)
 	return NewRunner(eng, 2)
 }
@@ -93,7 +93,7 @@ func TestRunner_CancelStopsAndReleasesSemaphore(t *testing.T) {
 	hold := make(chan struct{})
 	fm.Hold = hold
 	fm.Append(toolstest.FakeStep{Content: "long"})
-	eng, err := NewEinoEngineWithModel(&Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
+	eng, err := NewGoagentEngineWithModel(&Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
 	require.NoError(t, err)
 	r := NewRunner(eng, 1)
 	st := NewSessionStore(time.Minute, 20)
@@ -155,7 +155,7 @@ func TestRunner_Busy(t *testing.T) {
 	hold := make(chan struct{})
 	fm.Hold = hold
 	fm.Append(toolstest.FakeStep{Content: "long"})
-	eng, err := NewEinoEngineWithModel(&Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
+	eng, err := NewGoagentEngineWithModel(&Config{}, fm, tools.NewRegistry(toolstest.NewMock()))
 	require.NoError(t, err)
 	r := NewRunner(eng, 1)
 	st := NewSessionStore(time.Minute, 20)
