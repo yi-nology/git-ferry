@@ -20,7 +20,7 @@ require (
 	github.com/oekit/kitx v0.13.0
 	github.com/oekit/logx v0.12.1
 	github.com/oekit/metrics v0.4.3
-	github.com/oekit/pkg v0.57.0
+	github.com/oekit/pkg v0.61.5
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.74.0
 	github.com/spf13/cobra v1.10.2
