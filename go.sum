@@ -280,8 +280,12 @@ github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18/go.mod h1:Gvqtel
 github.com/nikolalohinski/gonja v1.5.3 h1:GsA+EEaZDZPGJ8JtpeGN78jidhOlxeJROpqMT9fTj9c=
 github.com/nikolalohinski/gonja v1.5.3/go.mod h1:RmjwxNiXAEqcq1HeK5SSMmqFJvKOfTfXhkJv6YBtPa4=
 github.com/nyaruka/phonenumbers v1.0.55/go.mod h1:sDaTZ/KPX5f8qyV9qN+hIm+4ZBARJrupC6LuhshJq1U=
+github.com/oagentkit/agent v0.16.0 h1:M50oDn51wYPPAk3Jqal6/9FKGhQo93quKYJg5Y+NGUM=
+github.com/oagentkit/agent v0.16.0/go.mod h1:ODb9BBThR0N2G8yZCwFAeLpa9ynlXjHSJeKl7b04Dno=
 github.com/oagentkit/guardx v0.28.0 h1:+7aKnaJ4HqZLqSMd5QfgI5bTbWy3QYpgPQ1tkIpysQs=
 github.com/oagentkit/guardx v0.28.0/go.mod h1:OzgOOEn1E7MsoRhtywx2d9WhzEYxzK/o2px+EpBXnUg=
+github.com/oagentkit/guardx v0.30.0 h1:qRP488xwQ9IBruUgHVr8ogqG4zp7iAQlMwMe87vbp+c=
+github.com/oagentkit/guardx v0.30.0/go.mod h1:qWTUIglBIT4ENUzNas8VjUpv0BwOYxYqklOaxbnp1WY=
 github.com/oekit/bootstrap v0.7.14 h1:4cWRyrYwKJxBj03PUatV1Fca7We03G7TEk+T/WSZowE=
 github.com/oekit/bootstrap v0.7.14/go.mod h1:aRWhfkoj+4C1DFLvgCGdJzprQlZIdl+UopEPTBe93c8=
 github.com/oekit/concurrency v0.40.0 h1:gFwginpsVXdY4R/hzwicyBa2u1WHmCN1h5Bw6ztlpBw=
@@ -348,6 +352,7 @@ github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
+github.com/rogpeppe/go-internal v1.15.0 h1:D0RCU5rMAp+SpgkiNdrjfJ+LX4J1M32V2NeCY7EJ6hc=
 github.com/rollbar/rollbar-go v1.0.2/go.mod h1:AcFs5f0I+c71bpHlXNNDbOWJiKwjFDtISeXco0L5PKQ=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/sergi/go-diff v1.4.5 h1:3LvhZn2aCAWagLwIhga3BZiEZ82j5+oQ0vKDwkhjHCI=
@@ -425,8 +430,12 @@ github.com/yi-nology/go-gongfeng v0.6.0 h1:REX6mLPjGCyvX+HCiKWzc80QXNPeTWSgtgq9+
 github.com/yi-nology/go-gongfeng v0.6.0/go.mod h1:5ReODRWkA/Dj1qMG/XklL1tXnxq4jPopLP/VzL/dRdw=
 github.com/yi-nology/goagent-kernel v0.66.1 h1:Axkk0uqDFoybEjOo630lERt8Yt+4O/yazozTgxEPvBQ=
 github.com/yi-nology/goagent-kernel v0.66.1/go.mod h1:s57LkTifDK5wJL0z9UoPjqiPl9GRqIvrXsvdkP+g4Zc=
+github.com/yi-nology/goagent-kernel v0.80.0 h1:6AxWuZvUeunlYqOvzg4+SQaA/iAGO2po74yE8gYEh+A=
+github.com/yi-nology/goagent-kernel v0.80.0/go.mod h1:B8yCjerGneYWnrnGLe1xJ5eWMT/vKPUTtUNZKcd8XRA=
 github.com/yi-nology/goagent-runtime v0.4.2 h1:63iq2RUGEdyjOtGPm/gk43bo8nYCgt+WQwtjNOLH15k=
 github.com/yi-nology/goagent-runtime v0.4.2/go.mod h1:QWjCowT/siKyDLGtGYvxFYmqRzb6gYq4DLTWVUZKu9g=
+github.com/yi-nology/goagent-runtime v0.9.0 h1:61HlglhwHKK/JqGBDnkUf6B+3u54Qo/s17NRnl5sDI4=
+github.com/yi-nology/goagent-runtime v0.9.0/go.mod h1:C67Yr1F0Sj4fLHaNIpBNOCK1dia2vAEzOV359QLcdx4=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=
 github.com/yuin/gopher-lua v1.1.1/go.mod h1:GBR0iDaNXjAgGg9zfCvksxSRnQx76gclCIb7kdAd1Pw=
 github.com/zeebo/xxh3 v1.1.0 h1:s7DLGDK45Dyfg7++yxI0khrfwq9661w9EN78eP/UZVs=

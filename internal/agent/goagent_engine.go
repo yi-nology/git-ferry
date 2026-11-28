@@ -19,7 +19,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	"github.com/yi-nology/goagent-kernel/checkpoint"
-	"github.com/yi-nology/goagent-kernel/roundguard"
+	"github.com/oagentkit/agent/roundguard"
 	"github.com/yi-nology/goagent-kernel/sideeffect"
 	"github.com/yi-nology/goagent-runtime/agentloop"
 	"github.com/yi-nology/goagent-runtime/chat"
@@ -215,6 +215,11 @@ func newGoagentModel(cm model.BaseModel[*schema.Message], infos map[string]*sche
 }
 
 // Chat 一次模型调用:转消息 → Stream → 逐 chunk 发 delta → 聚合完整响应。
+//
+// 归并交给上游 DeltaAggregator(goagent-runtime#11 收口物,框架与宿主
+// 共用同一份):按 Index 归并工具调用、累计 usage、拼接文本——本仓不再
+// 自写聚合桥。SSE delta(宿主事件面)走 ctx sink;loop 侧挂了事件面时
+// 经 req.OnDelta 出 runtime content_delta,两路相互独立。
 func (m *goagentModel) Chat(ctx context.Context, req chat.ChatRequest) (chat.ChatResponse, error) {
 	msgs := einoMessages(req.Messages)
 	var opts []model.Option
@@ -225,18 +230,17 @@ func (m *goagentModel) Chat(ctx context.Context, req chat.ChatRequest) (chat.Cha
 	if err != nil {
 		return chat.ChatResponse{}, errors.Wrap(err, "模型流调用失败")
 	}
-	var (
-		content strings.Builder
-		usage   *engine.Usage
-	)
-	// 聚合器:流式 chunk 的工具调用按 Index 归并;内容与 usage 逐 chunk 累计。
-	type callAgg struct {
-		id, name string
-		args     strings.Builder
-	}
-	calls := map[int]*callAgg{}
-	order := []int{}
+	agg := &chat.DeltaAggregator{}
 	sink := sinkFromCtx(ctx)
+	forward := func(d chat.Delta) {
+		agg.Add(d)
+		if req.OnDelta != nil {
+			req.OnDelta(d)
+		}
+		if d.Kind == chat.DeltaKindText && d.Text != "" {
+			sink(Event{Type: engine.EventDelta, Content: d.Text})
+		}
+	}
 	for {
 		chunk, cerr := sr.Recv()
 		if errors.Is(cerr, io.EOF) {
@@ -249,8 +253,7 @@ func (m *goagentModel) Chat(ctx context.Context, req chat.ChatRequest) (chat.Cha
 			continue
 		}
 		if chunk.Content != "" {
-			content.WriteString(chunk.Content)
-			sink(Event{Type: engine.EventDelta, Content: chunk.Content})
+			forward(chat.Delta{Kind: chat.DeltaKindText, Text: chunk.Content})
 		}
 		for i := range chunk.ToolCalls {
 			tc := chunk.ToolCalls[i]
@@ -258,36 +261,29 @@ func (m *goagentModel) Chat(ctx context.Context, req chat.ChatRequest) (chat.Cha
 			if tc.Index != nil {
 				idx = *tc.Index
 			}
-			agg, ok := calls[idx]
-			if !ok {
-				agg = &callAgg{}
-				calls[idx] = agg
-				order = append(order, idx)
-			}
-			if tc.ID != "" {
-				agg.id = tc.ID
-			}
-			if tc.Function.Name != "" {
-				agg.name = tc.Function.Name
-			}
-			agg.args.WriteString(tc.Function.Arguments)
+			forward(chat.Delta{
+				Kind: chat.DeltaKindToolCall,
+				ToolCall: &chat.ToolCallFragment{
+					Index:     idx,
+					ID:        tc.ID,
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				},
+			})
 		}
-		if usage == nil {
-			usage = usageFromCtx(ctx)
+		// usage 双落:ctx 累计器喂 SSE done 事件;usage 片段喂聚合器
+		// (loop 拿 ChatResponse.Usage 进 round 事件,Trace 聚合)。
+		if u := usageFromCtx(ctx); u != nil {
+			accumulateUsage(u, chunk)
 		}
-		if usage != nil {
-			accumulateUsage(usage, chunk)
+		if chunk.ResponseMeta != nil && chunk.ResponseMeta.Usage != nil {
+			forward(chat.Delta{Kind: chat.DeltaKindUsage, Usage: &chat.Usage{
+				PromptTokens:     chunk.ResponseMeta.Usage.PromptTokens,
+				CompletionTokens: chunk.ResponseMeta.Usage.CompletionTokens,
+			}})
 		}
 	}
-	out := chat.ChatResponse{Content: content.String()}
-	for _, idx := range order {
-		agg := calls[idx]
-		if agg.name == "" {
-			continue
-		}
-		out.ToolCalls = append(out.ToolCalls, chat.ToolCall{ID: agg.id, Name: agg.name, Arguments: agg.args.String()})
-	}
-	return out, nil
+	return agg.Response(), nil
 }
 
 // usageFromCtx 取 usage 累计器(缺省 nil = 不统计)。

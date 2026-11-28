@@ -12,7 +12,7 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
-	github.com/oagentkit/guardx v0.28.0
+	github.com/oagentkit/guardx v0.30.0
 	github.com/oekit/bootstrap v0.7.14
 	github.com/oekit/concurrency v0.40.0
 	github.com/oekit/core v0.18.0
@@ -28,8 +28,8 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/yi-nology/git-ferry-core v0.63.0
 	github.com/yi-nology/go-git-platform v1.2.0
-	github.com/yi-nology/goagent-kernel v0.66.1
-	github.com/yi-nology/goagent-runtime v0.4.2
+	github.com/yi-nology/goagent-kernel v0.80.0
+	github.com/yi-nology/goagent-runtime v0.9.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.31.2
@@ -110,6 +110,7 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
+	github.com/oagentkit/agent v0.16.0 // indirect
 	github.com/oekit/gormx v0.14.1 // indirect
 	github.com/oekit/middleware v0.23.0 // indirect
 	github.com/oekit/redisx v0.16.7 // indirect
