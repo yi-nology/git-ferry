@@ -18,8 +18,9 @@ import (
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 
-	"github.com/yi-nology/goagent-kernel/checkpoint"
 	"github.com/oagentkit/agent/roundguard"
+	"github.com/yi-nology/goagent-kernel/checkpoint"
+	"github.com/yi-nology/goagent-kernel/invocation"
 	"github.com/yi-nology/goagent-kernel/sideeffect"
 	"github.com/yi-nology/goagent-runtime/agentloop"
 	"github.com/yi-nology/goagent-runtime/chat"
@@ -57,6 +58,10 @@ type goagentEngine struct {
 	checks checkpoint.StoreCAS
 	// effects 工具副作用闸(进程内;跨重启的恢复保护由检查点历史兜底)。
 	effects sideeffect.Store
+	// journal 工具调用账本(v0.7.0,可选;nil = 不落账):执行前落 planned,
+	// 恢复按账本续跑、不再问模型要那次调用——幂等键不变,同一业务动作
+	// 不会被再施加(检查点历史之外的第二道背书)。
+	journal invocation.Store
 	closeFn func() error
 	// model chat.Model 适配器(Stream 聚合并发 delta 事件)。
 	model *goagentModel
@@ -92,7 +97,7 @@ func NewGoagentEngine(cfg *Config, apiKey string, svc tools.SyncService, dbPath 
 // NewGoagentEngineWithModel 测试构造:注入 eino 模型,进程内存储(无跨进程恢复)。
 func NewGoagentEngineWithModel(cfg *Config, cm model.BaseModel[*schema.Message], reg *tools.Registry) (engine.Engine, error) {
 	f := agentstore.NewMemory()
-	return newGoagentEngine(cfg, cm, reg, f.Checks, f.Effects, nil)
+	return newGoagentEngine(cfg, cm, reg, f.Checks, f.Effects, f.Journal, nil)
 }
 
 // NewGoagentEngineWithModelAt 测试构造:注入 eino 模型 + SQLite 检查点库,
@@ -102,7 +107,7 @@ func NewGoagentEngineWithModelAt(cfg *Config, cm model.BaseModel[*schema.Message
 	if err != nil {
 		return nil, errors.Wrap(err, "打开 agent 会话库失败", "path", dbPath)
 	}
-	return newGoagentEngine(cfg, cm, reg, st.Checkpoints(), st.Effects(), func() error { return st.Close() })
+	return newGoagentEngine(cfg, cm, reg, st.Checkpoints(), st.Effects(), st.Journal(), func() error { return st.Close() })
 }
 
 // ptrF32 温度转指针(零值也显式下传,与 eino 版行为一致)。
@@ -113,7 +118,7 @@ func ptrF32(f float64) *float32 {
 
 // newGoagentEngine 公共装配:管线投影 → 模型适配器 → 引擎。
 func newGoagentEngine(cfg *Config, cm model.BaseModel[*schema.Message], reg *tools.Registry,
-	checks checkpoint.StoreCAS, effects sideeffect.Store, closeFn func() error) (engine.Engine, error) {
+	checks checkpoint.StoreCAS, effects sideeffect.Store, journal invocation.Store, closeFn func() error) (engine.Engine, error) {
 	if cfg == nil {
 		cfg = &Config{}
 	}
@@ -130,6 +135,7 @@ func newGoagentEngine(cfg *Config, cm model.BaseModel[*schema.Message], reg *too
 		pipe:        pipe,
 		checks:      checks,
 		effects:     effects,
+		journal:     journal,
 		closeFn:     closeFn,
 		model:       newGoagentModel(cm, infos),
 		budget:      roundguard.Budget{MaxRounds: defaultMaxRounds},
@@ -459,11 +465,12 @@ func (e *goagentEngine) Run(ctx context.Context, sess engine.Session, in engine.
 		defer func() { <-lock }()
 
 		loop, err := agentloop.New(agentloop.Config{
-			Model:  e.model,
-			Tools:  e.pipe,
-			Store:  e.checks,
-			Budget: e.budget,
-			System: BuildPrompt(e.memManifest),
+			Model:   e.model,
+			Tools:   e.pipe,
+			Store:   e.checks,
+			Journal: e.journal,
+			Budget:  e.budget,
+			System:  BuildPrompt(e.memManifest),
 		})
 		if err != nil {
 			emit(engine.Event{Type: engine.EventError, Content: errText(err)})

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"testing"
@@ -11,6 +12,12 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/oekit/concurrency/async"
 
+	"github.com/yi-nology/goagent-kernel/checkpoint"
+	"github.com/yi-nology/goagent-kernel/contract"
+	"github.com/yi-nology/goagent-kernel/invocation"
+	"github.com/yi-nology/goagent-runtime/chat"
+
+	"github.com/yi-nology/git-ferry/internal/agent/agentstore"
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
 	"github.com/yi-nology/git-ferry/internal/agent/tools"
 	"github.com/yi-nology/git-ferry/internal/agent/tools/toolstest"
@@ -236,5 +243,158 @@ func TestGoagentEngineResumeAfterRestart(t *testing.T) {
 		if cm2.seenCount() != 1 {
 			t.Fatalf("Run2 模型应被调 1 次,实得 %d", cm2.seenCount())
 		}
+	}
+}
+
+// TestGoagentEngineJournalLedger 工具回合落账本:执行前 planned、完成后
+// applied 且保留结果——恢复续跑的第二道背书生效(agentloop.Config.Journal)。
+func TestGoagentEngineJournalLedger(t *testing.T) {
+	mock := toolstest.NewMock()
+	mock.Repos = []*corebridge.Repo{{Name: "r1"}}
+	db := t.TempDir() + "/ledger.db"
+
+	fm := toolstest.NewFakeModel()
+	fm.Append(toolstest.FakeStep{ToolName: "list_repos", ToolArgs: `{}`})
+	fm.Append(toolstest.FakeStep{Content: "查到了"})
+	reg := tools.NewRegistry(mock)
+	eng, err := NewGoagentEngineWithModelAt(&Config{}, fm, reg, db)
+	if err != nil {
+		t.Fatalf("构造引擎: %v", err)
+	}
+	defer func() { _ = eng.Close() }()
+
+	sess := newTestSession(t, "sess-ledger")
+	ch, cancel, err := eng.Run(context.Background(), sess, engine.Input{Message: "列仓库"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	evs := drainAIEvents(t, ch)
+	cancel()
+	for _, ev := range evs {
+		if ev.Type == engine.EventError {
+			t.Fatalf("意外错误事件: %s", ev.Content)
+		}
+	}
+
+	// 从同一库重开账本面,读回账目:恰一条,applied 且保留结果。
+	st, err := agentstore.Open(db)
+	if err != nil {
+		t.Fatalf("重开库: %v", err)
+	}
+	defer func() { _ = st.Close() }()
+	entries, err := st.Journal().List(context.Background(), "sess-ledger")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("应恰 1 条账目,实得 %d: %+v", len(entries), entries)
+	}
+	e := entries[0]
+	if e.Tool != "list_repos" {
+		t.Fatalf("账目工具名应为 list_repos,实得 %s", e.Tool)
+	}
+	if e.State != invocation.StateResultRecorded {
+		t.Fatalf("账目终态应为 result_recorded(施加+回录后),实得 %s", e.State)
+	}
+}
+
+// TestGoagentEngineLedgerResumeCrashWindow 账本背书的崩溃窗口恢复(账本的核心增益):
+// 进程死在「账本 executing → 历史回填提交」之间 ⇒ 历史不完整(assistant 要了
+// 工具、结果缺失)+ 账目停在 executing。恢复 Run:
+//   - 历史校验不再 fail-closed(账本背书合法未完成调用);
+//   - resumePending 按账本续跑该调用(sideeffect 闸保证不重复施加);
+//   - 模型不会被再问一次那次调用。
+func TestGoagentEngineLedgerResumeCrashWindow(t *testing.T) {
+	ctx := context.Background()
+	db := t.TempDir() + "/crash.db"
+
+	// ── 种子:手工构造崩溃窗口状态 ──
+	st, err := agentstore.Open(db)
+	if err != nil {
+		t.Fatalf("开种子库: %v", err)
+	}
+	history := []chat.Message{
+		{Role: chat.RoleUser, Content: "列一下仓库"},
+		{Role: chat.RoleAssistant, ToolCalls: []chat.ToolCall{{
+			ID: "call-crash", Name: "list_repos", Arguments: `{}`,
+		}}},
+		// (工具结果缺失 = 崩溃窗口形态,上面省略即是不完整历史)
+	}
+	raw, err := json.Marshal(history)
+	if err != nil {
+		t.Fatalf("序列化历史: %v", err)
+	}
+	snap := checkpoint.Snapshot{
+		RunID:  "sess-crash",
+		Seq:    1,
+		Status: contract.StatusRunning,
+		Fields: map[string]string{"history": string(raw)},
+	}
+	if err := st.Checkpoints().SaveIfNewer(ctx, snap); err != nil {
+		t.Fatalf("种快照: %v", err)
+	}
+	j := st.Journal()
+	if err := j.Plan(ctx, invocation.Entry{
+		SessionID: "sess-crash", CallID: "call-crash",
+		Tool: "list_repos", ArgsDigest: invocation.Digest([]byte(`{}`)),
+		Args: []byte(`{}`), State: invocation.StatePlanned,
+	}); err != nil {
+		t.Fatalf("种账目: %v", err)
+	}
+	if _, err := j.Advance(ctx, "sess-crash", "call-crash", invocation.StateExecuting, invocation.Update{}); err != nil {
+		t.Fatalf("推进 executing: %v", err)
+	}
+	if err := st.Close(); err != nil {
+		t.Fatalf("关种子库: %v", err)
+	}
+
+	// ── 恢复 Run:模型脚本只有终答(不再被问那次调用) ──
+	mock := toolstest.NewMock()
+	mock.Repos = []*corebridge.Repo{{Name: "r1"}}
+	cm := &captureModel{FakeModel: toolstest.NewFakeModel()}
+	cm.Append(toolstest.FakeStep{Content: "恢复完成,仓库 r1 还在"})
+	reg := tools.NewRegistry(mock)
+	eng, err := NewGoagentEngineWithModelAt(&Config{}, cm, reg, db)
+	if err != nil {
+		t.Fatalf("构造引擎: %v", err)
+	}
+	defer func() { _ = eng.Close() }()
+
+	sess := newTestSession(t, "sess-crash")
+	ch, cancel, err := eng.Run(ctx, sess, engine.Input{Message: "接着查"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	evs := drainAIEvents(t, ch)
+	cancel()
+
+	toolStarts := 0
+	for _, ev := range evs {
+		if ev.Type == engine.EventToolStart && ev.Tool == "list_repos" {
+			toolStarts++
+		}
+		if ev.Type == engine.EventError {
+			t.Fatalf("恢复不应报错(账本背书),实得: %s", ev.Content)
+		}
+	}
+	if toolStarts != 1 {
+		t.Fatalf("账本续跑应恰好执行 1 次 list_repos,实得 %d", toolStarts)
+	}
+	if !strings.Contains(cm.lastSeen(), "r1") {
+		t.Fatalf("模型应看到续跑回填的工具结果,实际:\n%s", cm.lastSeen())
+	}
+
+	// 账目收口:result_recorded。
+	st2, err := agentstore.Open(db)
+	if err != nil {
+		t.Fatalf("重开库: %v", err)
+	}
+	defer func() { _ = st2.Close() }()
+	entries, err := st2.Journal().List(ctx, "sess-crash")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 || entries[0].State != invocation.StateResultRecorded {
+		t.Fatalf("账目应收口为 result_recorded,实得 %+v", entries)
 	}
 }

@@ -57,6 +57,10 @@ func Open(path string) (*Store, error) {
 		_ = db.Close()
 		return nil, errors.Wrap(err, "初始化 schema 失败")
 	}
+	if _, err := db.Exec(ensureJournalSchema); err != nil {
+		_ = db.Close()
+		return nil, errors.Wrap(err, "初始化账本 schema 失败")
+	}
 	return &Store{db: db}, nil
 }
 
