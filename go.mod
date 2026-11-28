@@ -12,12 +12,13 @@ require (
 	github.com/hertz-contrib/gzip v0.0.4
 	github.com/hertz-contrib/requestid v1.1.0
 	github.com/hertz-contrib/sse v0.1.0
+	github.com/oagentkit/agent v0.16.0
 	github.com/oagentkit/guardx v0.30.0
-	github.com/oekit/bootstrap v0.7.14
+	github.com/oekit/authx v0.14.0
+	github.com/oekit/bootstrap v0.7.15
 	github.com/oekit/concurrency v0.40.0
 	github.com/oekit/core v0.18.0
-	github.com/oekit/hertz v0.14.1
-	github.com/oekit/kitx v0.13.0
+	github.com/oekit/hertz v0.14.2
 	github.com/oekit/logx v0.12.1
 	github.com/oekit/metrics v0.4.3
 	github.com/oekit/pkg v0.61.5
@@ -26,7 +27,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
-	github.com/yi-nology/git-ferry-core v0.63.0
+	github.com/yi-nology/git-ferry-core v0.64.0
 	github.com/yi-nology/go-git-platform v1.2.0
 	github.com/yi-nology/goagent-kernel v0.80.0
 	github.com/yi-nology/goagent-runtime v0.9.0
@@ -43,6 +44,7 @@ require (
 	github.com/42wim/httpsig v1.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.4 // indirect
 	github.com/ProtonMail/go-crypto v1.5.2 // indirect
+	github.com/alicebob/miniredis/v2 v2.41.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.6.1 // indirect
@@ -110,12 +112,11 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/next-bin/go-gitee v0.0.0-20260521141902-36ce436eee18 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
-	github.com/oagentkit/agent v0.16.0 // indirect
-	github.com/oekit/gormx v0.14.1 // indirect
+	github.com/oekit/gormx v0.15.3 // indirect
 	github.com/oekit/middleware v0.23.0 // indirect
-	github.com/oekit/redisx v0.16.7 // indirect
+	github.com/oekit/redisx v0.16.8 // indirect
 	github.com/oekit/registry v0.8.3 // indirect
-	github.com/oekit/tracing v0.4.8 // indirect
+	github.com/oekit/tracing v0.4.9 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pandatix/go-abnf v0.5.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
@@ -125,7 +126,7 @@ require (
 	github.com/prometheus/procfs v0.23.0 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.23.0 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.23.0 // indirect
-	github.com/redis/go-redis/v9 v9.23.0 // indirect
+	github.com/redis/go-redis/v9 v9.24.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sergi/go-diff v1.4.5 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
@@ -142,7 +143,7 @@ require (
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	github.com/yi-nology/go-gitcode v0.18.0 // indirect
 	github.com/yi-nology/go-gongfeng v0.6.0 // indirect
-	gitlab.com/gitlab-org/api/client-go/v3 v3.55.0 // indirect
+	gitlab.com/gitlab-org/api/client-go/v3 v3.57.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect

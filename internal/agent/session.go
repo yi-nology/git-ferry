@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oekit/authx/uidgen"
 	"github.com/oekit/concurrency/loop"
-	"github.com/oekit/kitx/uidgen"
 	strutil "github.com/yi-nology/git-ferry-core/pkg/strutil"
 	"github.com/yi-nology/git-ferry/internal/agent/engine"
 )

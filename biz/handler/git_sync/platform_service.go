@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/oekit/kitx/uidgen"
+	"github.com/oekit/authx/uidgen"
 	"github.com/oekit/pkg/convert"
 	platform "github.com/yi-nology/git-ferry/biz/model/platform"
 	"github.com/yi-nology/git-ferry/internal/converter"

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	kitxjwt "github.com/oekit/kitx/jwt"
+	authxjwt "github.com/oekit/authx/jwt"
 	oekiterrors "github.com/oekit/pkg/errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -52,12 +52,12 @@ func SetOIDCConfig(cfg *OIDCConfig) {
 		return
 	}
 	if cfg.Secret != "" {
-		if _, err := kitxjwt.NewSymmetric([]byte(cfg.Secret)); err != nil {
+		if _, err := authxjwt.NewSymmetric([]byte(cfg.Secret)); err != nil {
 			proclog.ExitOnFail("oidc.secret 不合格(需要 ≥32 字节,RFC 7518 §3.2)", err)
 		}
 	}
 	for kid, secret := range cfg.Keys {
-		if _, err := kitxjwt.NewSymmetric([]byte(secret)); err != nil {
+		if _, err := authxjwt.NewSymmetric([]byte(secret)); err != nil {
 			proclog.ExitOnFail("oidc.keys["+kid+"] 不合格(需要 ≥32 字节,RFC 7518 §3.2)", err)
 		}
 	}
@@ -139,12 +139,12 @@ type jwtClaims struct {
 // (原实现照跑不拒)——安全侧收紧。
 func parseHS256JWT(token, secret string, keys map[string]string) (*jwtClaims, error) {
 	var (
-		claims *kitxjwt.Claims
+		claims *authxjwt.Claims
 		err    error
 	)
 	if len(keys) > 0 {
-		claims, err = kitxjwt.ParseSymmetric(token, nil,
-			kitxjwt.WithSymmetricKeyIDResolver(func(kid string) ([]byte, error) {
+		claims, err = authxjwt.ParseSymmetric(token, nil,
+			authxjwt.WithSymmetricKeyIDResolver(func(kid string) ([]byte, error) {
 				if kid == "" && secret != "" {
 					return []byte(secret), nil
 				}
@@ -155,7 +155,7 @@ func parseHS256JWT(token, secret string, keys map[string]string) (*jwtClaims, er
 				return []byte(s), nil
 			}))
 	} else {
-		claims, err = kitxjwt.ParseSymmetric(token, []byte(secret))
+		claims, err = authxjwt.ParseSymmetric(token, []byte(secret))
 	}
 	if err != nil {
 		return nil, err
